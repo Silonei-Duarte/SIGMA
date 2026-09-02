@@ -71,7 +71,7 @@ def _configurar(
 
     Parâmetro None deixa a chave sem linha no banco: a chave conhecida
     responde o padrão declarado (horários 07:00,16:00; destinatários
-    ti@ipel.ind.br; limiar 5).
+    ti@empresa.com.br; limiar 5).
     """
     if horarios is not None:
         definir(CHAVE_HORARIOS, horarios, None)
@@ -217,7 +217,7 @@ class RelatorioFalhasEmailTests(TestCase):
 
     def _criar_fonte_telemetria_em_falha(self, ultima_tentativa):
         FonteColetaHTTP.objects.create(
-            url="http://172.16.30.99/coleta",
+            url="http://192.0.2.99/coleta",
             coleta_ativa=True,
             log="Falha na coleta de telemetria.",
             ultima_coleta_em=ultima_tentativa,
@@ -285,7 +285,7 @@ class RelatorioFalhasEmailTests(TestCase):
             datger=agora - timedelta(minutes=10),
             log=(
                 "Falha ao enviar. senha_sapiens_123 chave-django-teste "
-                "url http://coletor:segredo_na_url@172.16.30.99/coleta "
+                "url http://coletor:segredo_na_url@192.0.2.99/coleta "
                 "<user>usuario_sapiens</user><password>senha_sapiens_123</password>"
             ),
         )
@@ -419,7 +419,7 @@ class RelatorioFalhasEmailTests(TestCase):
 
     def test_padroes_da_chave_respondem_sem_linha_no_banco(self):
         # Defaults declarados em código: horários 07:00,16:00, destinatários
-        # ti@ipel.ind.br e limiar 5 — o relatório já nasce ativo no deploy,
+        # ti@empresa.com.br e limiar 5 — o relatório já nasce ativo no deploy,
         # sem nenhuma configuração pela tela.
         _configurar(horarios=None, destinatarios=None, limiar=None)
         agora = _hoje(7, 1)
@@ -432,7 +432,7 @@ class RelatorioFalhasEmailTests(TestCase):
                 self._executar()
 
         self.assertEqual(mock_send.call_count, 1)
-        self.assertEqual(mock_send.call_args.kwargs["recipient_list"], ["ti@ipel.ind.br"])
+        self.assertEqual(mock_send.call_args.kwargs["recipient_list"], ["ti@empresa.com.br"])
 
     def test_horarios_vazios_plantados_mantem_o_relatorio_desativado(self):
         # Defesa: linha gravada vazia por fora do validador (shell/migração)
@@ -558,20 +558,20 @@ class RelatorioFalhasEmailTests(TestCase):
         _configurar(horarios="00:00")
         agora = timezone.now()
         FonteColetaHTTP.objects.create(
-            url="http://172.16.30.10/coleta",
+            url="http://192.0.2.10/coleta",
             coleta_ativa=True,
             log=LOG_COLETA_SUCESSO,
             ultima_coleta_em=agora - timedelta(minutes=10),
         )
         FonteColetaHTTP.objects.create(
-            url="http://172.16.30.11/coleta",
+            url="http://192.0.2.11/coleta",
             coleta_ativa=False,
             log="Falha na coleta de telemetria.",
             ultima_coleta_em=agora - timedelta(minutes=10),
         )
         # Ativa em falha: é a única que deve aparecer.
         FonteColetaHTTP.objects.create(
-            url="http://172.16.30.12/coleta",
+            url="http://192.0.2.12/coleta",
             coleta_ativa=True,
             log="Falha na coleta de telemetria.",
             ultima_coleta_em=agora - timedelta(minutes=10),
@@ -581,9 +581,9 @@ class RelatorioFalhasEmailTests(TestCase):
             self._executar()
 
         corpo = mock_send.call_args.kwargs["message"]
-        self.assertIn("172.16.30.12", corpo)
-        self.assertNotIn("172.16.30.10", corpo)
-        self.assertNotIn("172.16.30.11", corpo)
+        self.assertIn("192.0.2.12", corpo)
+        self.assertNotIn("192.0.2.10", corpo)
+        self.assertNotIn("192.0.2.11", corpo)
 
     def test_executar_registra_ciclo_no_painel(self):
         _configurar(horarios="00:00")

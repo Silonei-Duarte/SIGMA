@@ -117,9 +117,9 @@ CHAVES_CONHECIDAS: Final[dict[str, ChaveConhecida]] = {
         topico="E-mail — Relatórios",
         descricao=(
             "Destinatários do relatório diário de falhas das filas, um e-mail "
-            "por linha. Padrão: ti@ipel.ind.br."
+            "por linha. Padrão: ti@empresa.com.br."
         ),
-        default="ti@ipel.ind.br",
+        default="ti@empresa.com.br",
         validador=_validar_destinatarios_email,
     ),
     "RELATORIO_FALHAS_HORARIOS": ChaveConhecida(

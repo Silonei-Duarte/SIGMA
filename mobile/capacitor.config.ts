@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'www',
   loggingBehavior: 'none',
   server: {
-    url: 'https://sigma.indaialpapel.com.br',
+    url: 'https://app.suaempresa.com.br',
     cleartext: false,
   },
   plugins: {

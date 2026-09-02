@@ -16,7 +16,7 @@ import java.util.Date;
 import java.util.Locale;
 
 public class MainActivity extends BridgeActivity {
-    private static final String SIGMA_HOST = "sigma.indaialpapel.com.br";
+    private static final String SIGMA_HOST = "app.suaempresa.com.br";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

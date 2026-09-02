@@ -82,4 +82,4 @@ TLS nesta versão) para rodar o SIGMA rápido em qualquer máquina. Ver [`docker
 
 ## Documentação
 
-Documentação técnica completa em [`docs/sigma/README.md`](docs/sigma/README.md) (índice dos documentos 01 a 13).
+Documentação técnica em [`docs/sigma/README.md`](docs/sigma/README.md).

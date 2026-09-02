@@ -33,7 +33,7 @@ def test_configuracoes_abre_autenticada_e_lista_chaves_agrupadas(
     # Chave conhecida sem linha no banco mostra o padrão do código na
     # listagem — a etiqueta "Padrão" é só da tela de edição. O texto do
     # e-mail aparece 2x na linha (descrição e valor): pego o primeiro.
-    expect(pagina_autenticada.get_by_text("ti@ipel.ind.br").first).to_be_visible()
+    expect(pagina_autenticada.get_by_text("ti@empresa.com.br").first).to_be_visible()
     # Sem criar/remover: a única ação por linha é editar.
     expect(pagina_autenticada.get_by_title("Editar").first).to_be_visible()
     assert pagina_autenticada.get_by_title("Remover").count() == 0

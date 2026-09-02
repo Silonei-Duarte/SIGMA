@@ -13,7 +13,7 @@ Regras do desenho:
   início de cada apuração. O cache in-process do service é invalidado por
   signal a cada gravação — alterar na tela vale sem reiniciar o processo,
   sem reconsulta a tabela a cada ciclo. Os padrões declarados em código
-  (horários 07:00,16:00; destinatários ti@ipel.ind.br; limiar 5) fazem o
+  (horários 07:00,16:00; destinatários ti@empresa.com.br; limiar 5) fazem o
   relatório nascer ativo; sem horário configurado (linha gravada vazia
   por fora do validador) o relatório fica desativado: o worker loga um
   aviso por ciclo e não envia nada.

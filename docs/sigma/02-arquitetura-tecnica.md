@@ -95,9 +95,9 @@ Os equipamentos precisam de acesso HTTPS ao SIGMA para abrir a aplicação e car
 
 | Endereço | Finalidade |
 |---|---|
-| `sigma.indaialpapel.com.br` | Aplicação SIGMA e seus arquivos estáticos locais, incluindo o CSS principal. |
+| `app.suaempresa.com.br` | Aplicação SIGMA e seus arquivos estáticos locais, incluindo o CSS principal. |
 
-Quando os equipamentos tiverem bloqueio de acesso externo, não é necessária nenhuma liberação para bibliotecas visuais. O acesso a `sigma.indaialpapel.com.br` é suficiente para a interface completa.
+Quando os equipamentos tiverem bloqueio de acesso externo, não é necessária nenhuma liberação para bibliotecas visuais. O acesso a `app.suaempresa.com.br` é suficiente para a interface completa.
 
 ### 3.5 Arquitetura lógica
 
