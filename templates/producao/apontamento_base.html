@@ -1,0 +1,498 @@
+{% extends 'base.html' %}
+{% block title %}{{ APPLICATION_NAME }} | Apontamentos{% endblock %}
+{% block content %}
+
+<div class="w-full px-4 mt-4 pb-4 text-sm text-texto-primario">
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+    <!-- ================= ESQUERDA (Seleção e Sequenciamento) ================= -->
+    <div id="sidebarContainer" class="col-span-1 space-y-4 transition-all duration-300 {% if codbar %}hidden md:hidden{% endif %}">
+
+        <div class="rounded-2xl border border-borda-sutil bg-superficie-elevada p-4 shadow-sm relative">
+            <button id="btnCollapseSidebar" class="absolute top-2 right-2 bg-superficie-afundada hover:bg-interacao-hover p-1 rounded text-xs font-bold flex items-center gap-1" title="Recolher menu">
+                <i data-lucide="panel-left-close" class="h-4 w-4" aria-hidden="true"></i>
+                <span>Recolher</span>
+            </button>
+
+            <h3 class="mb-3 text-base font-bold text-texto-primario">Sequenciamento e Seleção</h3>
+
+            <form method="get" id="formFiltros" class="space-y-3">
+                <div>
+                    <label class="font-semibold">Empresa</label>
+                    <select name="empresa"
+                        class="w-full rounded-xl border p-2 shadow-sm"
+                        {% if empresas|length == 1 %}disabled{% endif %}
+                        onchange="this.form.centro.value=''; this.form.recurso.value=''; this.form.submit()">
+                        {% for e in empresas %}
+                        <option value="{{ e.id }}" {% if empresa_id == e.id|stringformat:'s' %}selected{% endif %}>
+                            {{ e.nome }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-semibold">Centro de Recurso</label>
+                    <select name="centro"
+                        class="w-full rounded-xl border p-2 shadow-sm"
+                        onchange="this.form.submit()">
+                        <option value="">Selecione...</option>
+                        {% for c in centros %}
+                        <option value="{{ c.id }}" {% if centro_id == c.id|stringformat:'s' %}selected{% endif %}>
+                            {{ c.descricao }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-semibold">Recurso</label>
+                    <select name="recurso"
+                        class="w-full rounded-xl border p-2 shadow-sm"
+                        onchange="this.form.submit()">
+                        <option value="">Selecione...</option>
+                        {% for r in recursos %}
+                        <option value="{{ r.id }}" {% if recurso_id == r.id|stringformat:'s' %}selected{% endif %}>
+                            {{ r.codigo }} - {{ r.descricao }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+            </form>
+        </div>
+
+        {% if sequencias and fluxo_base_op_unica %}
+        <div class="max-h-[540px] overflow-x-auto overflow-y-auto rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+
+            <div class="border-b border-borda-sutil bg-superficie-afundada px-3 py-2 text-center text-sm font-bold text-texto-secundario">
+                Sequências
+            </div>
+
+            <table class="w-full text-base">
+                <thead class="sticky top-0 z-10 bg-superficie-afundada text-texto-primario">
+                    <tr>
+                        <th class="border border-borda-sutil px-1 py-2.5">#</th>
+                        <th class="border border-borda-sutil px-1 py-2.5">OP</th>
+                        <th class="border border-borda-sutil px-1 py-2.5">Origem</th>
+                        <th class="border border-borda-sutil px-1 py-2.5">Produto</th>
+                        <th class="border border-borda-sutil px-1 py-2.5">Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for s in sequencias %}
+                <tr class="cursor-pointer border border-borda-sutil text-center transition hover:bg-interacao-hover
+                    {% if op_ativa_recurso == s.codigo_barra %}text-erro-base font-bold{% endif %}
+                    {% if codbar == s.codigo_barra %}bg-interacao-selecionado font-bold{% endif %}"
+                    onclick="window.location.href='{% url 'apontamento_base' %}?empresa={{ empresa_id }}&centro={{ centro_id }}&recurso={{ recurso_id }}&codbar={{ s.codigo_barra }}'">
+                    <td class="border border-borda-sutil px-1 py-2.5">{{ s.ordenacao }}</td>
+                    <td class="border border-borda-sutil px-1 py-2.5">{{ s.op }}</td>
+                    <td class="border border-borda-sutil px-1 py-2.5">{{ s.origem }}</td>
+                    <td class="border border-borda-sutil px-1 py-2.5">{{ s.codproduto }}</td>
+                    <td class="border border-borda-sutil px-1 py-2.5">
+                        {% if fluxo_base_op_unica and op_ativa_recurso == s.codigo_barra and operador_validado and not parada_bloqueante and pode_apontar %}
+                        <form method="post" action="{% url 'desacoplar_op_ativa' recurso_id %}" onclick="event.stopPropagation()" onsubmit="return confirm('Desacoplar esta OP e encerrar o período produtivo?')">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button type="submit" class="botao-secundario text-sm">Desacoplar</button>
+                        </form>
+                        {% else %}-{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- ================= DIREITA (Conteúdo de Apontamento) ================= -->
+    <div id="contentContainer" class="relative space-y-4 transition-all duration-300 {% if codbar %}col-span-1 md:col-span-4{% else %}col-span-1 md:col-span-3{% endif %}">
+
+        <div class="flex items-center gap-2 rounded-2xl border border-borda-sutil bg-superficie-elevada p-2 shadow-sm">
+            
+            <button id="btnExpandSidebar" class="bg-superficie-afundada text-texto-primario px-3 py-1 rounded font-bold text-sm h-[34px] flex items-center gap-2 {% if not codbar %}hidden{% endif %}" title="Mostrar menu">
+                <i data-lucide="panel-left-open" class="h-4 w-4" aria-hidden="true"></i>
+                <span>Sequenciamento</span>
+            </button>
+
+            <form method="get" action="{% url 'apontamento_base' %}" class="flex w-full flex-col gap-2 md:flex-row">
+                {% if empresa_id %}<input type="hidden" name="empresa" value="{{ empresa_id }}">{% endif %}
+                {% if centro_id %}<input type="hidden" name="centro" value="{{ centro_id }}">{% endif %}
+                {% if recurso_id %}<input type="hidden" name="recurso" value="{{ recurso_id }}">{% endif %}
+                <div class="flex gap-2 w-full">
+                    <input type="text" name="codbar"
+                           class="h-[38px] w-full rounded-xl border px-3 text-base shadow-sm"
+                           placeholder="Digite ou escaneie o código de barras da OP"
+                           value="{{ codbar }}" autofocus>
+                    <button type="submit" class="botao-primario h-10 text-sm">
+                        OK
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="areaApontamentoConteudo" class="relative min-h-[65vh] space-y-4 overflow-hidden">
+            {% if not parada_bloqueante %}
+                {% block apontamento_content %}
+                    {% if not codbar %}
+                        <div class="flex min-h-[85vh] flex-col justify-center rounded-2xl border border-borda-sutil bg-superficie-elevada p-8 text-center shadow-sm">
+                            {% if not empresas.exists %}
+                                <h2 class="text-xl font-bold mb-4 text-erro-base">Você não possui acesso a nenhuma empresa ou não há empresas ativas.</h2>
+                                <p class="text-texto-secundario">Por favor, entre em contato com o administrador.</p>
+                            {% else %}
+                                <h2 class="text-xl font-bold mb-4 text-texto-secundario">Aguardando leitura do código de barras da OP...</h2>
+                                <p class="text-texto-legenda">Selecione os filtros ao lado ou escaneie o código de barras para carregar a produção.</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endblock %}
+
+                {% block extra_content %}
+                {% endblock %}
+            {% endif %}
+
+            {% if exibir_justificativas and recurso_id and codbar or exibir_justificativas and recurso_id and recurso_selecionado.view_id == 3 %}
+            <div id="modalParadaAberta"
+                 class="{% if not parada_bloqueante %}hidden{% endif %} absolute inset-0 z-40 flex items-start justify-center overflow-hidden bg-superficie-inversa/75 p-4 pt-12">
+                <div class="modal-justificar-paradas flex max-h-[80vh] min-h-0 w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-erro-borda bg-superficie-elevada p-4 text-texto-primario shadow-2xl">
+                    <div class="mb-0.5 text-center text-2xl font-bold text-erro-base">Paradas que bloqueiam o apontamento{% if recurso_selecionado %} · {{ recurso_selecionado.codigo }}{% endif %}</div>
+                    <p class="mb-3 text-center text-base text-texto-secundario">Justifique as pendências. Se houver uma única justificativa, não informe tempo. Ao encerrar uma parada, todo o tempo restante será direcionado à última justificativa.</p>
+                    {% if paradas_pendentes %}
+                    {% if paradas_pendentes %}
+                    {% if erro_motivos_parada %}
+                    <p class="rounded-lg border border-atencao-borda bg-atencao-sutil p-4 text-center text-atencao-base">Não foi possível consultar os motivos ativos no ERP. Tente novamente mais tarde.</p>
+                    {% elif motivos_parada %}
+                    {% if pode_apontar %}
+                    <form id="formJustificarParadas" method="post" action="{% url 'justificar_paradas' recurso_id %}" class="flex min-h-0 flex-1 flex-col gap-4" onsubmit="return validarJustificativasApontamento()">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <div class="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+                    {% for parada in paradas_pendentes %}
+                    <div class="cartao-justificativa-apontamento space-y-3 rounded-xl border {% if parada.tem_justificativa %}border-atencao-borda{% else %}border-borda-sutil{% endif %} bg-superficie-afundada p-4" data-parada-id="{{ parada.id }}" data-parada-aberta="{% if parada.fim %}false{% else %}true{% endif %}" data-inicio="{{ parada.inicio|date:'c' }}" data-fim="{% if parada.fim %}{{ parada.fim|date:'c' }}{% endif %}" data-proximo-indice="{% if parada.tem_justificativa %}1{% else %}2{% endif %}">
+                        <div class="flex flex-col gap-1 border-b border-borda-sutil pb-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="font-bold text-texto-primario">Parada de {{ parada.inicio|date:"d/m/Y H:i:s" }}</div>
+                            <div class="flex items-center gap-2">
+                                {% if parada.fim %}<span class="font-bold text-atencao-base">Finalizada pelo processo em {{ parada.fim|date:"d/m/Y H:i:s" }}</span>{% else %}<span class="font-bold text-erro-base">Parada ainda em aberto</span>{% endif %}
+                                <span class="tempo-total-parada-apontamento font-bold text-texto-secundario" data-parada-aberta="{% if parada.fim %}false{% else %}true{% endif %}">{{ parada.tempo_total_legivel }}</span>
+                            </div>
+                        </div>
+                        <div class="linhas-justificativa-apontamento space-y-2">
+                            {% for justificativa in parada.justificativas_ordenadas %}
+                            <div class="linha-justificativa-apontamento grid grid-cols-[minmax(0,1fr)_115px_34px_34px] gap-2" data-justificativa-id="{{ justificativa.id }}">
+                                <select name="motivo_{{ parada.id }}_{{ justificativa.id }}" class="motivo-justificativa rounded border border-borda-padrao bg-superficie-elevada px-2 py-2 text-texto-primario">{% for grupo in motivos_parada %}<optgroup label="{{ grupo.codigo }} - {{ grupo.descricao }}">{% for motivo in grupo.motivos %}<option value="{{ grupo.codigo }}|{{ motivo.codigo }}" {% if motivo.codigo == justificativa.motivo %}selected{% endif %}>{{ motivo.codigo }} - {{ motivo.descricao }}</option>{% endfor %}</optgroup>{% endfor %}</select>
+                                <input name="tempo_{{ parada.id }}_{{ justificativa.id }}" value="{{ justificativa.tempo_legivel }}" placeholder="{% if not parada.fim and justificativa.tempo is None %}Em andamento{% else %}HH:MM:SS{% endif %}" class="tempo-justificativa-apontamento rounded border border-borda-padrao bg-superficie-elevada px-2 py-2 text-sm text-texto-primario">
+                                <button type="button" onclick="atribuirTempoRestanteApontamento({{ parada.id }})" class="botao-restante-apontamento botao-atencao-icone !hidden !h-10 !w-8 !min-w-0 !rounded" title="Atribuir todo o tempo restante"><i data-lucide="clock" class="" aria-hidden="true"></i></button>
+                                <button type="button" onclick="removerUltimaJustificativaApontamento({{ parada.id }})" class="botao-remover-apontamento botao-perigo-icone !hidden" title="Excluir última justificativa" aria-label="Excluir última justificativa"><i data-lucide="trash-2" class="" aria-hidden="true"></i></button>
+                            </div>
+                            {% empty %}
+                            <div class="linha-justificativa-apontamento grid grid-cols-[minmax(0,1fr)_115px_34px_34px] gap-2">
+                                <select name="novo_motivo_{{ parada.id }}_1" class="motivo-justificativa rounded border border-borda-padrao bg-superficie-elevada px-2 py-2 text-texto-primario"><option value="">Selecione o motivo</option>{% for grupo in motivos_parada %}<optgroup label="{{ grupo.codigo }} - {{ grupo.descricao }}">{% for motivo in grupo.motivos %}<option value="{{ grupo.codigo }}|{{ motivo.codigo }}">{{ motivo.codigo }} - {{ motivo.descricao }}</option>{% endfor %}</optgroup>{% endfor %}</select>
+                                <input name="novo_tempo_{{ parada.id }}_1" placeholder="HH:MM:SS" class="tempo-justificativa-apontamento rounded border border-borda-padrao bg-superficie-elevada px-2 py-2 text-texto-primario">
+                                <button type="button" onclick="atribuirTempoRestanteApontamento({{ parada.id }})" class="botao-restante-apontamento botao-atencao-icone !hidden !h-10 !w-8 !min-w-0 !rounded" title="Atribuir todo o tempo restante"><i data-lucide="clock" class="" aria-hidden="true"></i></button>
+<button type="button" onclick="removerUltimaJustificativaApontamento({{ parada.id }})" class="botao-remover-apontamento botao-perigo-icone !hidden" title="Excluir última justificativa" aria-label="Excluir última justificativa"><i data-lucide="trash-2" class="" aria-hidden="true"></i></button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <template id="template-justificativa-apontamento-{{ parada.id }}"><div class="linha-justificativa-apontamento grid grid-cols-[minmax(0,1fr)_115px_34px_34px] gap-2"><select class="motivo-justificativa rounded border border-borda-padrao bg-superficie-elevada px-2 py-2 text-texto-primario" name="novo_motivo_{{ parada.id }}___INDICE__"><option value="">Selecione o motivo</option>{% for grupo in motivos_parada %}<optgroup label="{{ grupo.codigo }} - {{ grupo.descricao }}">{% for motivo in grupo.motivos %}<option value="{{ grupo.codigo }}|{{ motivo.codigo }}">{{ motivo.codigo }} - {{ motivo.descricao }}</option>{% endfor %}</optgroup>{% endfor %}</select><input name="novo_tempo_{{ parada.id }}___INDICE__" placeholder="HH:MM:SS" class="tempo-justificativa-apontamento rounded border border-borda-padrao bg-superficie-elevada px-2 py-2 text-sm text-texto-primario"><button type="button" onclick="atribuirTempoRestanteApontamento({{ parada.id }})" class="botao-restante-apontamento botao-atencao-icone !hidden !h-10 !w-8 !min-w-0 !rounded" title="Atribuir todo o tempo restante"><i data-lucide="clock" class="" aria-hidden="true"></i></button><button type="button" onclick="removerUltimaJustificativaApontamento({{ parada.id }})" class="botao-remover-apontamento !hidden inline-flex h-10 w-8 items-center justify-center rounded border border-erro-borda bg-erro-base text-texto-sobre-marca hover:bg-erro-destaque"><i data-lucide="trash-2" class="" aria-hidden="true"></i></button></div></template>
+                        <button type="button" onclick="adicionarJustificativaApontamento({{ parada.id }})" class="botao-secundario text-sm">+ Nova justificativa</button>
+                    </div>
+                    {% endfor %}
+                    </div>
+                        <div class="shrink-0 flex flex-col gap-3 border-t border-borda-sutil pt-3 sm:flex-row sm:items-end sm:justify-between">
+                            <div class="w-full max-w-sm">
+                                <label for="numcadParadas" class="mb-1 block text-sm font-bold text-texto-primario">Operador para todas as justificativas</label>
+                                <input id="numcadParadas" name="numcad" inputmode="numeric" autocomplete="off" required class="w-full rounded-lg border border-borda-padrao bg-superficie-elevada px-3 py-2 text-lg text-texto-primario" placeholder="Informe o código do operador">
+                            </div>
+                            <div class="flex flex-wrap gap-3">
+                                <button type="submit" class="botao-secundario text-base">Apenas justificar todas</button>
+                                {% if not tem_parada_sem_justificativa and parada_aberta %}
+                                <button type="submit" formaction="{% url 'encerrar_paradas' recurso_id %}" class="botao-primario text-base">Encerrar todas as paradas abertas</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+                    {% for parada in paradas_pendentes %}
+                    <div class="space-y-3 rounded-xl border border-atencao-borda bg-superficie-afundada p-4">
+                        <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div class="font-bold text-texto-primario">Parada de {{ parada.inicio|date:"d/m/Y H:i" }}</div><span class="font-bold text-atencao-base">Aguardando justificativa</span></div>
+                        <div class="space-y-1 text-sm text-texto-secundario">
+                            {% if not parada.tem_justificativa %}
+                            <div>Sem justificativa informada</div>
+                            {% else %}
+                            {% for justificativa in parada.justificativas_ordenadas %}
+                            <div>Motivo ERP: <strong>{{ justificativa.motivo }}</strong> · Tempo: <strong>{{ justificativa.tempo_exibicao }}</strong>{% if justificativa.tempo_em_andamento %} <span class="text-atencao-base">(em andamento)</span>{% endif %}</div>
+                            {% endfor %}
+                            {% endif %}
+                            {% if parada.operador %}<div>Operador: <strong>{{ parada.operador }}</strong></div>{% endif %}
+                        </div>
+                        <div><a href="{% url 'log_tempo_producao' %}?parada={{ parada.id }}" class="botao-secundario text-xs">Ver no log</a></div>
+                    </div>
+                    {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <p class="rounded-lg border border-atencao-borda bg-atencao-sutil p-4 text-center text-atencao-base">Não há motivos ativos vinculados a este recurso.</p>
+                    {% endif %}
+                    {% else %}
+                    <div class="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+                    {% for parada in paradas_pendentes %}
+                    <div class="space-y-3 rounded-xl border border-atencao-borda bg-superficie-afundada p-4">
+                        <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div class="font-bold text-texto-primario">Parada de {{ parada.inicio|date:"d/m/Y H:i" }}</div><span class="font-bold text-atencao-base">Justificada e ainda em aberto</span></div>
+                        <div class="space-y-1 text-sm text-texto-secundario">
+                            {% for justificativa in parada.justificativas_ordenadas %}
+                            <div>Motivo ERP: <strong>{{ justificativa.motivo }}</strong> · Tempo: <strong>{{ justificativa.tempo_exibicao }}</strong>{% if justificativa.tempo_em_andamento %} <span class="text-atencao-base">(em andamento)</span>{% endif %}</div>
+                            {% endfor %}
+                            {% if parada.operador %}<div>Operador: <strong>{{ parada.operador }}</strong></div>{% endif %}
+                        </div>
+                        <div><a href="{% url 'log_tempo_producao' %}?parada={{ parada.id }}" class="inline-flex h-9 items-center whitespace-nowrap rounded-full border border-informacao-borda bg-informacao-sutil px-3 text-xs font-bold text-informacao-base transition hover:opacity-90">Ver no log</a></div>
+                    </div>
+                    {% endfor %}
+                    </div>
+                    {% if pode_apontar %}
+                    <form method="post" action="{% url 'encerrar_paradas' recurso_id %}" class="mt-4 flex justify-end">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="botao-primario text-base">Encerrar todas as paradas abertas</button></form>
+                    {% endif %}
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+</div>
+
+<script>
+window.isPointing = false;
+
+function cartaoParadaApontamento(paradaId) {
+    return document.querySelector(`.cartao-justificativa-apontamento[data-parada-id="${paradaId}"]`);
+}
+
+function atualizarLixeiraApontamento(cartao) {
+    const linhas = cartao.querySelectorAll('.linha-justificativa-apontamento');
+    cartao.querySelectorAll('.botao-remover-apontamento').forEach((botao) => botao.classList.add('!hidden'));
+    cartao.querySelectorAll('.botao-restante-apontamento').forEach((botao) => botao.classList.add('!hidden'));
+    if (linhas.length > 1) {
+        linhas[linhas.length - 1]?.querySelector('.botao-remover-apontamento')?.classList.remove('!hidden');
+    }
+    if (cartao.dataset.paradaAberta === 'false') {
+        linhas[linhas.length - 1]?.querySelector('.botao-restante-apontamento')?.classList.remove('!hidden');
+    }
+}
+
+function tempoZeradoApontamento(valor) {
+    const digitos = valor.replace(/\D/g, '');
+    return digitos && Number(digitos) === 0;
+}
+
+function segundosTempoApontamento(valor) {
+    const partes = valor.split(':').map(Number);
+    if (partes.length !== 3 || partes.some(Number.isNaN)) return 0;
+    return partes[0] * 3600 + partes[1] * 60 + partes[2];
+}
+
+function textoTempoApontamento(segundos) {
+    segundos = Math.max(0, Math.floor(segundos));
+    const horas = Math.floor(segundos / 3600);
+    const minutos = Math.floor((segundos % 3600) / 60);
+    const resto = segundos % 60;
+    return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(resto).padStart(2, '0')}`;
+}
+
+function atribuirTempoRestanteApontamento(paradaId) {
+    const cartao = cartaoParadaApontamento(paradaId);
+    const linhas = Array.from(cartao.querySelectorAll('.linha-justificativa-apontamento'));
+    const ultima = linhas[linhas.length - 1];
+    const inicio = new Date(cartao.dataset.inicio).getTime();
+    const limite = cartao.dataset.fim ? new Date(cartao.dataset.fim).getTime() : Date.now();
+    const usado = linhas.slice(0, -1).reduce((total, linha) => total + segundosTempoApontamento(linha.querySelector('.tempo-justificativa-apontamento').value), 0);
+    ultima.querySelector('.tempo-justificativa-apontamento').value = textoTempoApontamento((limite - inicio) / 1000 - usado);
+}
+
+function adicionarJustificativaApontamento(paradaId) {
+    const cartao = cartaoParadaApontamento(paradaId);
+    const linhas = cartao.querySelectorAll('.linha-justificativa-apontamento');
+    const ultima = linhas[linhas.length - 1];
+    const motivo = ultima?.querySelector('.motivo-justificativa');
+    const tempo = ultima?.querySelector('.tempo-justificativa-apontamento');
+    if (!motivo?.value || !tempo?.value.trim() || tempoZeradoApontamento(tempo.value)) {
+        alert('Selecione o motivo e preencha um tempo maior que zero na justificativa anterior.');
+        return;
+    }
+    const indice = cartao.dataset.proximoIndice;
+    const template = document.getElementById(`template-justificativa-apontamento-${paradaId}`);
+    cartao.querySelector('.linhas-justificativa-apontamento').insertAdjacentHTML('beforeend', template.innerHTML.replaceAll('__INDICE__', indice));
+    cartao.dataset.proximoIndice = Number(indice) + 1;
+    atualizarLixeiraApontamento(cartao);
+}
+
+function removerUltimaJustificativaApontamento(paradaId) {
+    const cartao = cartaoParadaApontamento(paradaId);
+    const linhas = cartao.querySelectorAll('.linha-justificativa-apontamento');
+    if (linhas.length <= 1) return;
+    const ultima = linhas[linhas.length - 1];
+    if (!ultima) return;
+    const id = ultima.dataset.justificativaId;
+    if (id) {
+        const marcador = document.createElement('input');
+        marcador.type = 'hidden';
+        marcador.name = `remover_justificativa_${paradaId}`;
+        marcador.value = id;
+        document.getElementById('formJustificarParadas').appendChild(marcador);
+    }
+    ultima.remove();
+    atualizarLixeiraApontamento(cartao);
+}
+
+function validarJustificativasApontamento() {
+    for (const cartao of document.querySelectorAll('.cartao-justificativa-apontamento')) {
+        const aberta = cartao.dataset.paradaAberta === 'true';
+        const linhas = Array.from(cartao.querySelectorAll('.linha-justificativa-apontamento'));
+        if (!linhas.length) {
+            alert('Informe ao menos uma justificativa para cada parada.');
+            return false;
+        }
+        for (let indice = 0; indice < linhas.length; indice += 1) {
+            const motivo = linhas[indice].querySelector('.motivo-justificativa');
+            const tempo = linhas[indice].querySelector('.tempo-justificativa-apontamento');
+            const ultima = indice === linhas.length - 1;
+            if (!motivo.value) { alert('Informe o motivo de cada justificativa.'); return false; }
+            if (aberta && ultima && tempo.value.trim()) { alert('Em parada aberta, a última justificativa fica em andamento e não recebe tempo.'); return false; }
+            if ((!aberta || !ultima) && (!tempo.value.trim() || tempoZeradoApontamento(tempo.value))) { alert('Preencha um tempo maior que zero nas justificativas anteriores.'); return false; }
+        }
+    }
+    return true;
+}
+
+document.addEventListener('focusout', (evento) => {
+    if (!evento.target.classList.contains('tempo-justificativa-apontamento')) return;
+    const digitos = evento.target.value.replace(/\D/g, '');
+    if (!digitos) return;
+    const valor = digitos.slice(-6).padStart(6, '0');
+    evento.target.value = `${valor.slice(0, 2)}:${valor.slice(2, 4)}:${valor.slice(4, 6)}`;
+});
+
+function atualizarTempoTotalParadasApontamento() {
+    document.querySelectorAll('.tempo-total-parada-apontamento[data-parada-aberta="true"]').forEach((elemento) => {
+        const cartao = elemento.closest('.cartao-justificativa-apontamento');
+        if (!cartao?.dataset.inicio) return;
+        const inicio = new Date(cartao.dataset.inicio).getTime();
+        elemento.textContent = textoTempoApontamento((Date.now() - inicio) / 1000);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll('.cartao-justificativa-apontamento').forEach(atualizarLixeiraApontamento);
+    atualizarTempoTotalParadasApontamento();
+    setInterval(atualizarTempoTotalParadasApontamento, 1000);
+    const sidebar = document.getElementById('sidebarContainer');
+    const content = document.getElementById('contentContainer');
+    const btnCollapse = document.getElementById('btnCollapseSidebar');
+    const btnExpand = document.getElementById('btnExpandSidebar');
+    const chaveSidebarRecolhida = "{{ recurso_id }}" ? `sigma_sidebar_recolhida_{{ recurso_id }}` : "";
+
+    if (btnCollapse && btnExpand && sidebar && content) {
+        const recolherSidebar = () => {
+            sidebar.classList.add('hidden', 'md:hidden');
+            content.classList.remove('md:col-span-3');
+            content.classList.add('md:col-span-4');
+            btnExpand.classList.remove('hidden');
+        };
+        const expandirSidebar = () => {
+            sidebar.classList.remove('hidden', 'md:hidden');
+            content.classList.remove('md:col-span-4');
+            content.classList.add('md:col-span-3');
+            btnExpand.classList.add('hidden');
+        };
+
+        if (chaveSidebarRecolhida && sessionStorage.getItem(chaveSidebarRecolhida) === "1") {
+            recolherSidebar();
+        }
+
+        btnCollapse.addEventListener('click', () => {
+            recolherSidebar();
+            if (chaveSidebarRecolhida) sessionStorage.setItem(chaveSidebarRecolhida, "1");
+        });
+
+        btnExpand.addEventListener('click', () => {
+            expandirSidebar();
+            if (chaveSidebarRecolhida) sessionStorage.removeItem(chaveSidebarRecolhida);
+        });
+    }
+
+    // Escuta mudanças nos campos de input para evitar recarregamento enquanto digita
+    window.isPointing = window.isPointing || false;
+    window.isAwaitingPointingRedirect = window.isAwaitingPointingRedirect || false;
+
+    document.addEventListener('input', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+            window.isPointing = true;
+        }
+    });
+
+    const recursoId = "{{ recurso_id }}";
+    const modalParadaAberta = document.getElementById("modalParadaAberta");
+    const atualizarModalParada = (aberta) => {
+        if (!modalParadaAberta) return;
+        modalParadaAberta.classList.toggle("hidden", !aberta);
+    };
+
+    if (recursoId) {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const codbarSocket = "{{ codbar|urlencode }}";
+        const recursoSocket = new WebSocket(
+            `${protocol}//${window.location.host}/ws/recurso/${recursoId}/?codbar=${codbarSocket}`
+        );
+        window.recursoSocket = recursoSocket;
+        recursoSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === "refresh_page") {
+                if (!window.isPointing && !window.isAwaitingPointingRedirect) {
+                    window.location.reload();
+                }
+            } else if (data.type === "parada_update") {
+                atualizarModalParada(Boolean(data.bloqueia));
+                if (!window.isPointing && !window.isAwaitingPointingRedirect) {
+                    window.location.reload();
+                }
+            } else if (data.type === "balanca_update") {
+                document.dispatchEvent(new CustomEvent("sigma:balanca_update", {detail: data}));
+            }
+        };
+    }
+
+    // Backup: Atualiza a cada 5 minutos se não estiver digitando
+    setInterval(() => {
+        if (!window.isPointing && !window.isAwaitingPointingRedirect) {
+            window.location.reload();
+        }
+    }, 300000);
+
+    document.querySelectorAll("tr[data-url]").forEach(tr => {
+        tr.addEventListener("click", () => {
+            navegarComTabId(tr.dataset.url);
+        });
+    });
+
+    const inputAutoSubmit = document.querySelector('input[name="codbar"]');
+    if (inputAutoSubmit) {
+        const form = inputAutoSubmit.closest('form');
+        let timeout;
+        inputAutoSubmit.addEventListener("input", () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                if (inputAutoSubmit.value.trim().length >= 10) form.submit();
+            }, 300);
+        });
+    }
+});
+</script>
+
+{% endblock %}

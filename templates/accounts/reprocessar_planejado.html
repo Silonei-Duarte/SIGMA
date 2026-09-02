@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}IPEL | Reprocessar Planejado{% endblock %}
+
+{% block content %}
+<div class="p-4">
+    <div class="bg-superficie-elevada rounded p-6 shadow-md w-full">
+        <h1 class="titulo-pagina mb-4 border-b border-borda-sutil pb-2 text-texto-primario">
+            Reprocessar Tempo Planejado (OEE)
+        </h1>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex flex-col mb-4">
+                    <label for="data_inicio" class="font-semibold mb-1 text-texto-primario">Data Início</label>
+                    <div class="relative border border-borda-sutil rounded p-2 cursor-pointer bg-superficie-elevada"
+                         onclick="this.querySelector('input').showPicker()">
+                        <input type="date" id="data_inicio" name="data_inicio" required
+                               class="w-full bg-transparent  cursor-pointer text-texto-primario">
+                    </div>
+                </div>
+
+                <div class="flex flex-col mb-4">
+                    <label for="data_fim" class="font-semibold mb-1 text-texto-primario">Data Fim</label>
+                    <div class="relative border border-borda-sutil rounded p-2 cursor-pointer bg-superficie-elevada"
+                         onclick="this.querySelector('input').showPicker()">
+                        <input type="date" id="data_fim" name="data_fim" required
+                               class="w-full bg-transparent  cursor-pointer text-texto-primario">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <button type="submit"
+                        class="botao-primario w-full uppercase">
+                    Reprocessar
+                </button>
+            </div>
+        </form>
+        
+        <div class="mt-4 text-xs text-texto-legenda italic">
+            * Este processo pode levar alguns segundos dependendo do período selecionado.
+            <br>* Regra de fechamento (D-2) é ignorada no reprocessamento manual.
+        </div>
+    </div>
+</div>
+{% endblock %}

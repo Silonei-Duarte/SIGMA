@@ -1,0 +1,480 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ APPLICATION_NAME }} | {{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="w-full px-4 mt-4 pb-4 text-sm text-texto-primario">
+    <div class="mb-6 border-b border-borda-sutil pb-4">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <h2 class="titulo-pagina text-texto-primario">Consulta de Lotes</h2>
+            </div>
+
+            <div class="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+                <form method="GET" action="{% url 'qualidade:consulta_lote' %}" class="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+                    <input type="text" name="search" value="{{ search_query }}"
+                           placeholder="Buscar por bobina, lote, produto, depósito..."
+                           class="h-10 w-full rounded-xl border px-3 text-sm shadow-sm md:w-80">
+                    <select name="status" class="h-10 rounded-xl border bg-superficie-elevada px-3 text-sm shadow-sm">
+                        <option value="">Todos os status</option>
+                        {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if status == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="botao-primario h-10 shrink-0 whitespace-nowrap px-4 text-sm">
+                        <i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i> Filtrar
+                    </button>
+                    {% if search_query or status %}
+                    <a href="{% url 'qualidade:consulta_lote' %}" class="botao-secundario h-10 w-10 p-0" aria-label="Limpar filtros"><i data-lucide="x" class="h-5 w-5" aria-hidden="true"></i>
+                    </a>
+                    {% endif %}
+                </form>
+                {% if pode_enviar %}
+                <form method="POST" action="{% url 'qualidade:consulta_lote' %}" class="m-0">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="enviar_todos">
+                    <button type="submit"
+                            class="botao-primario h-10 whitespace-nowrap px-4 text-sm"
+                            onclick="return confirm('Deseja enviar todos os lotes não integrados?')">
+                        <i data-lucide="send" class=" mr-2" aria-hidden="true"></i> Enviar Todos
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-center text-xs [&>thead>tr>th]:border-borda-sutil [&>tbody>tr>td]:border-borda-sutil">
+                <thead class="bg-superficie-afundada text-texto-primario">
+                    <tr>
+                        <th class="border border-borda-sutil p-2">Bobina</th>
+                        <th class="border border-borda-sutil p-2">Lote</th>
+                        <th class="border border-borda-sutil p-2">Origem</th>
+                        <th class="border border-borda-sutil p-2">OP</th>
+                        <th class="border border-borda-sutil p-2">Cod. Integrador</th>
+                        <th class="border border-borda-sutil p-2">Dep. Origem</th>
+                        <th class="border border-borda-sutil p-2">Dep. Destino</th>
+                        <th class="border border-borda-sutil p-2">Produto</th>
+                        <th class="border border-borda-sutil p-2">Der.</th>
+                        <th class="border border-borda-sutil p-2">Qtd. Total</th>
+                        <th class="border border-borda-sutil p-2">Qtd. Liberada</th>
+                        <th class="border border-borda-sutil p-2">Qtd. Refugada</th>
+                        <th class="border border-borda-sutil p-2">Qtd. Reclassificada</th>
+                        <th class="border border-borda-sutil p-2">Qtd. Prensa</th>
+                        <th class="border border-borda-sutil p-2">Produto Recl.</th>
+                        <th class="border border-borda-sutil p-2">Der. Recl.</th>
+                        <th class="border border-borda-sutil p-2">Motivo</th>
+                        <th class="border border-borda-sutil p-2">Reunião</th>
+                        <th class="border border-borda-sutil p-2">Ações</th>
+                        <th class="border border-borda-sutil p-2">Usuário</th>
+                        <th class="max-w-48 truncate whitespace-nowrap border border-borda-sutil p-2">Log</th>
+                        <th class="border border-borda-sutil p-2">Data/Hora Log</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for grupo in grupos_lotes %}
+                    <tr class="cursor-pointer border-t-2 border-borda-padrao bg-superficie-elevada hover:bg-interacao-hover" onclick="alternarGrupoLote({{ forloop.counter }})">
+                        <td class="border border-borda-sutil p-2">
+                            <span class="inline-flex items-center gap-2 whitespace-nowrap">
+                                <i id="seta-consulta-{{ forloop.counter }}" data-lucide="chevron-right" class="mr-1 inline-block h-4 w-4 transition-transform" aria-hidden="true"></i>{{ grupo.numbob|default:"-" }}
+                            </span>
+                        </td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.codlot }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.codori|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.numorp|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.codigo_integrador }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.coddep|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.deptrf|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.codpro }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.codder|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.qtdtot|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if grupo.total_libe > 0 %} bg-sucesso-sutil text-sucesso-base font-bold{% endif %} p-2">{{ grupo.total_libe|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if grupo.total_refu > 0 %} bg-erro-sutil text-erro-base font-bold{% endif %} p-2">{{ grupo.total_refu|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if grupo.total_recl > 0 %} bg-atencao-sutil text-atencao-base font-bold{% endif %} p-2">{{ grupo.total_recl|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if grupo.total_prensa > 0 %} bg-informacao-sutil text-informacao-base font-bold{% endif %} p-2">{{ grupo.total_prensa|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil p-2">-</td>
+                        <td class="border border-borda-sutil p-2">-</td>
+                        <td class="border border-borda-sutil p-2">
+                            {% for motivo in grupo.motivos %}
+                                <div>{{ motivo }}</div>
+                            {% empty %}
+                                -
+                            {% endfor %}
+                        </td>
+                        <td class="border border-borda-sutil p-2 whitespace-nowrap">
+                            {{ grupo.data_hora_fim_reuniao|date:"d/m/Y H:i"|default:"-" }}
+                            {% if grupo.participantes_reuniao %}
+                            <button type="button"
+                                    class="js-ver-participantes ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-informacao-borda bg-informacao-sutil text-xs font-bold text-informacao-base hover:bg-informacao-base hover:text-texto-sobre-marca"
+                                    data-participantes="{{ grupo.participantes_reuniao }}"
+                                    data-reuniao-inicio="{{ grupo.data_hora_inicio_reuniao|date:'d/m/Y H:i' }}"
+                                    data-reuniao-fim="{{ grupo.data_hora_fim_reuniao|date:'d/m/Y H:i' }}"
+                                    title="Ver participantes">?</button>
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2" onclick="event.stopPropagation()">
+                            <div class="flex items-center justify-start gap-2">
+                                {% if grupo.tem_processando %}
+                                <span class="w-24 shrink-0 text-informacao-base flex items-center justify-center">
+                                    Processando
+                                </span>
+                                {% elif grupo.tem_pendente %}
+                                    {% if not grupo.tem_pendente_enviavel %}
+                                    <span class="w-24 shrink-0 text-texto-legenda flex items-center justify-center italic">
+                                        Bloqueado
+                                    </span>
+                                    {% else %}
+                                    <span class="w-24 shrink-0 text-atencao-base flex items-center justify-center">
+                                        Pendente
+                                    </span>
+                                    {% endif %}
+                                {% elif grupo.tem_integrado %}
+                                <span class="w-24 shrink-0 flex items-center justify-center text-sucesso-base">
+                                    Integrado
+                                </span>
+                                {% else %}
+                                <span class="w-24 shrink-0 text-informacao-base flex items-center justify-center">
+                                    Local
+                                </span>
+                                {% endif %}
+                                <button type="button"
+                                        class="js-ver-observacoes botao-informacao-icone"
+                                        data-titulo="Observações do lote {{ grupo.codlot }}"
+                                        data-observacoes="{{ grupo.observacoes_texto }}"
+                                        title="Ver observações" aria-label="Ver observações">
+                                    <i data-lucide="message-square" class="h-5 w-5" aria-hidden="true"></i>
+                                </button>
+                                <a href="{% url 'qualidade:rastreamento_lote' %}?codemp={{ grupo.codemp }}&codlot={{ grupo.codlot|urlencode }}"
+                                   class="botao-sucesso-icone"
+                                   target="_blank"
+                                   rel="noopener"
+                                   title="Rastrear lote" aria-label="Rastrear lote">
+                                    <i data-lucide="workflow" class="h-5 w-5" aria-hidden="true"></i>
+                                </a>
+                                {% if grupo.tem_integrado %}
+                                <a href="{% url 'qualidade:imprimir_etiquetas_grupo' %}?codemp={{ grupo.codemp }}&codlot={{ grupo.codlot|urlencode }}&codpro={{ grupo.codpro|urlencode }}&codder={{ grupo.codder|urlencode }}"
+                                   class="js-imprimir-etiqueta botao-atencao-icone"
+                                   title="Imprimir etiquetas integradas do lote">
+                                    <i data-lucide="printer" class="" aria-hidden="true"></i>
+                                </a>
+                                {% endif %}
+                                {% if grupo.tem_pendente and pode_enviar and grupo.tem_pendente_enviavel %}
+                                <form method="POST" onsubmit="return confirm('Enviar todos os registros não integrados deste lote?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="enviar_grupo">
+                                    <input type="hidden" name="codemp" value="{{ grupo.codemp }}">
+                                    <input type="hidden" name="codlot" value="{{ grupo.codlot }}">
+                                    <input type="hidden" name="codpro" value="{{ grupo.codpro }}">
+                                    <input type="hidden" name="codder" value="{{ grupo.codder }}">
+                                    <button type="submit"
+                                            class="botao-sucesso-icone"
+                                            title="Enviar lote" aria-label="Enviar lote">
+                                        <i data-lucide="send" class="h-5 w-5" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                {% if pode_excluir and grupo.pode_excluir %}
+                                <form method="POST" onsubmit="return confirm('Excluir todos os registros não integrados deste lote?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="excluir_grupo">
+                                    <input type="hidden" name="codemp" value="{{ grupo.codemp }}">
+                                    <input type="hidden" name="codlot" value="{{ grupo.codlot }}">
+                                    <input type="hidden" name="codpro" value="{{ grupo.codpro }}">
+                                    <input type="hidden" name="codder" value="{{ grupo.codder }}">
+                                    <button type="submit"
+                                            class="botao-perigo-icone" title="Excluir lote" aria-label="Excluir lote">
+                                        <i data-lucide="trash-2" class="h-5 w-5" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.usuario }}</td>
+                        <td class="max-w-48 truncate whitespace-nowrap border border-borda-sutil p-2 text-left" title="{% for log in grupo.logs %}{{ log }}{% if not forloop.last %}&#10;{% endif %}{% endfor %}">
+                            {% for log in grupo.logs %}{{ log }}{% if not forloop.last %} | {% endif %}{% empty %}-{% endfor %}
+                        </td>
+                        <td class="border border-borda-sutil p-2 whitespace-nowrap">{{ grupo.data_hora|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    {% for registro in grupo.registros %}
+                    <tr class="grupo-lote-{{ forloop.parentloop.counter }} hidden bg-superficie-afundada">
+                        <td class="border border-borda-sutil p-2 pl-8">{{ registro.numbob|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ registro.lottrf|default:registro.codlot }}</td>
+                        <td class="border border-borda-sutil p-2">{{ registro.codori|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ registro.numorp|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ registro.codigo_integrador }}</td>
+                        <td class="border border-borda-sutil p-2">{{ registro.coddep|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ registro.deptrf|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ registro.codpro }}</td>
+                        <td class="border border-borda-sutil p-2">{{ registro.codder|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ registro.qtdtot|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if registro.qtdlibe > 0 %} bg-sucesso-sutil text-sucesso-base font-bold{% endif %} p-2">{{ registro.qtdlibe|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if registro.qtdrefu > 0 %} bg-erro-sutil text-erro-base font-bold{% endif %} p-2">{{ registro.qtdrefu|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if registro.qtdrecl > 0 %} bg-atencao-sutil text-atencao-base font-bold{% endif %} p-2">{{ registro.qtdrecl|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if registro.qtdprensa > 0 %} bg-informacao-sutil text-informacao-base font-bold{% endif %} p-2">{{ registro.qtdprensa|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil p-2">{{ registro.codpro_recl|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ registro.codder_recl|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ registro.coddft|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2 whitespace-nowrap">
+                            {{ registro.reuniao.data_hora_fim|date:"d/m/Y H:i"|default:"-" }}
+                            {% if registro.participantes_reuniao %}
+                            <button type="button"
+                                    class="js-ver-participantes ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-informacao-borda bg-informacao-sutil text-xs font-bold text-informacao-base hover:bg-informacao-base hover:text-texto-sobre-marca"
+                                    data-participantes="{{ registro.participantes_reuniao }}"
+                                    data-reuniao-inicio="{{ registro.reuniao.data_hora_inicio|date:'d/m/Y H:i' }}"
+                                    data-reuniao-fim="{{ registro.reuniao.data_hora_fim|date:'d/m/Y H:i' }}"
+                                    title="Ver participantes">?</button>
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2">
+                            <div class="flex items-center justify-start gap-2">
+                            {% if registro.status == 2 %}
+                            <span class="w-24 shrink-0 text-informacao-base flex items-center justify-center">
+                                Processando
+                            </span>
+                            {% elif registro.status == 0 %}
+                                {% if not registro.reuniao or registro.reuniao.data_hora_fim %}
+                                <span class="w-24 shrink-0 text-atencao-base flex items-center justify-center">
+                                    Pendente
+                                </span>
+                                {% else %}
+                                <span class="w-24 shrink-0 text-texto-legenda flex items-center justify-center italic">
+                                    Bloqueado
+                                </span>
+                                {% endif %}
+                            {# LOCAL ocupa o 4: o 3 ficou reservado ao esquema numérico comum das filas de integração. #}
+                            {% elif registro.status == 4 %}
+                            <span class="w-24 shrink-0 text-informacao-base flex items-center justify-center">
+                                Local
+                            </span>
+                            {% else %}
+                            <span class="w-24 shrink-0 flex items-center justify-center text-sucesso-base">
+                                Integrado
+                            </span>
+                            {% endif %}
+                            <button type="button"
+                                    class="js-ver-observacoes botao-informacao-icone"
+                                    data-titulo="Observações do lote {{ registro.lottrf|default:registro.codlot }}"
+                                    data-observacoes="Obs. etiqueta:
+{% if registro.observacao_etiqueta_texto %}- {{ registro.observacao_etiqueta_texto }}{% else %}- Nenhuma{% endif %}
+
+Obs. geral:
+{% if registro.observacao_geral %}- {{ registro.observacao_geral }}{% else %}- Nenhuma{% endif %}"
+                                    title="Ver observações" aria-label="Ver observações">
+                                <i data-lucide="message-square" class="h-5 w-5" aria-hidden="true"></i>
+                            </button>
+                            <a href="{% url 'qualidade:rastreamento_lote' %}?codemp={{ registro.codemp }}&codlot={{ registro.lottrf|default:registro.codlot|urlencode }}"
+                               class="botao-sucesso-icone"
+                               target="_blank"
+                               rel="noopener"
+                               title="Rastrear lote" aria-label="Rastrear lote">
+                                <i data-lucide="workflow" class="h-5 w-5" aria-hidden="true"></i>
+                            </a>
+                            {% if registro.status == 0 %}
+                                {% if pode_enviar and not registro.reuniao or pode_enviar and registro.reuniao.data_hora_fim %}
+                                <form method="POST" onsubmit="return confirm('Enviar este registro?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="enviar_registro">
+                                    <input type="hidden" name="registro_id" value="{{ registro.id }}">
+                                    <button type="submit"
+                                            class="botao-sucesso-icone"
+                                            title="Enviar registro" aria-label="Enviar registro">
+                                        <i data-lucide="send" class="h-5 w-5" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            {% elif registro.status == 1 %}
+                            <a href="{% url 'qualidade:imprimir_etiqueta_lote' registro.id %}"
+                               class="js-imprimir-etiqueta botao-atencao-icone"
+                               title="Imprimir etiqueta">
+                                <i data-lucide="printer" class="" aria-hidden="true"></i>
+                            </a>
+                            {% endif %}
+                            </div>
+                        </td>
+                        <td class="border border-borda-sutil p-2">{{ registro.usuario }}</td>
+                        <td class="max-w-48 truncate whitespace-nowrap border border-borda-sutil p-2 text-left" title="{{ registro.log }}">
+                            {{ registro.log|default:"-" }}
+                        </td>
+                        <td class="border border-borda-sutil p-2 whitespace-nowrap">{{ registro.data_hora|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="21" class="border border-borda-sutil p-6 text-center text-texto-legenda">Nenhum registro encontrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if grupos_lotes.has_other_pages %}
+    <div class="mt-6 mb-8 flex justify-center">
+        <nav class="inline-flex rounded-xl shadow-sm">
+            {% if grupos_lotes.has_previous %}
+                <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="botao-secundario text-sm">Primeira</a>
+                <a href="?page={{ grupos_lotes.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="botao-secundario text-sm">Anterior</a>
+            {% endif %}
+
+            <span class="botao-primario text-sm">
+                Página {{ grupos_lotes.number }} de {{ grupos_lotes.paginator.num_pages }}
+            </span>
+
+            {% if grupos_lotes.has_next %}
+                <a href="?page={{ grupos_lotes.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="botao-secundario text-sm">Próxima</a>
+                <a href="?page={{ grupos_lotes.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status %}&status={{ status }}{% endif %}" class="botao-secundario text-sm">Última</a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<div id="modal-observacoes-lote" class="fixed inset-0 z-50 hidden items-center justify-center bg-superficie-inversa/40">
+    <div class="mx-4 w-full max-w-xl rounded-2xl border border-borda-padrao bg-superficie-elevada p-4 text-texto-primario shadow-xl">
+        <div class="mb-3 flex items-center justify-between">
+            <h3 id="titulo-modal-observacoes" class="text-base font-bold">Observações</h3>
+            <button type="button" id="fechar-modal-observacoes" class="text-xl leading-none" aria-label="Fechar"><i data-lucide="x" aria-hidden="true"></i></button>
+        </div>
+        <div id="conteudo-modal-observacoes" class="max-h-80 whitespace-pre-line overflow-y-auto rounded-xl border border-borda-sutil bg-superficie-afundada p-3 text-sm text-texto-secundario"></div>
+    </div>
+</div>
+
+<div id="modal-participantes-reuniao" class="fixed inset-0 z-50 hidden items-center justify-center bg-superficie-inversa/40">
+    <div class="mx-4 w-full max-w-md rounded-2xl border border-borda-padrao bg-superficie-elevada p-4 text-texto-primario shadow-xl">
+        <div class="mb-3 flex items-center justify-between">
+            <h3 class="text-base font-bold">Participantes da reunião</h3>
+            <button type="button" id="fechar-modal-participantes" class="text-xl leading-none" aria-label="Fechar"><i data-lucide="x" aria-hidden="true"></i></button>
+        </div>
+        <div id="periodo-reuniao" class="mb-3 rounded-xl border border-borda-sutil bg-superficie-afundada px-3 py-2 text-xs text-texto-secundario"></div>
+        <div id="lista-participantes-reuniao" class="space-y-2 text-sm text-texto-secundario"></div>
+    </div>
+</div>
+
+<script>
+    function alternarGrupoLote(indice) {
+        document.querySelectorAll(`.grupo-lote-${indice}`).forEach((linha) => linha.classList.toggle("hidden"));
+        const seta = document.getElementById(`seta-consulta-${indice}`);
+        seta.classList.toggle("rotate-90");
+    }
+
+    (function () {
+        const modalObservacoes = document.getElementById("modal-observacoes-lote");
+        const tituloObservacoes = document.getElementById("titulo-modal-observacoes");
+        const conteudoObservacoes = document.getElementById("conteudo-modal-observacoes");
+        const fecharObservacoes = document.getElementById("fechar-modal-observacoes");
+        const modal = document.getElementById("modal-participantes-reuniao");
+        const lista = document.getElementById("lista-participantes-reuniao");
+        const periodo = document.getElementById("periodo-reuniao");
+        const fechar = document.getElementById("fechar-modal-participantes");
+
+        function fecharModalObservacoes() {
+            modalObservacoes.classList.add("hidden");
+            modalObservacoes.classList.remove("flex");
+        }
+
+        function fecharModal() {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        document.querySelectorAll(".js-ver-observacoes").forEach((botao) => {
+            botao.addEventListener("click", function (event) {
+                event.stopPropagation();
+                tituloObservacoes.innerText = botao.dataset.titulo || "Observações";
+                conteudoObservacoes.innerText = botao.dataset.observacoes || "Nenhuma observação registrada.";
+                modalObservacoes.classList.remove("hidden");
+                modalObservacoes.classList.add("flex");
+            });
+        });
+
+        document.querySelectorAll(".js-imprimir-etiqueta").forEach((link) => {
+            link.addEventListener("click", async function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                try {
+                    const validacaoUrl = new URL(link.href, window.location.href);
+                    validacaoUrl.searchParams.set("validar", "1");
+                    const response = await fetch(validacaoUrl.toString(), {
+                        headers: {
+                            "Accept": "application/json",
+                            "X-Requested-With": "XMLHttpRequest"
+                        }
+                    });
+                    const contentType = response.headers.get("content-type") || "";
+                    if (!contentType.includes("application/json")) {
+                        alert("Não foi possível validar o saldo do lote antes da impressão.");
+                        return;
+                    }
+                    const data = await response.json();
+                    if (!response.ok || !data.ok) {
+                        alert(data.message || "Etiqueta não liberada para impressão.");
+                        return;
+                    }
+                    window.open(link.href, "_blank", "noopener");
+                } catch (error) {
+                    alert("Não foi possível validar o saldo do lote antes da impressão.");
+                }
+            });
+        });
+
+        if (fecharObservacoes) fecharObservacoes.addEventListener("click", fecharModalObservacoes);
+        if (modalObservacoes) {
+            modalObservacoes.addEventListener("click", function (event) {
+                if (event.target === modalObservacoes) {
+                    fecharModalObservacoes();
+                }
+            });
+        }
+
+        document.querySelectorAll(".js-ver-participantes").forEach((botao) => {
+            botao.addEventListener("click", function (event) {
+                event.stopPropagation();
+                const participantes = (botao.dataset.participantes || "")
+                    .split("||")
+                    .map((nome) => nome.trim())
+                    .filter(Boolean);
+                const inicio = botao.dataset.reuniaoInicio || "-";
+                const fim = botao.dataset.reuniaoFim || "-";
+                const rotuloInicio = document.createElement("div");
+                rotuloInicio.textContent = `Início: ${inicio}`;
+                const rotuloFim = document.createElement("div");
+                rotuloFim.textContent = `Fim: ${fim}`;
+                periodo.replaceChildren(rotuloInicio, rotuloFim);
+                // Nomes vêm de cadastro de operador (texto livre): montar nós via
+                // textContent, nunca innerHTML, para não reinterpretar como HTML.
+                lista.replaceChildren(
+                    ...(participantes.length
+                        ? participantes.map((nome) => {
+                              const item = document.createElement("div");
+                              item.className =
+                                  "rounded-xl border border-borda-sutil bg-superficie-afundada px-3 py-2";
+                              item.textContent = nome;
+                              return item;
+                          })
+                        : [])
+                );
+                if (!participantes.length) {
+                    const vazio = document.createElement("div");
+                    vazio.className = "text-texto-legenda";
+                    vazio.textContent = "Nenhum participante informado.";
+                    lista.append(vazio);
+                }
+                modal.classList.remove("hidden");
+                modal.classList.add("flex");
+            });
+        });
+
+        if (fechar) fechar.addEventListener("click", fecharModal);
+        if (modal) {
+            modal.addEventListener("click", function (event) {
+                if (event.target === modal) {
+                    fecharModal();
+                }
+            });
+        }
+    })();
+</script>
+{% endblock %}

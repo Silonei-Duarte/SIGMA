@@ -1,0 +1,783 @@
+{% extends 'base.html' %}
+{% block title %}{{ APPLICATION_NAME }} | Sequenciamento{% endblock %}
+{% block content %}
+
+<div class="w-full px-4 mt-4 pb-4 text-sm text-texto-primario">
+
+<!-- =============================== TOP =============================== -->
+<div class="mb-6 border-b border-borda-sutil pb-4">
+<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+    <div class="md:col-span-2">
+        <h2 class="titulo-pagina text-texto-primario">Sequenciamento ERP</h2>
+    </div>
+
+    <!-- EMPRESA -->
+    <form method="get" class="space-y-1">
+        <label class="font-semibold">Empresa</label>
+        <select name="empresa"
+                class="w-full rounded-xl border p-2 shadow-sm"
+                {% if empresas|length == 1 %}disabled{% endif %}
+                onchange="this.form.submit()">
+
+            {% if empresas|length > 1 %}
+            <option value="">Selecione...</option>
+            {% endif %}
+
+            {% for e in empresas %}
+            <option value="{{ e.id }}"
+                {% if empresa_id|stringformat:'s' == e.id|stringformat:'s' %}selected{% endif %}>
+                {{ e.codemp }} - {{ e.nome }}
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+
+
+    <!-- CENTRO + BOTÃO -->
+    <form method="post" class="grid grid-cols-3 items-end gap-2">
+        {% csrf_token %}
+
+        <div class="col-span-2">
+            <label class="font-semibold">Centro de Recurso</label>
+
+            <select name="centro"
+                    id="selectCentro"
+                    class="w-full rounded-xl border p-2 shadow-sm" required>
+                <option value="">Selecione...</option>
+
+                {% for c in centros %}
+                <option value="{{ c.id }}"
+                    {% if request.POST.centro == c.id|stringformat:"s" %}selected{% endif %}>
+                    {{ c.descricao }} ({{ c.codigo_integrador }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit"
+                class="botao-primario h-10 px-3 py-2">
+            Sequenciar
+        </button>
+    </form>
+
+</div>
+</div>
+
+
+{% if erro %}
+<div class="mb-4 rounded-xl bg-erro-base text-texto-sobre-marca px-4 py-3 shadow-sm">{{ erro }}</div>
+{% endif %}
+
+
+{% if resultados %}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+    <!-- =============================== TABELA ERP (ESQUERDA) =============================== -->
+    <div class="md:col-span-2">
+
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-4">
+
+            <h3 class="text-base font-bold text-texto-primario">Ordens em Aberto</h3>
+
+            <div class="flex items-center gap-2">
+                <input id="filtroTabela"
+                       class="w-64 rounded-xl border p-2 text-sm shadow-sm"
+                       placeholder="Filtrar...">
+
+                <button id="btnFiltrar"
+                        type="button"
+                        class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                    <i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i> Filtrar
+                </button>
+
+                <a href="{% url 'exportar_sequenciamento' %}?centro={{ request.POST.centro }}"
+                   class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                    Exportar Excel
+                </a>
+
+                {% if pode_consolidar_sequenciamento_erp %}
+                <button id="btnAutoSequenciar"
+                        type="button"
+                        class="botao-secundario text-sm">
+                    Sequenciamento Automático
+                </button>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <div class="max-h-[70vh] overflow-x-auto overflow-y-auto rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+
+            <table id="tabelaERP" class="w-full text-xs border-collapse">
+                <thead class="sticky top-0 bg-superficie-afundada text-texto-primario">
+                    <tr>
+                        <th class="border border-borda-sutil p-1">Origem</th>
+                        <th class="border border-borda-sutil p-1">OP</th>
+                        <th class="border border-borda-sutil p-1">Produto</th>
+                        <th class="border border-borda-sutil p-1">Derivação</th>
+                        <th class="border border-borda-sutil p-1">Descrição</th>
+                        <th class="border border-borda-sutil p-1">Qt. Prev.</th>
+                        <th class="hidden">Estágio</th>
+                        <th class="hidden">Seq Rot</th>
+                        <th class="hidden">Operação</th>
+                        <th class="border border-borda-sutil p-1">Tempo</th>
+                        <th class="border border-borda-sutil p-1">Estoque</th>
+                        <th class="border border-borda-sutil p-1">Reservado</th>
+                        <th class="border border-borda-sutil p-1">Est. Mín</th>
+                        <th class="border border-borda-sutil p-1">Est. Máx</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for r in resultados %}
+                    {% with key=r.OP|stringformat:"s"|add:"-"|add:r.ESTAGIO|stringformat:"s"|add:"-"|add:r.SEQROTEIRO|stringformat:"s" %}
+
+                    <tr draggable="true"
+                        data-id="{{ forloop.counter }}"
+                        data-key="{{ key }}"
+                        class="text-center transition hover:bg-interacao-hover {% if key in sequencias_existentes %}bg-sucesso-sutil{% endif %}">
+                        <td class="border border-borda-sutil p-1">{{ r.ORIGEM|default_if_none:"" }}</td>
+                        <td class="border border-borda-sutil p-1">{{ r.OP|default_if_none:"" }}</td>
+                        <td class="border border-borda-sutil p-1">{{ r.PRODUTO|default_if_none:"" }}</td>
+                        <td class="border border-borda-sutil p-1">{{ r.DERIVACAO|default_if_none:"" }}</td>
+                        <td class="border border-borda-sutil p-1">{{ r.DESCRICAO|default_if_none:"" }}</td>
+                        <td class="border border-borda-sutil p-1 text-right">{{ r.QTDPRV|default_if_none:""|floatformat:0 }}</td>
+                        <td class="hidden">{{ r.ESTAGIO|default_if_none:"" }}</td>
+                        <td class="hidden">{{ r.SEQROTEIRO|default_if_none:"" }}</td>
+                        <td class="hidden">{{ r.OPERACAO|default_if_none:"" }}</td>
+                        <td class="tempo-minutos border border-borda-sutil p-1" data-minutos="{{ r.TEMPO|default_if_none:"" }}"></td>
+                        <td class="border border-borda-sutil p-1 text-right">{{ r.QTDEST|default_if_none:""|floatformat:0 }}</td>
+                        <td class="border border-borda-sutil p-1 text-right">{{ r.QTDRES|default_if_none:""|floatformat:0 }}</td>
+                        <td class="border border-borda-sutil p-1 text-right">{{ r.ESTMIN|default_if_none:""|floatformat:0 }}</td>
+                        <td class="border border-borda-sutil p-1 text-right">{{ r.ESTMAX|default_if_none:""|floatformat:0 }}</td>
+                    </tr>
+
+                    {% endwith %}
+                {% endfor %}
+                </tbody>
+
+            </table>
+
+        </div>
+    </div>
+
+    <!-- =============================== RECURSOS (DIREITA) =============================== -->
+    <div>
+
+        <div class="max-h-[75vh] overflow-y-auto rounded-2xl border border-borda-sutil bg-superficie-elevada p-3 shadow-sm">
+
+            <div class="mb-3 flex items-center justify-between rounded-xl bg-superficie-afundada px-3 py-2 text-texto-primario">
+                <span>Recursos do Centro</span>
+
+                {% if pode_consolidar_sequenciamento_erp %}
+                <button id="btnConsolidar"
+                        type="button"
+                        class="botao-primario text-sm">
+                    Consolidar
+                </button>
+                {% endif %}
+            </div>
+
+            {% for item in recursos_sequenciamentos %}
+            {% with r=item.recurso sequenciamentos=item.sequenciamentos %}
+            <div class="mt-4">
+
+                <h3 class="mb-1 font-semibold text-texto-primario">
+                    {{ r.codigo }} - {{ r.descricao }}
+                    {% if pode_consolidar_sequenciamento_erp %}
+                    <button type="button"
+                            class="btnLimparRecurso hidden botao-secundario text-xs"
+                            data-target="recurso-{{ r.id }}">
+                        Limpar
+                    </button>
+                    {% endif %}
+                </h3>
+
+                <ul id="recurso-{{ r.id }}"
+                    data-recurso="{{ r.id }}"
+                    class="dropzone min-h-[120px] max-h-[300px] space-y-1 overflow-y-auto rounded-xl border border-borda-sutil bg-superficie-elevada p-2 transition-colors duration-200 [&.drag-over]:border-2 [&.drag-over]:border-dashed [&.drag-over]:border-informacao-borda [&.drag-over]:bg-informacao-sutil">
+
+                    {% if sequenciamentos %}
+                        {% for s in sequenciamentos %}
+
+                        <li class="list-item flex cursor-move select-none items-center gap-2 rounded-xl border border-borda-sutil bg-sucesso-sutil px-2 py-1 [&.dragging]:bg-informacao-sutil [&.dragging]:opacity-60 [&.placeholder]:h-8 [&.placeholder]:border-2 [&.placeholder]:border-dashed [&.placeholder]:border-borda-sutil [&.placeholder]:bg-superficie-afundada"
+                            draggable="true"
+                            data-key="{{ s.op }}-{{ s.estagio }}-{{ s.seqrot }}"
+                            data-op='{{ s.op|default_if_none:"" }}'
+                            data-origem='{{ s.origem|default_if_none:"" }}'
+                            data-codproduto='{{ s.codproduto|default_if_none:"" }}'
+                            data-derivacao='{{ s.derivacao|default_if_none:"" }}'
+                            data-descricao='{{ s.descricao|default_if_none:"" }}'
+                            data-estagio='{{ s.estagio|default_if_none:"" }}'
+                            data-seqrot='{{ s.seqrot|default_if_none:"" }}'
+                            data-operacao='{{ s.operacao|default_if_none:"" }}'
+                            data-tempo='{{ s.tempo|default_if_none:"" }}'
+                            data-from-db="true">
+
+                            <span class="seq-posicao mr-2 whitespace-nowrap text-xs text-texto-secundario [.text-not-consolidated_&]:after:ml-2 [.text-not-consolidated_&]:after:inline-flex [.text-not-consolidated_&]:after:h-4 [.text-not-consolidated_&]:after:w-4 [.text-not-consolidated_&]:after:items-center [.text-not-consolidated_&]:after:justify-center [.text-not-consolidated_&]:after:rounded-full [.text-not-consolidated_&]:after:bg-erro-base [.text-not-consolidated_&]:after:text-[0.7rem] [.text-not-consolidated_&]:after:font-bold [.text-not-consolidated_&]:after:text-texto-sobre-marca [.text-not-consolidated_&]:after:content-['!']">Pos. <strong class="ordem text-texto-primario">{{ s.ordenacao }}</strong></span>
+                            <span class="min-w-0 flex-1 text-xs">
+                                {{ s.origem|default_if_none:"" }}-{{ s.op|default_if_none:"" }} | {{ s.codproduto|default_if_none:"" }}-{{ s.derivacao|default_if_none:"" }} {{ s.descricao|default_if_none:"" }}
+                            </span>
+                            <span class="seq-tempo whitespace-nowrap rounded bg-superficie-elevada/70 px-2 py-0.5 text-xs text-texto-primario"></span>
+
+                        </li>
+
+                        {% endfor %}
+                    {% endif %}
+                </ul>
+            </div>
+            {% endwith %}
+
+            {% empty %}
+            <div class="text-texto-legenda">Nenhum recurso vinculado a este centro.</div>
+            {% endfor %}
+
+        </div>
+    </div>
+
+    <!-- Modal Sequenciamento Automático -->
+    <div id="modalAutoSequenciamento" class="fixed inset-0 bg-superficie-elevada/5 flex items-center justify-center hidden z-50 backdrop-blur-sm">
+        <div class="w-full max-w-md rounded-2xl border border-borda-sutil bg-superficie-elevada p-6 shadow-2xl">
+            <h3 class="text-lg font-bold mb-4">Sequenciamento Automático</h3>
+            <p class="mb-6 text-texto-secundario text-center">Como deseja realizar o sequenciamento?</p>
+            <div class="flex flex-col gap-2">
+                <button id="btnRespeitarAtual" class="botao-primario px-4 py-2">
+                    Respeitar Sequenciamento Atual
+                </button>
+                <button id="btnSequenciarTudo" class="botao-secundario">
+                    Sequenciar Tudo
+                </button>
+                <button id="btnFecharModal" class="botao-secundario mt-2 h-10 px-4">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endif %}
+
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const tabelaERP = document.querySelector("#tabelaERP tbody");
+  const zonas = document.querySelectorAll(".dropzone");
+  const cache = {};
+
+  if (!tabelaERP) return;
+
+  document.querySelectorAll(".tempo-minutos").forEach(td => {
+    const minutos = parseFloat((td.dataset.minutos || "0").replace(",", "."));
+    td.textContent = formatarTempo(minutos);
+  });
+
+  // cria cache com chave única (op-estagio-seq)
+  // cols: 0=Origem 1=OP 2=Produto 3=Derivação 4=Descrição 5=QtPrev 6=Estágio(hidden) 7=SeqRot(hidden) 8=Operação(hidden) 9=Tempo
+  tabelaERP.querySelectorAll("tr").forEach(r => {
+    const key = `${r.children[1].innerText}-${r.children[6].innerText}-${r.children[7].innerText}`;
+    r.dataset.key = key;
+    cache[key] = Array.from(r.children).map((td, index) => index === 9 ? (td.dataset.minutos || "") : td.innerText);
+  });
+
+  // pinta verde linhas já consolidadas
+  const chavesExistentes = new Set([
+    {% for s in sequencias_existentes %}"{{ s }}",{% endfor %}
+  ]);
+  tabelaERP.querySelectorAll("tr").forEach(r => {
+    if (chavesExistentes.has(r.dataset.key)) {
+        r.classList.add("bg-sucesso-sutil");
+        r.dataset.consolidado = "true";
+    }
+  });
+
+  // filtro simples
+  document.getElementById("btnFiltrar").addEventListener("click", () => {
+    const termo = document.getElementById("filtroTabela").value.toLowerCase();
+    tabelaERP.querySelectorAll("tr").forEach(r => {
+      r.classList.toggle("hidden", !r.textContent.toLowerCase().includes(termo));
+    });
+  });
+
+  // Limpar ao trocar de centro (para evitar consolidar no centro errado)
+  document.getElementById("selectCentro").addEventListener("change", (e) => {
+      // Limpa a tabela ERP e as dropzones
+      const grids = document.querySelector(".grid.grid-cols-1.md\\:grid-cols-3");
+      if (grids) {
+          grids.classList.add("hidden");
+          
+          // Remove mensagem anterior se existir
+          const msgAntiga = document.getElementById("msg-centro-alterado");
+          if (msgAntiga) msgAntiga.remove();
+
+          // Mostrar uma mensagem pedindo para clicar em Sequenciar
+          const msg = document.createElement("div");
+          msg.id = "msg-centro-alterado";
+          msg.className = "text-center text-erro-base font-bold p-12 bg-superficie-afundada rounded border-2 border-dashed border-erro-borda my-4";
+          msg.innerText = "Centro de Recurso alterado. Clique em 'Sequenciar' para carregar os dados deste centro.";
+          grids.parentNode.insertBefore(msg, grids);
+      }
+      
+      // Bloqueia o botão de consolidar se ele estiver na tela
+      const btnConsolidar = document.getElementById("btnConsolidar");
+      if (btnConsolidar) {
+          btnConsolidar.disabled = true;
+          btnConsolidar.classList.add("opacity-50", "cursor-not-allowed");
+          btnConsolidar.innerText = "Recarregue para Consolidar";
+      }
+  });
+
+  // drag ERP
+  tabelaERP.querySelectorAll("tr").forEach(row => {
+    row.addEventListener("dragstart", e => {
+      if (row.dataset.consolidado === "true") {
+        e.preventDefault(); // bloqueia mover já consolidado
+        return;
+      }
+      e.dataTransfer.setData("origem", "erp");
+      e.dataTransfer.setData("key", row.dataset.key);
+      row.classList.add("dragging-erp"); // classe temporária
+      row.classList.add("bg-informacao-sutil");
+    });
+    row.addEventListener("dragend", () => {
+        row.classList.remove("table-active");
+        row.classList.remove("dragging-erp");
+        row.classList.remove("bg-informacao-sutil");
+    });
+  });
+
+  // ativa drag nas zonas
+  function habilitarDrag(li) {
+    li.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("origem", "zona");
+      e.dataTransfer.setData("key", li.dataset.key);
+      li.classList.add("dragging");
+    });
+    li.addEventListener("dragend", () => li.classList.remove("dragging"));
+  }
+// garante que todos os li antigos tenham data-* e sejam arrastáveis
+document.querySelectorAll(".dropzone .list-item").forEach(li => {
+  li.draggable = true;
+  habilitarDrag(li);
+
+  if (!li.dataset.op) {
+    // formato: OP | Origem | Produto | Derivação | Descrição | Estágio | SeqRot | Operação
+    const texto = li.innerText.replace(/^\s*\d+\s*\|?/, "").trim();
+    const partes = texto.split("|").map(p => p.trim());
+    li.dataset.op         = partes[0];
+    li.dataset.origem     = partes[1];
+    li.dataset.codproduto = partes[2];
+    li.dataset.derivacao  = partes[3];
+    li.dataset.descricao  = partes[4];
+    li.dataset.estagio    = partes[5];
+    li.dataset.seqrot     = partes[6];
+    li.dataset.operacao   = partes[7];
+    li.dataset.tempo      = partes[8];
+  }
+});
+
+
+function escaparHtml(valor) {
+  const elemento = document.createElement("span");
+  elemento.textContent = valor ?? "";
+  return elemento.innerHTML;
+}
+
+function criarItem(key, dados) {
+  // dados = [0=Origem, 1=OP, 2=Produto, 3=Derivação, 4=Descrição, 5=QtPrev, 6=Estágio, 7=SeqRot, 8=Operação, 9=Tempo]
+  const li = document.createElement("li");
+  li.className = "list-item flex cursor-move select-none items-center gap-2 rounded border border-borda-sutil bg-sucesso-sutil px-2 py-1 text-not-consolidated [&.dragging]:bg-informacao-sutil [&.dragging]:opacity-60 [&.placeholder]:h-8 [&.placeholder]:border-2 [&.placeholder]:border-dashed [&.placeholder]:border-borda-sutil [&.placeholder]:bg-superficie-afundada";
+  li.draggable = true;
+  li.dataset.key        = key;
+  li.dataset.op         = dados[1];
+  li.dataset.origem     = dados[0];
+  li.dataset.codproduto = dados[2];
+  li.dataset.derivacao  = dados[3];
+  li.dataset.descricao  = dados[4];
+  li.dataset.estagio    = dados[6];
+  li.dataset.seqrot     = dados[7];
+  li.dataset.operacao   = dados[8];
+  li.dataset.tempo      = dados[9];
+
+  li.innerHTML = `<span class="seq-posicao mr-2 whitespace-nowrap text-xs text-texto-secundario [.text-not-consolidated_&]:after:ml-2 [.text-not-consolidated_&]:after:inline-flex [.text-not-consolidated_&]:after:h-4 [.text-not-consolidated_&]:after:w-4 [.text-not-consolidated_&]:after:items-center [.text-not-consolidated_&]:after:justify-center [.text-not-consolidated_&]:after:rounded-full [.text-not-consolidated_&]:after:bg-erro-base [.text-not-consolidated_&]:after:text-[0.7rem] [.text-not-consolidated_&]:after:font-bold [.text-not-consolidated_&]:after:text-texto-sobre-marca [.text-not-consolidated_&]:after:content-['!']">Pos. <strong class="ordem text-texto-primario"></strong></span><span class="min-w-0 flex-1 text-xs">${escaparHtml(dados[0])}-${escaparHtml(dados[1])} | ${escaparHtml(dados[2])}-${escaparHtml(dados[3])} ${escaparHtml(dados[4])}</span><span class="seq-tempo whitespace-nowrap rounded bg-superficie-elevada/70 px-2 py-0.5 text-xs text-texto-primario"></span>`;
+  habilitarDrag(li);
+  return li;
+}
+
+
+
+// atualiza ordens de todos os recursos
+function atualizarTodos() {
+  zonas.forEach(zone => {
+    let totalMin = 0;
+
+    zone.querySelectorAll(".list-item").forEach((li, i) => {
+      li.querySelector(".ordem").innerText = i + 1;
+
+      const minutos = parseFloat((li.dataset.tempo || "0").replace(",", "."));
+      if (!isNaN(minutos)) totalMin += minutos;
+
+      const tempo = li.querySelector(".seq-tempo");
+      if (tempo) tempo.textContent = formatarTempo(minutos);
+    });
+
+    let header = zone.previousElementSibling.querySelector(".total-min");
+    if (!header) {
+      header = document.createElement("span");
+      header.className = "total-min text-muted ms-2";
+      zone.previousElementSibling.appendChild(header);
+    }
+
+    const h = Math.floor(totalMin / 60);
+    const m = Math.round(totalMin % 60);
+    header.textContent = `(${h}h ${m}min)`;
+
+    const btnLimpar = zone.previousElementSibling.querySelector(".btnLimparRecurso");
+    if (btnLimpar) {
+      btnLimpar.classList.remove("hidden");
+      zone.previousElementSibling.appendChild(btnLimpar);
+    }
+  });
+}
+
+function formatarTempo(minutos) {
+  if (isNaN(minutos) || minutos <= 0) return "";
+  const h = Math.floor(minutos / 60);
+  const m = Math.round(minutos % 60);
+  if (h && m) return `${h}h ${m}min`;
+  if (h) return `${h}h`;
+  return `${m}min`;
+}
+
+// chama ao carregar a página
+atualizarTodos();
+
+  // drop nas zonas
+  zonas.forEach(zone => {
+    zone.addEventListener("dragover", e => {
+      e.preventDefault();
+      const dragging = document.querySelector(".dragging");
+      const draggingERP = document.querySelector(".dragging-erp");
+
+      if (dragging) {
+        const afterElement = getDragAfterElement(zone, e.clientY);
+        if (afterElement == null) {
+          zone.appendChild(dragging);
+        } else {
+          zone.insertBefore(dragging, afterElement);
+        }
+      } else if (draggingERP) {
+          // Para itens vindo do ERP, podemos mostrar um "placeholder" ou apenas tratar no drop
+          // Por enquanto, apenas preventDefault já permite o drop
+      }
+    });
+
+    zone.addEventListener("drop", e => {
+      e.preventDefault();
+      const origem = e.dataTransfer.getData("origem");
+      const key = e.dataTransfer.getData("key");
+      if (!key) return;
+
+      const itemExistente = document.querySelector(`.dropzone li[data-key="${key}"]`);
+      
+      if (origem === "erp") {
+        if (itemExistente) itemExistente.remove();
+        const dados = cache[key];
+        if (dados) {
+          const afterElement = getDragAfterElement(zone, e.clientY);
+          const li = criarItem(key, dados);
+          if (afterElement == null) {
+            zone.appendChild(li);
+          } else {
+            zone.insertBefore(li, afterElement);
+          }
+        }
+      } else if (origem === "zona") {
+        const dragging = document.querySelector(".dragging");
+        if (dragging) {
+           const afterElement = getDragAfterElement(zone, e.clientY);
+           if (afterElement == null) {
+             zone.appendChild(dragging);
+           } else {
+             zone.insertBefore(dragging, afterElement);
+           }
+        }
+      }
+      
+      atualizarTodos();
+
+      // marca ERP verde
+      const linhaERP = document.querySelector(`tr[data-key="${key}"]`);
+      if (linhaERP) {
+        linhaERP.classList.add("bg-sucesso-sutil");
+        linhaERP.dataset.consolidado = "true";
+      }
+    });
+  });
+
+  function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll(".list-item:not(.dragging)")];
+
+    return draggableElements.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset: offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+
+  // devolver para ERP
+  tabelaERP.addEventListener("dragover", e => e.preventDefault());
+  tabelaERP.addEventListener("drop", e => {
+    e.preventDefault();
+    const key = e.dataTransfer.getData("key");
+    if (!key) return;
+
+    const item = document.querySelector(`li[data-key="${key}"]`);
+    if (item) item.remove();
+
+    // desmarca a linha ERP
+    const linhaERP = document.querySelector(`tr[data-key="${key}"]`);
+    if (linhaERP) {
+      linhaERP.classList.remove("bg-sucesso-sutil");
+      delete linhaERP.dataset.consolidado;
+    }
+
+    atualizarTodos(); // reordena tudo
+  });
+
+// limpar sequenciamento visual de um recurso, sem salvar no banco até consolidar
+document.querySelectorAll(".btnLimparRecurso").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const zone = document.getElementById(btn.dataset.target);
+    if (!zone) return;
+
+    if (!confirm("Limpar o sequenciamento deste recurso na tela? A alteração só será salva ao consolidar.")) {
+      return;
+    }
+
+    zone.querySelectorAll(".list-item").forEach(item => {
+      const key = item.dataset.key;
+      item.remove();
+
+      const linhaERP = document.querySelector(`tr[data-key="${key}"]`);
+      if (linhaERP) {
+        linhaERP.classList.remove("bg-sucesso-sutil");
+        delete linhaERP.dataset.consolidado;
+      }
+    });
+
+    atualizarTodos();
+  });
+});
+
+// consolidar
+const btnConsolidarPrincipal = document.getElementById("btnConsolidar");
+if (btnConsolidarPrincipal) {
+btnConsolidarPrincipal.addEventListener("click", async () => {
+  const centroOriginal = "{{ request.POST.centro }}";
+  const centroAtual = document.querySelector("select[name='centro']").value;
+
+  if (centroOriginal !== centroAtual) {
+      alert("O Centro de Recurso foi alterado. Clique em 'Sequenciar' antes de consolidar.");
+      return;
+  }
+
+  const payload = [];
+  document.querySelectorAll(".dropzone").forEach(zone => {
+    const recurso = zone.dataset.recurso;
+    zone.querySelectorAll(".list-item").forEach((li, i) => {
+      payload.push({
+        recurso,
+        ordenacao: i + 1,
+        op: li.dataset.op,
+        origem: li.dataset.origem,
+        codproduto: li.dataset.codproduto,
+        derivacao: li.dataset.derivacao || null,
+        descricao: li.dataset.descricao,
+        estagio: li.dataset.estagio,
+        seqrot: li.dataset.seqrot,
+        operacao: li.dataset.operacao,
+        tempo: li.dataset.tempo,
+      });
+    });
+  });
+
+  const centroId = document.querySelector("select[name='centro']").value;
+  payload.forEach(p => p.centro_id = centroId);
+
+  const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const res = await fetch("{% url 'consolidar_sequenciamento' %}", {
+    method: "POST",
+    headers: { "X-CSRFToken": csrf },
+    body: new URLSearchParams({
+          sequenciamento_json: JSON.stringify(payload),
+          centro_id: centroId
+    }),
+  });
+  try {
+  const data = await res.json();
+  if (res.ok && data.status === "ok") {
+    alert(data.msg || "Sequenciamento consolidado com sucesso.");
+    // Remove a cor vermelha de todos os itens consolidados
+    document.querySelectorAll(".dropzone .list-item.text-not-consolidated").forEach(li => {
+        li.classList.remove("text-not-consolidated");
+    });
+  } else {
+    alert(data.msg || "Erro ao consolidar.");
+  }
+} catch {
+  alert("Erro ao consolidar.");
+}
+
+});
+}
+
+// Auto Sequenciamento
+const btnAutoSequenciar = document.getElementById("btnAutoSequenciar");
+const modalAuto = document.getElementById("modalAutoSequenciamento");
+const btnRespeitarAtual = document.getElementById("btnRespeitarAtual");
+const btnSequenciarTudo = document.getElementById("btnSequenciarTudo");
+const btnFecharModal = document.getElementById("btnFecharModal");
+
+if (btnAutoSequenciar) {
+    btnAutoSequenciar.addEventListener("click", () => {
+        const centroId = document.querySelector("select[name='centro']").value;
+        if (!centroId) {
+            alert("Selecione um centro primeiro.");
+            return;
+        }
+        modalAuto.classList.remove("hidden");
+    });
+}
+
+if (btnFecharModal) {
+    btnFecharModal.addEventListener("click", () => {
+        modalAuto.classList.add("hidden");
+    });
+}
+
+const dispararAutoSequenciamento = async (manter) => {
+    modalAuto.classList.add("hidden");
+    const centroOriginal = "{{ request.POST.centro }}";
+    const centroId = document.querySelector("select[name='centro']").value;
+
+    if (centroOriginal !== centroId) {
+        alert("O Centro de Recurso foi alterado. Clique em 'Sequenciar' para carregar os dados deste centro antes de usar o sequenciamento automático.");
+        return;
+    }
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    const payload = [];
+    document.querySelectorAll(".dropzone").forEach(zone => {
+      const recurso = zone.dataset.recurso;
+      zone.querySelectorAll(".list-item").forEach((li, index) => {
+        payload.push({
+          recurso: recurso,
+          ordenacao: index + 1,
+          op: li.dataset.op,
+          origem: li.dataset.origem,
+          codproduto: li.dataset.codproduto,
+          derivacao: li.dataset.derivacao || null,
+          estagio: li.dataset.estagio,
+          seqrot: li.dataset.seqrot,
+          tempo: li.dataset.tempo,
+        });
+      });
+    });
+
+    const res = await fetch("{% url 'sequenciar_automatico' %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": csrf },
+        body: new URLSearchParams({
+            centro_id: centroId,
+            manter_atual: manter ? "true" : "false",
+            sequenciamento_json: JSON.stringify(payload)
+        }),
+    });
+
+    try {
+        const data = await res.json();
+        if (res.ok && data.status === "ok") {
+            if (data.limpar_atual) {
+                // Remove todos os itens das zonas (que não vieram do DB ou se for para limpar tudo)
+                document.querySelectorAll(".dropzone .list-item").forEach(li => {
+                    const key = li.dataset.key;
+                    li.remove();
+                    // Desmarca na tabela ERP
+                    const linhaERP = document.querySelector(`tr[data-key="${key}"]`);
+                    if (linhaERP) {
+                        linhaERP.classList.remove("bg-sucesso-sutil");
+                        delete linhaERP.dataset.consolidado;
+                    }
+                });
+            }
+
+            // Distribuir a proposta visualmente
+            data.proposta.forEach(p => {
+                const zone = document.querySelector(`#recurso-${p.recurso_id}`);
+                if (zone) {
+                    // Verifica se já não está na zona (evitar duplicatas se algo falhou)
+                    if (!zone.querySelector(`li[data-key="${p.key}"]`)) {
+                        const dados = cache[p.key];
+                        if (dados) {
+                            const li = criarItem(p.key, dados);
+                            zone.appendChild(li);
+                            
+                            // Marca na tabela ERP
+                            const linhaERP = document.querySelector(`tr[data-key="${p.key}"]`);
+                            if (linhaERP) {
+                                linhaERP.classList.add("bg-sucesso-sutil");
+                                linhaERP.dataset.consolidado = "true";
+                            }
+                        } else {
+                            // Se não está no cache (não veio do ERP no load original), cria com os dados do próprio JSON do backend
+                            const li = document.createElement("li");
+                            li.className = "list-item flex cursor-move select-none items-center gap-2 rounded border border-borda-sutil bg-sucesso-sutil px-2 py-1 text-not-consolidated [&.dragging]:bg-informacao-sutil [&.dragging]:opacity-60 [&.placeholder]:h-8 [&.placeholder]:border-2 [&.placeholder]:border-dashed [&.placeholder]:border-borda-sutil [&.placeholder]:bg-superficie-afundada";
+                            li.draggable = true;
+                            li.dataset.key = p.key;
+                            li.dataset.op         = p.op;
+                            li.dataset.origem     = p.origem;
+                            li.dataset.codproduto = p.codproduto;
+                            li.dataset.derivacao  = p.derivacao || "";
+                            li.dataset.descricao  = p.descricao;
+                            li.dataset.estagio    = p.estagio;
+                            li.dataset.seqrot     = p.seqrot;
+                            li.dataset.operacao   = p.operacao;
+                            li.dataset.tempo      = p.tempo;
+                            li.innerHTML = `<span class="seq-posicao mr-2 whitespace-nowrap text-xs text-texto-secundario [.text-not-consolidated_&]:after:ml-2 [.text-not-consolidated_&]:after:inline-flex [.text-not-consolidated_&]:after:h-4 [.text-not-consolidated_&]:after:w-4 [.text-not-consolidated_&]:after:items-center [.text-not-consolidated_&]:after:justify-center [.text-not-consolidated_&]:after:rounded-full [.text-not-consolidated_&]:after:bg-erro-base [.text-not-consolidated_&]:after:text-[0.7rem] [.text-not-consolidated_&]:after:font-bold [.text-not-consolidated_&]:after:text-texto-sobre-marca [.text-not-consolidated_&]:after:content-['!']">Pos. <strong class="ordem text-texto-primario"></strong></span><span class="min-w-0 flex-1 text-xs">${escaparHtml(p.origem)}-${escaparHtml(p.op)} | ${escaparHtml(p.codproduto)}-${escaparHtml(p.derivacao || "")} ${escaparHtml(p.descricao)}</span><span class="seq-tempo whitespace-nowrap rounded bg-superficie-elevada/70 px-2 py-0.5 text-xs text-texto-primario"></span>`;
+                            habilitarDrag(li);
+                            zone.appendChild(li);
+                        }
+                    }
+                }
+            });
+
+            atualizarTodos();
+            alert(data.msg || "Distribuição automática concluída. Não esqueça de Consolidar.");
+        } else {
+            alert(data.msg || "Erro no sequenciamento automático.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao processar sequenciamento automático.");
+    }
+};
+
+if (btnRespeitarAtual) {
+    btnRespeitarAtual.addEventListener("click", () => dispararAutoSequenciamento(true));
+}
+
+if (btnSequenciarTudo) {
+    btnSequenciarTudo.addEventListener("click", () => dispararAutoSequenciamento(false));
+}
+
+});
+</script>
+
+
+</div>
+{% endblock %}

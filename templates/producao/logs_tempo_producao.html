@@ -1,0 +1,381 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ APPLICATION_NAME }} | Log Tempo Produção{% endblock %}
+{% block content %}
+<div class="w-full px-4 mt-4 pb-8 text-sm text-texto-primario">
+    <div id="feedback-log-tempo-producao" class="hidden fixed right-6 top-6 z-50 rounded-lg border px-4 py-3 font-semibold shadow-lg"></div>
+    <div class="mb-6 border-b border-borda-sutil pb-4">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <h2 class="titulo-pagina text-texto-primario">Log Tempo Produção</h2>
+            </div>
+            <div class="flex w-full gap-2 lg:w-auto">
+            <form method="GET" action="{% url 'log_tempo_producao' %}" class="flex w-full gap-2 md:w-96">
+                <input type="text" name="search" value="{{ search_query }}" placeholder="Buscar por {{ rotulos_busca }}..."
+                       class="min-w-0 flex-1 rounded-lg border border-borda-padrao px-3 py-2 text-sm">
+                <button class="botao-primario h-10 shrink-0 whitespace-nowrap px-4 text-sm"><i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i> Filtrar</button>
+                <button type="button" onclick="window.history.back()" class="botao-secundario h-10 shrink-0 whitespace-nowrap px-4 text-sm" title="Voltar"><i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i> Voltar</button>
+                {% if search_query %}<a href="{% url 'log_tempo_producao' %}" class="botao-secundario h-10 w-10 p-0" aria-label="Limpar busca"><i data-lucide="x" class="" aria-hidden="true"></i></a>{% endif %}
+            </form>
+            {% if recursos_parada_manual %}
+            <button type="button" onclick="document.getElementById('modal-parada-manual').showModal()" class="botao-perigo h-10 shrink-0 whitespace-nowrap px-4 text-sm"><i data-lucide="circle-stop" class="h-5 w-5" aria-hidden="true"></i> Abrir Parada</button>
+            {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-center text-xs [&>thead>tr>th]:border-borda-sutil [&>tbody>tr>td]:border-borda-sutil">
+                <colgroup>
+                    <col class="w-[5%]"><col class="w-[6%]"><col class="w-[5%]"><col class="w-[13%]"><col class="w-[6%]"><col class="w-[8%]"><col class="w-[7%]"><col class="w-[9%]"><col class="w-[11%]"><col class="w-[7%]"><col class="w-[7%]"><col class="w-[9%]"><col class="w-[6%]">
+                </colgroup>
+                <thead class="bg-superficie-afundada text-texto-primario">
+                    <tr>
+                        <th class="border border-borda-padrao p-2">Empresa</th>
+                        <th class="border border-borda-padrao p-2">Origem</th>
+                        <th class="border border-borda-padrao p-2 text-left">OP</th>
+                        <th class="border border-borda-padrao p-2">Estágio</th>
+                        <th class="border border-borda-padrao p-2">Seq.</th>
+                        <th class="border border-borda-padrao p-2">Operador</th>
+                        <th class="border border-borda-padrao p-2">Recurso</th>
+                        <th class="border border-borda-padrao p-2">Início</th>
+                        <th class="border border-borda-padrao p-2">Fim</th>
+                        <th class="border border-borda-padrao p-2">Tempo</th>
+                        <th class="border border-borda-padrao p-2">Usuário</th>
+                        <th class="border border-borda-padrao p-2">Data/Hora do Log</th>
+                        <th class="border border-borda-padrao p-2">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for periodo in periodos %}
+                    <tr class="{% if periodo.paradas_periodo %}cursor-pointer hover:bg-interacao-hover{% endif %} border-t-2 border-borda-padrao bg-superficie-elevada"
+                        {% if periodo.paradas_periodo %}onclick="alternarPeriodo({{ periodo.id }})" title="Clique para exibir as paradas"{% endif %}>
+                        <td class="border border-borda-padrao p-2 whitespace-nowrap">{% if periodo.paradas_periodo %}<i id="seta-periodo-{{ periodo.id }}" data-lucide="chevron-right" class="mr-1 inline-block h-4 w-4 transition-transform {% if periodo.expandido %}rotate-90{% endif %}" aria-hidden="true"></i>{% endif %}{{ periodo.recurso.centro_recurso.setor.departamento.filial.empresa.codemp }}</td>
+                        <td class="border border-borda-padrao p-2 whitespace-nowrap">
+                            {{ periodo.origem|default:"-" }}
+                        </td>
+                        <td class="border border-borda-padrao p-2 text-left whitespace-nowrap">
+                            {{ periodo.op|default:"-" }}
+                        </td>
+                        <td class="border border-borda-padrao p-2">{{ periodo.estagio|default:"-" }}</td>
+                        <td class="border border-borda-padrao p-2">{{ periodo.seqrot|default:"-" }}</td>
+                        <td class="border border-borda-padrao p-2">{{ periodo.id_operador|default:"-" }}</td>
+                        <td class="border border-borda-padrao p-2 whitespace-nowrap">{{ periodo.recurso.codigo }}</td>
+                        <td class="border border-borda-padrao p-2 whitespace-nowrap">{{ periodo.horario_troca|date:"d/m/Y H:i:s" }}</td>
+                        <td class="border border-borda-padrao p-2 whitespace-nowrap">
+                            {% if periodo.horario_saida %}{{ periodo.horario_saida|date:"d/m/Y H:i:s" }}{% elif periodo.tem_parada_aberta %}<span class="rounded border border-erro-borda bg-erro-sutil px-1.5 py-0.5 text-xs font-bold uppercase text-erro-base">Parado</span>{% else %}<span class="rounded border border-sucesso-borda bg-sucesso-sutil px-1.5 py-0.5 text-xs font-bold uppercase text-sucesso-base">Em produção</span>{% endif %}
+                        </td>
+                        <td class="border border-borda-padrao p-2 whitespace-nowrap">{{ periodo.tempo_periodo }}</td>
+                        <td class="border border-borda-padrao p-2">{{ periodo.usuario|default:"-" }}</td>
+                        <td class="border border-borda-padrao p-2 whitespace-nowrap">{{ periodo.data_hora|date:"d/m/Y H:i" }}</td>
+                        <td class="border border-borda-padrao p-2" onclick="event.stopPropagation()">
+                            <div class="flex min-h-8 items-center justify-center gap-1">
+                            {% if pode_excluir_pendencias and not periodo.tem_parada_aberta %}
+                            <form method="POST" action="{% url 'excluir_periodo_tempo_producao' periodo.id %}" onsubmit="return confirm('Excluir este período produtivo do log? Os pacotes ERP vinculados (mesmo já integrados) também serão removidos do SIGMA — o registro no ERP é preservado. Paradas exclusivas deste período serão apagadas; compartilhadas serão preservadas.')">{% csrf_token %}<button class="botao-perigo-icone" title="Excluir período" aria-label="Excluir período"><i data-lucide="trash-2" class="" aria-hidden="true"></i></button></form>
+                            {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr id="paradas-periodo-{{ periodo.id }}" class="linha-periodo-detalhes {% if not periodo.expandido %}hidden{% endif %} bg-superficie-afundada">
+                        <td colspan="13" class="border border-borda-sutil p-2 text-left">
+                            <table class="w-full border-collapse bg-superficie-elevada text-center text-xs">
+                                <thead class="bg-superficie-afundada text-texto-secundario"><tr><th class="border border-borda-sutil p-2">Tipo de Parada</th><th class="border border-borda-sutil p-2">Operador</th><th class="border border-borda-sutil p-2">Início</th><th class="border border-borda-sutil p-2">Fim</th><th class="border border-borda-sutil p-2">Tempo</th><th class="border border-borda-sutil p-2">Usuário</th><th class="border border-borda-sutil p-2">Data/Hora do Log</th><th class="border border-borda-sutil p-2">Ações</th></tr></thead>
+                                <tbody>{% for parada in periodo.paradas_periodo %}
+                                    <tr class="{% if parada.justificativas_exibicao %}cursor-pointer hover:bg-informacao-sutil{% endif %}" {% if parada.justificativas_exibicao %}onclick="alternarJustificativasParada({{ periodo.id }}, {{ parada.id }})" title="Clique para exibir as justificativas"{% endif %}>
+                                        <td class="border border-borda-sutil p-2 text-left">{% if parada.justificativas_exibicao %}<i id="seta-parada-{{ periodo.id }}-{{ parada.id }}" data-lucide="chevron-right" class="mr-1 inline-block h-4 w-4 transition-transform" aria-hidden="true"></i>{% endif %}{{ parada.get_tipo_display }}</td><td class="border border-borda-sutil p-2">{{ parada.operador|default:"-" }}</td><td class="border border-borda-sutil p-2 whitespace-nowrap">{{ parada.inicio_exibicao|date:"d/m/Y H:i:s" }}</td><td class="border border-borda-sutil p-2 whitespace-nowrap">{% if parada.fim_exibicao %}{{ parada.fim_exibicao|date:"d/m/Y H:i:s" }}{% elif parada.justificativas.all %}<span class="rounded border border-atencao-borda bg-atencao-sutil px-1.5 py-0.5 text-xs font-bold uppercase text-atencao-base">Justificada - em aberto</span>{% else %}<span class="rounded border border-erro-borda bg-erro-sutil px-1.5 py-0.5 text-xs font-bold uppercase text-erro-base">Em aberto</span>{% endif %}</td><td class="border border-borda-sutil p-2 whitespace-nowrap">{{ parada.tempo_parada_exibicao }}</td><td class="border border-borda-sutil p-2">{{ parada.usuario|default:"-" }}</td><td class="border border-borda-sutil p-2 whitespace-nowrap">{{ parada.data_hora|date:"d/m/Y H:i"|default:"-" }}</td>
+                                        <td class="border border-borda-sutil p-2" onclick="event.stopPropagation()">
+                                            {% if parada.pode_alterar_horarios or parada.pode_alterar_justificativas or pode_excluir_pendencias and parada.fim %}
+                                            <div class="flex justify-center gap-1">
+                                                {% if parada.pode_alterar_horarios %}
+                                                <button type="button" onclick="document.getElementById('modal-horarios-{{ periodo.id }}-{{ parada.id }}').showModal()" class="botao-informacao-icone" title="Alterar horários da parada"><i data-lucide="calendar-range" class="" aria-hidden="true"></i></button>
+                                                {% else %}
+                                                <span class="inline-flex h-9 w-9" aria-hidden="true"></span>
+                                                {% endif %}
+                                                {% if parada.pode_alterar_justificativas %}
+                                                <button type="button" onclick="document.getElementById('modal-justificativas-{{ periodo.id }}-{{ parada.id }}').showModal()" class="botao-atencao-icone" title="Alterar justificativas"><i data-lucide="pen" class="" aria-hidden="true"></i></button>
+                                                {% else %}
+                                                <span class="inline-flex h-9 w-9" aria-hidden="true"></span>
+                                                {% endif %}
+                                                {% if pode_excluir_pendencias and parada.fim %}
+                                                <form method="POST" action="{% url 'excluir_parada_tempo_producao' parada.id %}" onsubmit="return confirm('Excluir o vínculo desta parada com este período? A parada só será excluída se não houver outro período associado.')">{% csrf_token %}<input type="hidden" name="periodo_id" value="{{ periodo.id }}"><button class="botao-perigo-icone" title="Excluir parada" aria-label="Excluir parada"><i data-lucide="trash-2" class="" aria-hidden="true"></i></button></form>
+                                                {% else %}
+                                                <span class="inline-flex h-9 w-9" aria-hidden="true"></span>
+                                                {% endif %}
+                                            </div>
+                                            {% else %}
+                                            -
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% if parada.justificativas_exibicao %}<tr id="justificativas-parada-{{ periodo.id }}-{{ parada.id }}" class="hidden bg-superficie-afundada"><td colspan="8" class="border border-borda-sutil p-2"><table class="w-full border-collapse bg-superficie-elevada text-center text-xs"><thead class="bg-superficie-afundada text-texto-secundario"><tr><th class="border border-borda-sutil p-2">Justificativa</th><th class="border border-borda-sutil p-2">Operador</th><th class="border border-borda-sutil p-2">Início</th><th class="border border-borda-sutil p-2">Fim</th><th class="border border-borda-sutil p-2">Tempo</th><th class="border border-borda-sutil p-2">Usuário</th><th class="border border-borda-sutil p-2">Data/Hora do Log</th></tr></thead><tbody>{% for justificativa in parada.justificativas_exibicao %}<tr><td class="border border-borda-sutil p-2 text-left">{{ justificativa.sequencia }}. {{ justificativa.motivo }}{% if justificativa.descricao_motivo %} - {{ justificativa.descricao_motivo }}{% endif %}</td><td class="border border-borda-sutil p-2">{{ parada.operador|default:"-" }}</td><td class="border border-borda-sutil p-2 whitespace-nowrap">{{ justificativa.inicio_exibicao|date:"d/m/Y H:i:s" }}</td><td class="border border-borda-sutil p-2 whitespace-nowrap">{{ justificativa.fim_exibicao|date:"d/m/Y H:i:s" }}</td><td class="border border-borda-sutil p-2 whitespace-nowrap">{{ justificativa.tempo_exibicao_legivel }}</td><td class="border border-borda-sutil p-2">{{ parada.usuario|default:"-" }}</td><td class="border border-borda-sutil p-2 whitespace-nowrap">{{ justificativa.data_hora|date:"d/m/Y H:i:s"|default:"-" }}</td></tr>{% endfor %}</tbody></table></td></tr>{% endif %}
+                                    {% if parada.pode_alterar_justificativas %}<dialog id="modal-justificativas-{{ periodo.id }}-{{ parada.id }}" class="fixed left-1/2 top-1/2 m-0 max-h-[90vh] w-[min(92vw,42rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-borda-sutil bg-superficie-elevada p-0 text-texto-primario shadow-2xl" onclick="if (event.target === this) this.close()"><div class="bg-superficie-elevada p-4 text-left text-texto-primario"><div class="mb-3 flex items-center justify-between border-b border-borda-sutil pb-3"><h3 class="text-lg font-bold text-texto-primario">Alterar justificativas da parada física</h3><button type="button" onclick="this.closest('dialog').close()" class="text-xl leading-none text-texto-legenda hover:text-texto-primario" aria-label="Fechar"><i data-lucide="x" aria-hidden="true"></i></button></div><p class="mb-3 rounded border border-informacao-borda bg-informacao-sutil px-3 py-2 text-sm text-informacao-base">Esta parada é física e compartilhada entre os períodos vinculados. As justificativas alteram a duração total: {{ parada.inicio|date:"d/m/Y H:i:s" }} até {% if parada.fim %}{{ parada.fim|date:"d/m/Y H:i:s" }}{% else %}em aberto{% endif %}. Neste período, ela é considerada de {{ parada.inicio_exibicao|date:"d/m/Y H:i:s" }} até {% if parada.fim_exibicao %}{{ parada.fim_exibicao|date:"d/m/Y H:i:s" }}{% else %}em aberto{% endif %}.</p><form id="form-justificativas-{{ periodo.id }}-{{ parada.id }}" data-parada-aberta="{% if parada.fim %}false{% else %}true{% endif %}" data-inicio="{{ parada.inicio|date:'c' }}" data-fim="{% if parada.fim %}{{ parada.fim|date:'c' }}{% endif %}" method="POST" action="{% url 'salvar_justificativas_parada' parada.id %}" class="grid gap-6" onsubmit="enviarJustificativas(event, {{ periodo.id }}, {{ parada.id }})">{% csrf_token %}<div id="erro-justificativas-{{ periodo.id }}-{{ parada.id }}" class="hidden rounded border border-erro-borda bg-erro-sutil px-3 py-2 font-semibold text-erro-base"></div>{% for justificativa in parada.justificativas_ordenadas %}<div class="linha-justificativa grid grid-cols-[1fr_100px_34px_34px] gap-3" data-justificativa-id="{{ justificativa.id }}"><select name="motivo_{{ justificativa.id }}" class="min-w-0 rounded border border-borda-padrao px-2 py-2 text-texto-primario">{% for grupo in parada.motivos_parada %}<optgroup label="{{ grupo.codigo }} - {{ grupo.descricao }}">{% for motivo in grupo.motivos %}<option value="{{ motivo.codigo }}" {% if motivo.codigo == justificativa.motivo %}selected{% endif %}>{{ motivo.codigo }} - {{ motivo.descricao }}</option>{% endfor %}</optgroup>{% endfor %}</select><input name="tempo_{{ justificativa.id }}" value="{{ justificativa.tempo_legivel }}" placeholder="HH:MM:SS" class="tempo-justificativa w-full rounded border border-borda-padrao px-2 py-2 text-texto-primario"><button type="button" onclick="atribuirTempoRestanteLog({{ periodo.id }}, {{ parada.id }})" class="botao-restante-justificativa !hidden inline-flex h-10 w-8 items-center justify-center rounded border border-atencao-borda bg-atencao-sutil text-atencao-base hover:bg-atencao-sutil" title="Atribuir todo o tempo restante"><i data-lucide="clock" class="" aria-hidden="true"></i></button><button type="button" onclick="removerUltimaJustificativa({{ periodo.id }}, {{ parada.id }})" class="botao-remover-justificativa botao-perigo-icone !hidden" title="Excluir última justificativa" aria-label="Excluir última justificativa"><i data-lucide="trash-2" class="" aria-hidden="true"></i></button></div>{% endfor %}<div id="novas-justificativas-{{ periodo.id }}-{{ parada.id }}" class="grid gap-3"></div><template id="template-justificativa-{{ periodo.id }}-{{ parada.id }}"><div class="linha-justificativa grid grid-cols-[1fr_100px_34px_34px] gap-3 border-t border-borda-padrao pt-2"><select name="novo_motivo___INDICE__" class="min-w-0 rounded border border-borda-padrao px-2 py-2 text-texto-primario"><option value="">Selecione o motivo</option>{% for grupo in parada.motivos_parada %}<optgroup label="{{ grupo.codigo }} - {{ grupo.descricao }}">{% for motivo in grupo.motivos %}<option value="{{ motivo.codigo }}">{{ motivo.codigo }} - {{ motivo.descricao }}</option>{% endfor %}</optgroup>{% endfor %}</select><input name="novo_tempo___INDICE__" placeholder="HH:MM:SS" class="tempo-justificativa w-full rounded border border-borda-padrao px-2 py-2 text-texto-primario"><button type="button" onclick="atribuirTempoRestanteLog({{ periodo.id }}, {{ parada.id }})" class="botao-restante-justificativa !hidden inline-flex h-10 w-8 items-center justify-center rounded border border-atencao-borda bg-atencao-sutil text-atencao-base hover:bg-atencao-sutil" title="Atribuir todo o tempo restante"><i data-lucide="clock" class="" aria-hidden="true"></i></button><button type="button" onclick="removerUltimaJustificativa({{ periodo.id }}, {{ parada.id }})" class="botao-remover-justificativa botao-perigo-icone !hidden" title="Excluir última justificativa" aria-label="Excluir última justificativa"><i data-lucide="trash-2" class="" aria-hidden="true"></i></button></div></template><button type="button" onclick="adicionarJustificativa({{ periodo.id }}, {{ parada.id }})" class="mr-4 w-fit rounded border border-informacao-borda bg-informacao-sutil px-3 py-2 font-semibold text-informacao-base hover:opacity-90">+ Nova justificativa</button><button class="botao-primario mt-3 inline-flex items-center gap-2 px-3 py-3"><i data-lucide="save" class="h-4 w-4" aria-hidden="true"></i>Salvar</button></form></div></dialog>{% endif %}
+                                    {% if parada.pode_alterar_horarios %}
+                                    <dialog id="modal-horarios-{{ periodo.id }}-{{ parada.id }}" class="fixed left-1/2 top-1/2 m-0 w-[min(92vw,38rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-borda-sutil bg-superficie-elevada p-0 text-texto-primario shadow-2xl" onclick="if (event.target === this) this.close()">
+                                        <div class="p-6 text-left">
+                                            <div class="mb-4 flex items-center justify-between border-b border-borda-sutil pb-3"><h3 class="text-lg font-bold">Alterar horários da parada física</h3><button type="button" onclick="this.closest('dialog').close()" class="text-xl leading-none text-texto-legenda hover:text-texto-primario" aria-label="Fechar"><i data-lucide="x" aria-hidden="true"></i></button></div>
+                                            <p class="mb-3 rounded border border-borda-sutil bg-informacao-sutil px-3 py-2 text-sm text-texto-primario">A alteração vale para todos os períodos que cruzarem este intervalo. Ela não altera somente a OP desta linha.</p>
+                                            <form method="POST" action="{% url 'alterar_horarios_parada_tempo_producao' parada.id %}" class="grid gap-6">
+                                                {% csrf_token %}
+                                                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                                    <div><label class="mb-2 block font-semibold">Início</label><input type="datetime-local" name="inicio" value="{{ parada.inicio|date:'Y-m-d\TH:i:s' }}" step="1" class="w-full rounded border border-borda-padrao px-3 py-2" required></div>
+                                                    <div><label class="mb-2 block font-semibold">Fim</label><input type="datetime-local" name="fim" value="{% if parada.fim %}{{ parada.fim|date:'Y-m-d\TH:i:s' }}{% endif %}" step="1" class="w-full rounded border border-borda-padrao px-3 py-2" {% if parada.fim %}required{% endif %}></div>
+                                                </div>
+                                                {% if parada.fim %}
+                                                <p class="text-xs leading-relaxed text-texto-legenda">Esta parada já está encerrada: o fim é obrigatório e não pode ser removido por esta ação.</p>
+                                                {% else %}
+                                                <p class="text-xs leading-relaxed text-texto-legenda">Deixe o fim em branco para manter a parada aberta; informe-o para encerrá-la.</p>
+                                                {% endif %}
+                                                <p class="rounded border border-atencao-borda bg-atencao-sutil px-3 py-3 text-xs leading-relaxed text-atencao-base">Pacotes ERP pendentes, a partir do trecho corrigido, serão regenerados. Pacotes já integrados ou em processamento permanecem imutáveis e não serão reenviados ao ERP.</p>
+                                                <button class="botao-primario mt-2 inline-flex items-center gap-2"><i data-lucide="save" class="h-4 w-4" aria-hidden="true"></i>Salvar horários</button>
+                                            </form>
+                                        </div>
+                                    </dialog>
+                                    {% endif %}
+                                {% empty %}<tr><td colspan="8" class="border border-borda-sutil p-2 text-texto-legenda">Nenhuma parada neste período.</td></tr>{% endfor %}</tbody>
+                            </table>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="13" class="border border-borda-sutil p-6 text-texto-legenda">Nenhum período produtivo encontrado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if periodos.has_other_pages %}
+    <div class="mt-6 flex justify-center"><nav class="inline-flex rounded-xl shadow-sm">
+        {% if periodos.has_previous %}<a href="?page={{ periodos.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Anterior</a>{% endif %}
+        <span class="botao-primario text-sm">Página {{ periodos.number }} de {{ periodos.paginator.num_pages }}</span>
+        {% if periodos.has_next %}<a href="?page={{ periodos.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Próxima</a>{% endif %}
+    </nav></div>
+    {% endif %}
+</div>
+{% if recursos_parada_manual %}
+<dialog id="modal-parada-manual" class="fixed left-1/2 top-1/2 m-0 w-[min(92vw,38rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-borda-sutil bg-superficie-elevada p-0 text-texto-primario shadow-2xl" onclick="if (event.target === this) this.close()">
+    <div class="p-6">
+        <div class="mb-4 flex items-center justify-between border-b border-borda-sutil pb-3"><h3 class="text-lg font-bold">Abrir parada manual</h3><button type="button" onclick="this.closest('dialog').close()" class="text-xl leading-none text-texto-legenda hover:text-texto-primario" aria-label="Fechar"><i data-lucide="x" aria-hidden="true"></i></button></div>
+        <form method="post" action="{% url 'criar_parada_manual_log' %}" class="grid gap-3">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <div><label class="mb-1 block font-semibold">Recurso</label><select id="recurso-parada-manual" name="recurso" class="w-full rounded border border-borda-padrao px-3 py-2" required><option value="">Selecione...</option>{% for recurso in recursos_parada_manual %}<option value="{{ recurso.id }}">{{ recurso.codigo }} - {{ recurso.descricao }}</option>{% endfor %}</select></div>
+            <div><label class="mb-1 block font-semibold">Código do operador</label><input name="numcad" inputmode="numeric" class="w-full rounded border border-borda-padrao px-3 py-2" required></div>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2"><div><label class="mb-1 block font-semibold">Início</label><div class="flex gap-1"><input id="inicio-parada-manual" type="datetime-local" name="inicio" class="min-w-0 flex-1 rounded border border-borda-padrao px-3 py-2" required><button type="button" onclick="abrirCalendarioParadaManual('inicio-parada-manual')" class="rounded bg-superficie-afundada px-3 text-texto-primario hover:bg-interacao-hover" title="Selecionar início"><i data-lucide="calendar-days" class="" aria-hidden="true"></i></button></div></div><div><label class="mb-1 block font-semibold">Fim</label><div class="flex gap-1"><input id="fim-parada-manual" type="datetime-local" name="fim" class="min-w-0 flex-1 rounded border border-borda-padrao px-3 py-2"><button type="button" onclick="abrirCalendarioParadaManual('fim-parada-manual')" class="rounded bg-superficie-afundada px-3 text-texto-primario hover:bg-interacao-hover" title="Selecionar fim"><i data-lucide="calendar-days" class="" aria-hidden="true"></i></button></div></div></div>
+            <p class="text-xs text-texto-legenda">A parada é física do recurso e será vinculada automaticamente a todas as OPs/períodos que coincidirem com o intervalo. O intervalo respeita a duração mínima configurada no recurso e não pode coincidir com outra parada.</p>
+            <button class="botao-perigo">Salvar parada manual</button>
+        </form>
+    </div>
+</dialog>
+{% endif %}
+<script>
+function abrirCalendarioParadaManual(id) {
+    const campo = document.getElementById(id);
+    campo.focus();
+    if (campo.showPicker) campo.showPicker();
+}
+
+function alternarPeriodo(periodoId) {
+    const detalhes = document.getElementById(`paradas-periodo-${periodoId}`);
+    const seta = document.getElementById(`seta-periodo-${periodoId}`);
+    detalhes.classList.toggle('hidden');
+    seta.classList.toggle('rotate-90');
+}
+
+function chaveParadaPeriodo(periodoId, paradaId) {
+    return `${periodoId}-${paradaId}`;
+}
+
+function alternarJustificativasParada(periodoId, paradaId) {
+    const chave = chaveParadaPeriodo(periodoId, paradaId);
+    const detalhes = document.getElementById(`justificativas-parada-${chave}`);
+    const seta = document.getElementById(`seta-parada-${chave}`);
+    detalhes.classList.toggle('hidden');
+    seta.classList.toggle('rotate-90');
+}
+
+function adicionarJustificativa(periodoId, paradaId) {
+    const chave = chaveParadaPeriodo(periodoId, paradaId);
+    const form = document.getElementById(`form-justificativas-${chave}`);
+    const linhas = form.querySelectorAll('.linha-justificativa');
+    const ultimaLinha = linhas[linhas.length - 1];
+    const ultimoTempo = ultimaLinha?.querySelector('.tempo-justificativa');
+    const ultimoMotivo = ultimaLinha?.querySelector('select');
+    if (ultimoMotivo && !ultimoMotivo.value) {
+        exibirErroJustificativas(periodoId, paradaId, 'Selecione o motivo da justificativa anterior antes de adicionar outra.');
+        return;
+    }
+    if (ultimoTempo && !ultimoTempo.value.trim()) {
+        exibirErroJustificativas(periodoId, paradaId, 'Preencha o tempo da justificativa anterior antes de adicionar outra.');
+        return;
+    }
+    if (ultimoTempo && tempoZerado(ultimoTempo.value)) {
+        exibirErroJustificativas(periodoId, paradaId, 'Tempo zerado não pode ficar em uma sequência anterior.');
+        return;
+    }
+    const destino = document.getElementById(`novas-justificativas-${chave}`);
+    const template = document.getElementById(`template-justificativa-${chave}`);
+    const indice = destino.children.length + 1;
+    destino.insertAdjacentHTML('beforeend', template.innerHTML.replaceAll('__INDICE__', indice));
+    atualizarBotoesRemoverJustificativa(form);
+}
+
+function removerUltimaJustificativa(periodoId, paradaId) {
+    const form = document.getElementById(`form-justificativas-${chaveParadaPeriodo(periodoId, paradaId)}`);
+    const linhas = form.querySelectorAll('.linha-justificativa');
+    if (linhas.length <= 1) return;
+    const ultimaLinha = linhas[linhas.length - 1];
+    if (!ultimaLinha) return;
+    const justificativaId = ultimaLinha.dataset.justificativaId;
+    if (justificativaId) {
+        const marcador = document.createElement('input');
+        marcador.type = 'hidden';
+        marcador.name = 'remover_justificativa';
+        marcador.value = justificativaId;
+        form.appendChild(marcador);
+    }
+    ultimaLinha.remove();
+    atualizarBotoesRemoverJustificativa(form);
+}
+
+function atualizarBotoesRemoverJustificativa(form) {
+    const linhas = form.querySelectorAll('.linha-justificativa');
+    form.querySelectorAll('.botao-remover-justificativa').forEach((botao) => botao.classList.add('!hidden'));
+    form.querySelectorAll('.botao-restante-justificativa').forEach((botao) => botao.classList.add('!hidden'));
+    const ultimaLinha = linhas[linhas.length - 1];
+    if (linhas.length > 1) {
+        ultimaLinha?.querySelector('.botao-remover-justificativa')?.classList.remove('!hidden');
+    }
+    if (form.dataset.paradaAberta === 'false') {
+        ultimaLinha?.querySelector('.botao-restante-justificativa')?.classList.remove('!hidden');
+    }
+}
+
+function atribuirTempoRestanteLog(periodoId, paradaId) {
+    const form = document.getElementById(`form-justificativas-${chaveParadaPeriodo(periodoId, paradaId)}`);
+    const linhas = Array.from(form.querySelectorAll('.linha-justificativa'));
+    const ultima = linhas[linhas.length - 1];
+    const segundos = (valor) => {
+        const partes = valor.split(':').map(Number);
+        return partes.length === 3 && !partes.some(Number.isNaN) ? partes[0] * 3600 + partes[1] * 60 + partes[2] : 0;
+    };
+    const inicio = new Date(form.dataset.inicio).getTime();
+    const fim = form.dataset.fim ? new Date(form.dataset.fim).getTime() : Date.now();
+    const usados = linhas.slice(0, -1).reduce((total, linha) => total + segundos(linha.querySelector('.tempo-justificativa').value), 0);
+    const restante = Math.max(0, Math.floor((fim - inicio) / 1000 - usados));
+    ultima.querySelector('.tempo-justificativa').value = `${String(Math.floor(restante / 3600)).padStart(2, '0')}:${String(Math.floor((restante % 3600) / 60)).padStart(2, '0')}:${String(restante % 60).padStart(2, '0')}`;
+}
+
+function tempoZerado(valor) {
+    const digitos = valor.replace(/\D/g, '');
+    return digitos && Number(digitos) === 0;
+}
+
+function formatarTempo(campo) {
+    const digitos = campo.value.replace(/\D/g, '');
+    if (!digitos) return;
+    const valor = digitos.slice(-6).padStart(6, '0');
+    campo.value = `${valor.slice(0, 2)}:${valor.slice(2, 4)}:${valor.slice(4, 6)}`;
+}
+
+document.addEventListener('focusout', (evento) => {
+    if (evento.target.classList.contains('tempo-justificativa')) formatarTempo(evento.target);
+});
+
+function exibirErroJustificativas(periodoId, paradaId, mensagem) {
+    const erro = document.getElementById(`erro-justificativas-${chaveParadaPeriodo(periodoId, paradaId)}`);
+    erro.textContent = mensagem;
+    erro.classList.remove('hidden');
+}
+
+function exibirFeedbackLogTempo(mensagem, tipo = 'sucesso') {
+    const feedback = document.getElementById('feedback-log-tempo-producao');
+    feedback.textContent = mensagem;
+    feedback.className = `fixed right-6 top-6 z-50 rounded-lg border px-4 py-3 font-semibold shadow-lg ${tipo === 'sucesso' ? 'border-sucesso-borda bg-sucesso-sutil text-sucesso-base' : 'border-erro-borda bg-erro-sutil text-erro-base'}`;
+    setTimeout(() => feedback.classList.add('hidden'), 5000);
+}
+
+function validarJustificativas(periodoId, paradaId) {
+    const chave = chaveParadaPeriodo(periodoId, paradaId);
+    const form = document.getElementById(`form-justificativas-${chave}`);
+    const linhas = Array.from(form.querySelectorAll('.linha-justificativa'));
+    const aberta = form.dataset.paradaAberta === 'true';
+    const erro = document.getElementById(`erro-justificativas-${chave}`);
+    erro.classList.add('hidden');
+
+    for (let indice = 0; indice < linhas.length; indice += 1) {
+        const motivo = linhas[indice].querySelector('select');
+        const tempo = linhas[indice].querySelector('.tempo-justificativa');
+        if (!motivo.value) {
+            exibirErroJustificativas(periodoId, paradaId, 'Informe o motivo de cada justificativa.');
+            return false;
+        }
+        const ultima = indice === linhas.length - 1;
+        if (aberta && ultima && tempo.value.trim()) {
+            exibirErroJustificativas(periodoId, paradaId, 'Em parada aberta, a última justificativa fica em andamento e não recebe tempo.');
+            return false;
+        }
+        if ((!aberta || !ultima) && !tempo.value.trim()) {
+            exibirErroJustificativas(periodoId, paradaId, 'Preencha o tempo de todas as justificativas, exceto a última parada aberta.');
+            return false;
+        }
+        if (!ultima && tempoZerado(tempo.value)) {
+            exibirErroJustificativas(periodoId, paradaId, 'Tempo zerado só é permitido na última sequência.');
+            return false;
+        }
+    }
+    return true;
+}
+
+async function enviarJustificativas(evento, periodoId, paradaId) {
+    evento.preventDefault();
+    if (!validarJustificativas(periodoId, paradaId)) return;
+
+    const chave = chaveParadaPeriodo(periodoId, paradaId);
+    const form = document.getElementById(`form-justificativas-${chave}`);
+    try {
+        const resposta = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+        });
+        const dados = await resposta.json();
+        if (!resposta.ok || !dados.ok) {
+            exibirErroJustificativas(periodoId, paradaId, dados.mensagem || 'Não foi possível salvar as justificativas.');
+            return;
+        }
+        sessionStorage.setItem('feedback-log-tempo-producao', 'Justificativas salvas com sucesso.');
+        document.getElementById(`modal-justificativas-${chave}`).close();
+        window.location.reload();
+    } catch (erro) {
+        exibirErroJustificativas(periodoId, paradaId, 'Não foi possível salvar as justificativas.');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll(
+        'dialog[id^="modal-horarios-"] > div > form, dialog[id^="modal-justificativas-"] > div > form'
+    ).forEach((form) => {
+        // Dialogs renderizados dentro de tbody são reordenados pelo navegador.
+        // Reanexa ao form os campos e ações que ficaram como irmãos dele.
+        while (form.nextSibling) {
+            form.appendChild(form.nextSibling);
+        }
+    });
+    document.querySelectorAll(
+        'dialog[id^="modal-justificativas-"] > div > button[onclick^="adicionarJustificativa"]'
+    ).forEach((botao) => {
+        botao.classList.add('mr-4');
+    });
+    document.querySelectorAll('dialog[id^="modal-horarios-"] > div > button').forEach((botao) => {
+        botao.classList.add('mt-6', 'py-3');
+    });
+    document.querySelectorAll('[id^="form-justificativas-"]').forEach((form) => {
+        atualizarBotoesRemoverJustificativa(form);
+    });
+    const mensagem = sessionStorage.getItem('feedback-log-tempo-producao');
+    if (mensagem) {
+        sessionStorage.removeItem('feedback-log-tempo-producao');
+        exibirFeedbackLogTempo(mensagem);
+    }
+});
+</script>
+{% endblock %}

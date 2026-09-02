@@ -1,0 +1,1150 @@
+{% extends 'producao/apontamento_base.html' %}
+{% load l10n %}
+{% block apontamento_content %}
+        {% if erro %}
+         <div class="mb-3 flex items-center justify-between rounded-xl bg-erro-base px-4 py-3 text-texto-sobre-marca shadow-sm">
+            <span>{{ erro }}</span>
+            <button onclick="this.parentElement.remove()" class="font-bold text-xl leading-none ml-4" aria-label="Fechar"><i data-lucide="x" aria-hidden="true"></i></button>
+         </div>
+         {% endif %}
+
+        {% if tem_multiplas_ops_ativas %}
+        <div class="mb-3 rounded-xl border border-atencao-borda bg-atencao-sutil px-4 py-3 text-atencao-base shadow-sm">
+            Este recurso possui mais de uma OP ativa. As ações desta tela estão bloqueadas porque a V1 trabalha com uma única OP.
+        </div>
+        {% endif %}
+
+        <div class="overflow-x-auto rounded-2xl border border-borda-sutil bg-superficie-elevada text-xl shadow-sm md:text-2xl">
+
+                <div class="flex min-w-[640px] items-center justify-between bg-superficie-afundada px-4 py-4 text-texto-primario">
+                    <span class="text-2xl font-bold md:text-3xl">Apontamento de Produção {% if recurso_selecionado %}- {{ recurso_selecionado.descricao }}{% endif %}</span>
+                    <div class="flex items-center gap-2">
+                    {% if pode_corrigir_lote %}
+                    <div class="flex items-center gap-2">
+                        <button onclick="document.getElementById('modalCorrigirLote').classList.remove('hidden')"
+                                class="botao-secundario px-3 text-base font-bold md:text-lg">
+                            <i data-lucide="square-pen" class=" mr-2" aria-hidden="true"></i> Corrigir Apontamento
+                        </button>
+                    </div>
+                    {% endif %}
+                    {% if dados_op and recurso_id %}
+                    <a href="{% url 'log_tempo_producao' %}?recurso={{ recurso_id }}&origem={{ dados_op.codori }}&op={{ dados_op.numorp }}&estagio={{ codetg }}&seqrot={{ seqrot }}"
+                       class="inline-flex h-10 items-center whitespace-nowrap rounded-full border border-informacao-borda bg-informacao-sutil px-4 text-sm font-bold text-informacao-base shadow-sm transition hover:opacity-90">
+                        <i data-lucide="history" class="h-5 w-5" aria-hidden="true"></i> Log Tempos
+                    </a>
+                    {% endif %}
+                    {% if pode_abrir_parada_manual %}
+                    <form method="post" action="{% url 'abrir_parada_manual_apontamento' recurso_id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="numcad" value="{{ numcad }}">
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" onclick="return confirm('Abrir parada manual agora?')" class="botao-perigo whitespace-nowrap px-3 py-2 text-base md:text-lg"><i data-lucide="circle-stop" class=" mr-2" aria-hidden="true"></i> Abrir Parada
+                        </button>
+                    </form>
+                    {% endif %}
+                    </div>
+                </div>
+
+            <div class="min-w-[640px] space-y-9 bg-superficie-afundada p-6 min-h-[50vh]">
+
+                {% if dados_op %}
+                <div class="grid grid-cols-2 gap-3 items-end lg:grid-cols-12">
+
+                    <div class="hidden">
+                        <label class="text-xl md:text-3xl font-semibold">Empresa</label>
+                        <input class="border bg-superficie-afundada p-1 text-xl md:text-3xl rounded w-full"
+                               value="{{ codbar|slice:':4' }}" readonly>
+                    </div>
+                    <div class="col-span-2 flex min-w-0 flex-col gap-1 lg:col-span-1">
+                        <label class="mb-1 block min-h-8 text-xl font-semibold md:text-3xl">Origem</label>
+                        <input class="border bg-superficie-afundada p-1 text-xl md:text-3xl rounded w-full h-[58px]"
+                               value="{{ dados_op.codori }}" readonly tabindex="-1">
+                    </div>
+                    <div class="col-span-2 flex min-w-0 flex-col gap-1 lg:col-span-2">
+                        <label class="mb-1 block min-h-8 text-xl font-semibold md:text-3xl">Ordem</label>
+                        <input class="border bg-superficie-afundada p-1 text-xl md:text-3xl rounded w-full h-[58px]"
+                               value="{{ dados_op.numorp }}" readonly tabindex="-1">
+                    </div>
+
+                    {% if recurso_id and pode_apontar and not tem_multiplas_ops_ativas %}
+                    <div id="operadorValidadoBox" class="col-span-2 lg:col-span-6">
+                        {% if nome_operador %}
+                        <label class="text-xl md:text-3xl font-semibold">Operador</label>
+                        <div class="flex h-[58px] items-center truncate rounded-xl bg-marca-base px-3 py-1 text-xl text-texto-sobre-marca shadow-sm md:text-2xl">
+                             <strong>{{ nome_operador }} ({{ numcad }})</strong>
+                        </div>
+                        {% else %}
+                        <label class="text-xl md:text-3xl font-semibold">ID Operador</label>
+                        <input type="number" name="numcad"
+                               form="formValidarOperador"
+                               class="border rounded p-1 w-full text-xl md:text-3xl h-[58px]"
+                               placeholder="Digite o ID..."
+                               required>
+                        {% endif %}
+                    </div>
+
+                    <div id="operadorAcaoBox" class="col-span-2 flex items-end lg:col-span-2">
+                        {% if nome_operador %}
+                        {% if not parada_aberta %}
+                        <form method="post" class="w-full">
+                            {% csrf_token %}
+                            <input type="hidden" name="codbar" value="{{ codbar }}">
+                            <input type="hidden" name="centro" value="{{ centro_id }}">
+                            <input type="hidden" name="recurso" value="{{ recurso_id }}">
+                            <button name="trocar_operador"
+                                    class="botao-perigo h-[58px] w-full px-2 py-1 text-xl md:text-2xl" title="Trocar Operador">
+                                Trocar
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% else %}
+                        <form method="post" id="formValidarOperador" class="w-full">
+                            {% csrf_token %}
+                            <input type="hidden" name="codbar" value="{{ codbar }}">
+                            <input type="hidden" name="centro" value="{{ centro_id }}">
+                            <input type="hidden" name="recurso" value="{{ recurso_id }}">
+                            <button name="validar_operador"
+                                    class="botao-primario h-[58px] w-full px-2 py-1 text-xl md:text-2xl"
+                                    title="Validar Operador">
+                                Validar
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+                    {% if codbar and recurso_selecionado and recurso_selecionado.bobina is not None %}
+                    <div class="col-span-1">
+                        <label class="font-semibold text-xl md:text-3xl whitespace-nowrap">Nº Bobina Atual</label>
+                        <select id="bobina_selecionada" name="bobina_selecionada" form="formApontamento"
+                                class="border rounded p-1 w-full bg-superficie-elevada text-xl md:text-3xl h-[58px] "
+                                onchange="updateBobinaColor()">
+                            {% for b in bobinas_disponiveis %}
+                                <option value="{{ b }}"
+                                        {% if bobina_selecionada_post %}{% if b|stringformat:"s" == bobina_selecionada_post %}selected{% endif %}{% elif forloop.last %}selected{% endif %}
+                                        class="font-bold {% if b == recurso_selecionado.bobina %}!text-sucesso-base{% else %}!text-erro-base{% endif %}"
+                                        data-status="{% if b == recurso_selecionado.bobina %}correta{% else %}divergente{% endif %}">
+                                    {{ b }}
+                                </option>
+                            {% empty %}
+                                <option value="" selected
+                                        class="font-bold !text-erro-base"
+                                        data-status="divergente"
+                                        title="Sensor de bobina deste recurso está com leitura inconsistente. Avise a manutenção.">
+                                    Sem número de bobina
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <script>
+                            function updateBobinaColor() {
+                                const select = document.getElementById('bobina_selecionada');
+                                if (!select) return;
+                                const selectedOption = select.options[select.selectedIndex];
+                                if (selectedOption) {
+                                    const correta = selectedOption.dataset.status === 'correta';
+                                    select.classList.remove('!text-sucesso-base', '!border-sucesso-borda', '!text-erro-base', '!border-erro-borda');
+                                    select.classList.add('font-bold', ...(correta
+                                        ? ['!text-sucesso-base', '!border-sucesso-borda']
+                                        : ['!text-erro-base', '!border-erro-borda']));
+                                }
+                            }
+                            // Inicializa a cor no carregamento e após qualquer mudança de estado
+                            document.addEventListener('DOMContentLoaded', updateBobinaColor);
+                            // Caso o select mude via script (se houver algum)
+                            window.addEventListener('load', updateBobinaColor);
+                        </script>
+                    </div>
+                    {% endif %}
+
+                    {% if dados_op %}
+                    <div class="col-span-1">
+                        <label class="text-xl md:text-3xl font-semibold whitespace-nowrap">Status OP</label>
+                        <div class="flex h-[58px] items-center gap-1">
+                            <input class="border p-1 text-xl md:text-3xl font-bold rounded w-full h-full {% if status_seq == 'Finalizada' %}bg-informacao-sutil text-informacao-base{% else %}bg-superficie-afundada{% endif %}"
+                                   value="{{ status_seq|default:'-' }}" readonly tabindex="-1">
+
+                            {% if status_seq == "Finalizada" and sequencia_atual_id and not tem_multiplas_ops_ativas and pode_apontar %}
+                            <form method="post" onsubmit="return confirm('Deseja realmente remover esta sequência do sequenciamento?')" class="h-full">
+                                {% csrf_token %}
+                                <input type="hidden" name="sequencia_id" value="{{ sequencia_atual_id }}">
+                                <input type="hidden" name="tab_id" value="{{ tab_id }}">
+                                <button type="submit" name="remover_sequencia"
+                                        class="flex h-full w-[58px] items-center justify-center rounded-full bg-erro-base px-2 py-1 text-xl font-bold text-texto-sobre-marca shadow-sm transition hover:bg-erro-destaque md:text-2xl"Remover do sequenciamento">
+                                    <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if operacoes %}
+                    <div class="col-span-1 md:col-span-2">
+                        <label class="text-xl md:text-3xl font-semibold whitespace-nowrap">Bobinas por Pesagem</label>
+                        <input class="border bg-superficie-afundada p-1 text-xl md:text-3xl rounded w-full h-[58px]"
+                               value="{{ dados_op.usu_qtdbob|default:'0' }}" readonly tabindex="-1">
+                    </div>
+                    {% endif %}
+
+                    <div class="hidden xl:block xl:col-span-2"></div>
+                </div>
+
+                {% if codbar and dados_op and recurso_id %}
+                <form method="post" id="formApontamento" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    {% csrf_token %}
+
+                    <input type="hidden" name="codbar" value="{{ codbar }}">
+                    <input type="hidden" name="centro" value="{{ centro_id }}">
+                    <input type="hidden" name="recurso" value="{{ recurso_id }}">
+                    <input type="hidden" name="numcad" value="{{ numcad }}">
+
+                    {% if status_seq != "Finalizada" and status_seq != "Sequência inexistente" and status_seq != "Não movimenta" %}
+
+                    {% if op_ativa_recurso == codbar and pode_apontar and habilitar_apontamento and not tem_multiplas_ops_ativas %}
+                    <div class="col-span-1">
+                        <label class="text-xl md:text-3xl font-semibold flex items-center gap-2">
+                            Produzida
+                            <span id="labelOrigemPeso" class="text-xs px-1 rounded border border-borda-padrao text-texto-legenda bg-superficie-afundada uppercase font-bold hidden">Aguardando</span>
+                        </label>
+                        <div class="flex gap-1 relative">
+                            <input type="number"
+                                   name="qtdre1"
+                                   id="qtdre1"
+                                   step="0.01"
+                                   max="{{ parametros_apontamento.limite_apontamento_maximo|unlocalize }}"
+                                   min="0"
+                                   class="border rounded p-1 w-full text-xl md:text-3xl bg-superficie-afundada h-[58px]"
+                                   value="0"
+                                   readonly tabindex="-1"
+                                   required
+                                   onkeydown="return false;"
+                                   onpaste="return false;"
+                                   oncontextmenu="return false;">
+                            <input type="hidden" name="origem_peso" id="origem_peso" value="">
+                            <input type="hidden" name="autorizado_modal" id="autorizado_modal" value="0">
+                            <button type="button"
+                                    id="btnAbrirModalBalanca"
+                                    class="botao-primario h-[58px] min-w-[72px] text-xl md:text-2xl"
+                                    title="Capturar peso da balança">
+                                <i data-lucide="scale" class="h-9 w-9" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% if aponta_refugo %}
+                    <div class="col-span-1">
+                        <label class="text-xl md:text-3xl font-semibold">Refugada</label>
+                        <input type="number"
+                               name="qtdrfg"
+                               id="qtdrfg"
+                               step="0.01"
+                               max="{{ parametros_apontamento.limite_apontamento_maximo|unlocalize }}"
+                               min="0"
+                               class="border rounded p-1 w-full text-xl md:text-3xl h-[58px]"
+                               value="0"
+                               required>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
+                    {% endif %}
+
+                    <div class="col-span-1 md:col-span-2 flex items-end">
+                    {% if status_seq != "Finalizada" and status_seq != "Sequência inexistente" and status_seq != "Não movimenta" %}
+                        {% if op_ativa_recurso != codbar and pode_apontar and habilitar_apontamento and not parada_bloqueante and not tem_multiplas_ops_ativas %}
+                            <button type="submit" name="trocar_op_ativa"
+                                    onclick="return confirm('Deseja realmente trocar para esta OP? Isso irá interromper a OP atual no recurso.')"
+                                    class="botao-perigo h-[58px] w-full px-2 py-2 text-xl md:text-2xl">
+                                Trocar OP Ativa
+                            </button>
+                        {% elif pode_apontar and habilitar_apontamento and not parada_bloqueante and not tem_multiplas_ops_ativas %}
+                            <button type="submit" id="btnApontar" name="enviar_apontamento"
+                                    class="botao-primario h-[58px] w-full text-xl md:text-2xl">
+                                Apontar
+                            </button>
+                        {% elif pode_apontar and habilitar_apontamento and not tem_multiplas_ops_ativas %}
+                            <div class="flex h-[58px] w-full items-center justify-center rounded-xl bg-erro-sutil px-4 text-center text-base font-bold text-erro-base md:text-xl">
+                                Justifique todas as paradas para apontar
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                    </div>
+
+                </form>
+                {% endif %}
+
+                {% if resposta %}
+                <div id="alertResposta" class="rounded-xl px-4 py-3 text-texto-sobre-marca shadow-sm
+                    {% if 'ERRO' in resposta or 'inválida' in resposta or 'não' in resposta %} bg-erro-base {% else %} bg-marca-base {% endif %}">
+                    <strong>{{ acao|default:"Retorno" }}:</strong> <span id="textoResposta">{{ resposta }}</span>
+                </div>
+                {% endif %}
+
+            </div>
+
+        </div>
+
+        <!-- MODAL BALANÇA -->
+        <div id="modalBalanca" class="fixed inset-0 bg-transparent hidden items-center justify-center z-50">
+            <div class="bg-superficie-elevada rounded-lg shadow-2xl p-7 w-[440px] border border-borda-sutil text-xl">
+                <div class="flex justify-between items-center mb-5 text-texto-primario">
+                    <h3 class="text-3xl font-bold">Captura de Peso</h3>
+                    <button id="btnFecharModal" type="button" class="text-texto-legenda hover:text-erro-base p-1" aria-label="Fechar">
+                        <i data-lucide="x" class="h-8 w-8" aria-hidden="true"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-5 text-center">
+                    <div class="text-left">
+                        <label class="text-lg font-semibold text-texto-secundario">Selecione a Tara:</label>
+                        <select id="selectTara" class="w-full border rounded p-3 text-xl text-texto-primario">
+                            <option value="">Selecionar...</option>
+                            {% for t in taras_vinculadas %}
+                            <option value="{{ t.peso|stringformat:'.3f' }}">{{ t.tara }} ({{ t.peso }} kg)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="text-xl text-texto-secundario mb-2">Peso atual na balança:</div>
+                    <input type="number" id="pesoModal" readonly
+                           class="text-5xl font-mono font-bold text-center w-full border-2 border-sucesso-borda rounded p-6 bg-superficie-elevada text-texto-primario"
+                           value="0.00">
+
+                    <div id="avisoManual" class="text-lg text-erro-base mt-1 italic font-semibold">
+                        Em caso de falha na coleta de peso o campo de inserção irá aparecer em {{ parametros_apontamento.tempo_sem_comunicacao_manual }} seg
+                    </div>
+
+                    <div id="containerPesoManual" class="text-left hidden">
+                        <label class="text-lg font-semibold text-texto-secundario">Digitação Manual:</label>
+                        <input type="number" id="pesoManual" step="0.01"
+                               min="0"
+                               max="{{ parametros_apontamento.limite_apontamento_maximo|unlocalize }}"
+                               class="text-4xl font-mono font-bold text-center w-full border-2 border-atencao-borda rounded p-3 bg-superficie-elevada text-texto-primario"
+                               placeholder="0.00">
+                    </div>
+
+                    <div class="flex gap-2 mt-6">
+                        <button id="btnConfirmarPeso" class="botao-primario w-full text-2xl">
+                            Confirmar Peso
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const recursoId = "{{ recurso_id }}";
+                const modalBalanca = document.getElementById("modalBalanca");
+                const pesoModal = document.getElementById("pesoModal");
+                const btnAbrirModal = document.getElementById("btnAbrirModalBalanca");
+                const btnFecharModal = document.getElementById("btnFecharModal");
+                const btnConfirmarPeso = document.getElementById("btnConfirmarPeso");
+                const inputQtdPrincipal = document.getElementById("qtdre1");
+                const labelOrigemPeso = document.getElementById("labelOrigemPeso");
+                const inputOrigemPeso = document.getElementById("origem_peso");
+                const inputAutorizadoModal = document.getElementById("autorizado_modal");
+                const pesoManual = document.getElementById("pesoManual");
+                const containerPesoManual = document.getElementById("containerPesoManual");
+                const avisoManual = document.getElementById("avisoManual");
+                const btnApontar = document.getElementById("btnApontar");
+                const operadorLimpoKey = recursoId ? `sigma_v1_operador_limpo_${recursoId}` : "";
+
+                function mostrarOperadorNaoValidado() {
+                    const operadorBox = document.getElementById("operadorValidadoBox");
+                    const operadorAcaoBox = document.getElementById("operadorAcaoBox");
+                    const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+                    const csrf = csrfInput ? csrfInput.value : "";
+                    if (operadorBox) {
+                        operadorBox.innerHTML = `
+                            <label class="text-xl md:text-3xl font-semibold">ID Operador</label>
+                            <input type="number" name="numcad"
+                                   form="formValidarOperador"
+class="border rounded p-1 w-full text-xl md:text-3xl h-[58px]"
+                                   placeholder="Digite o ID..."
+                                   required>
+                        `;
+                    }
+                    if (operadorAcaoBox) {
+                        operadorAcaoBox.innerHTML = `
+                            <form method="post" id="formValidarOperador" class="w-full">
+                                <input type="hidden" name="csrfmiddlewaretoken" value="${csrf}">
+                                <input type="hidden" name="codbar" value="{{ codbar }}">
+                                <input type="hidden" name="centro" value="{{ centro_id }}">
+                                <input type="hidden" name="recurso" value="{{ recurso_id }}">
+                                <button name="validar_operador"
+                                        class="botao-primario h-[58px] w-full px-2 py-1 text-xl md:text-2xl"
+                                        title="Validar Operador">
+                                    Validar
+                                </button>
+                            </form>
+                        `;
+                    }
+                }
+
+                if (operadorLimpoKey && sessionStorage.getItem(operadorLimpoKey) === "1") {
+                    mostrarOperadorNaoValidado();
+                }
+
+                document.addEventListener("submit", function(event) {
+                    if (operadorLimpoKey && event.submitter && event.submitter.name === "validar_operador") {
+                        sessionStorage.removeItem(operadorLimpoKey);
+                    }
+                });
+
+                let tempoParaManual = Number("{{ parametros_apontamento.tempo_sem_comunicacao_manual|unlocalize }}") || 15;
+                const limiteApontamentoMinimo = Number("{{ parametros_apontamento.limite_apontamento_minimo|unlocalize }}");
+                const limiteApontamentoMaximo = Number("{{ parametros_apontamento.limite_apontamento_maximo|unlocalize }}");
+                let timerManual = null;
+
+                // 1. Lógica do Botão Apontar (Contagem 5s)
+                if (btnApontar) {
+                    btnApontar.addEventListener("click", function(event) {
+                        event.preventDefault();
+                        const form = btnApontar.form;
+                        if (!form.reportValidity()) return;
+
+                        const qtdProd = parseFloat(document.getElementById('qtdre1').value) || 0;
+                        const qtdRef = parseFloat(document.getElementById('qtdrfg')?.value) || 0;
+                        const qtdTotal = qtdProd + qtdRef;
+
+                        if (qtdTotal < limiteApontamentoMinimo || qtdTotal > limiteApontamentoMaximo) {
+                            alert(`A quantidade total (Produzida + Refugada) deve ficar entre ${limiteApontamentoMinimo} e ${limiteApontamentoMaximo}.`);
+                            return;
+                        }
+
+                        window.isPointing = true;
+                        window.isAwaitingPointingRedirect = true;
+                        btnApontar.disabled = true;
+                        
+                        // Capturamos os dados do formulário antes de enviar
+                        const formData = new FormData(form);
+                        formData.append('enviar_apontamento', '1');
+
+                        // Enviamos via fetch (assíncrono) para não recarregar a página imediatamente
+                        fetch(window.location.href, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        }).then(response => response.json())
+                        .then(data => {
+                            if (data.redirect_immediate && data.redirect_url) {
+                                window.isAwaitingPointingRedirect = false;
+                                window.location.href = data.redirect_url;
+                                return;
+                            }
+
+                            if (operadorLimpoKey && data.operador_limpo) {
+                                sessionStorage.setItem(operadorLimpoKey, "1");
+                            }
+
+                            let segundos = 10;
+                            btnApontar.innerText = `Apontando... (${segundos}s)`;
+                            btnApontar.classList.replace("bg-marca-base", "bg-atencao-destaque");
+
+                            const intervalo = setInterval(() => {
+                                if (segundos <= 0) {
+                                    clearInterval(intervalo);
+                                    if (data.redirect_url) {
+                                        window.isAwaitingPointingRedirect = false;
+                                        window.location.href = data.redirect_url;
+                                    } else {
+                                        window.isAwaitingPointingRedirect = false;
+                                        window.location.reload();
+                                    }
+                                } else {
+                                    btnApontar.innerText = `Apontando... (${segundos}s)`;
+                                    segundos--;
+                                }
+                            }, 1000);
+
+                            if (data.redirect_url) {
+                                return;
+                            }
+                            console.log("Apontamento enviado, aguardando processamento...");
+                        }).catch(error => {
+                            window.isAwaitingPointingRedirect = false;
+                            console.error("Erro ao enviar apontamento:", error);
+                        });
+                    });
+                }
+
+                // 2. Lógica da Balança e Modal
+                function atualizarFlagOrigem(origem) {
+                    if (labelOrigemPeso && inputOrigemPeso) {
+                        inputOrigemPeso.value = origem;
+                        labelOrigemPeso.innerText = origem;
+                        labelOrigemPeso.classList.remove("hidden", "bg-atencao-sutil", "text-atencao-base", "border-atencao-borda", "bg-sucesso-sutil", "text-sucesso-base", "border-sucesso-borda");
+                        if (origem === "Balança") {
+                            labelOrigemPeso.classList.add("bg-sucesso-sutil", "text-sucesso-base", "border-sucesso-borda");
+                        } else {
+                            labelOrigemPeso.classList.add("bg-atencao-sutil", "text-atencao-base", "border-atencao-borda");
+                        }
+                    }
+                }
+
+                function iniciarTimerManual() {
+                    clearTimeout(timerManual);
+                    if (avisoManual) avisoManual.classList.remove("hidden");
+
+                    timerManual = setTimeout(() => {
+                        if ((parseFloat(pesoModal.value) || 0) <= 0 && !modalBalanca.classList.contains("hidden")) {
+                            if (containerPesoManual) containerPesoManual.classList.remove("hidden");
+                            if (avisoManual) avisoManual.classList.add("hidden");
+                        }
+                    }, tempoParaManual * 1000);
+                }
+
+                document.addEventListener("sigma:balanca_update", (event) => {
+                    const valor = (Math.trunc(parseFloat(event.detail.balanca) * 100) / 100).toFixed(2);
+                    if (modalBalanca && !modalBalanca.classList.contains("hidden")) {
+                        pesoModal.value = valor;
+                        if (valor > 0) {
+                            if (containerPesoManual) containerPesoManual.classList.add("hidden");
+                            clearTimeout(timerManual);
+                        }
+                    }
+                });
+
+                if (inputQtdPrincipal) {
+                    inputQtdPrincipal.readOnly = true;
+                    inputQtdPrincipal.tabIndex = -1;
+                    inputQtdPrincipal.classList.add("bg-superficie-afundada");
+                }
+
+                if (btnAbrirModal) {
+                    btnAbrirModal.addEventListener("click", () => {
+                        pesoModal.value = "0.00";
+                        if (pesoManual) {
+                            pesoManual.value = "";
+                            containerPesoManual.classList.add("hidden");
+                        }
+                        modalBalanca.classList.replace("hidden", "flex");
+                        iniciarTimerManual();
+                    });
+                }
+
+                if (btnFecharModal) {
+                    btnFecharModal.addEventListener("click", () => {
+                        modalBalanca.classList.replace("flex", "hidden");
+                        clearTimeout(timerManual);
+                    });
+                }
+
+                if (btnConfirmarPeso) {
+                    btnConfirmarPeso.addEventListener("click", () => {
+                        if (!selectTara || selectTara.value === "") {
+                            alert("Por favor, selecione uma tara.");
+                            return;
+                        }
+                        const pesoBrutoBalanca = parseFloat(pesoModal.value) || 0;
+                        const pesoBrutoManual = (pesoManual && !containerPesoManual.classList.contains("hidden")) ? (parseFloat(pesoManual.value) || 0) : 0;
+                        let pesoBruto = pesoBrutoBalanca > 0 ? pesoBrutoBalanca : pesoBrutoManual;
+                        let origem = pesoBrutoBalanca > 0 ? "Balança" : "Manual";
+
+                        if (pesoBruto <= 0) {
+                            alert("Peso inválido.");
+                            return;
+                        }
+
+                        let pesoLiquido = Math.max(0, pesoBruto - (parseFloat(selectTara.value) || 0));
+                        if (pesoLiquido <= 0 || pesoLiquido > limiteApontamentoMaximo) {
+                            alert(`Peso deve ser maior que zero e no máximo ${limiteApontamentoMaximo}.`);
+                            return;
+                        }
+                        inputQtdPrincipal.value = pesoLiquido.toFixed(2);
+                        if (inputAutorizadoModal) inputAutorizadoModal.value = "1";
+                        atualizarFlagOrigem(origem);
+                        inputQtdPrincipal.classList.add("bg-informacao-sutil");
+                        setTimeout(() => {
+                            inputQtdPrincipal.classList.remove("bg-informacao-sutil");
+                        }, 1000);
+                        modalBalanca.classList.replace("flex", "hidden");
+                    });
+                }
+            });
+        </script>
+
+        <!-- CABEÇALHO OP -->
+        {% if dados_op %}
+        <details class="overflow-hidden rounded border border-borda-sutil bg-superficie-elevada shadow group [&_th]:py-2 [&_th]:leading-5 [&_td]:py-2 [&_td]:leading-5">
+            <summary class="bg-superficie-afundada p-2 font-bold text-sm cursor-pointer flex justify-between items-center list-none">
+                <span>Cabeçalho da OP</span>
+                <i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+            </summary>
+
+            <div class="overflow-x-auto">
+            <table class="min-w-max w-full text-sm text-center">
+                <thead class="bg-superficie-afundada">
+                    <tr>
+                        <th class="border p-1">Ordem</th>
+                        <th class="border p-1">Produto</th>
+                        <th class="border p-1">Deriv.</th>
+                        <th class="border p-1">Descrição</th>
+                        <th class="border p-1">Unid.</th>
+                        <th class="border p-1">Situação</th>
+                        <th class="border p-1">Prev.</th>
+                        <th class="border p-1">Prod.</th>
+                        <th class="border p-1">Início</th>
+                        <th class="border p-1">Fim</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="border p-1">{{ dados_op.codori }} - {{ dados_op.numorp }}</td>
+                        <td class="border p-1">{{ dados_op.codpro }}</td>
+                        <td class="border p-1">{{ dados_op.codder }}</td>
+                        <td class="border p-1">{{ dados_op.despro }}</td>
+                        <td class="border p-1">{{ dados_op.unimed }}</td>
+                        <td class="border p-1">{{ dados_op.sitorp }}</td>
+                        <td class="border p-1">{{ dados_op.qtdprv }}</td>
+                        <td class="border p-1">{{ dados_op.qtdre1 }}</td>
+                        <td class="border p-1">{{ dados_op.dtrini }}</td>
+                        <td class="border p-1">{{ dados_op.dtrfim }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            </div>
+
+        </details>
+        {% endif %}
+
+        <!-- COMPONENTES -->
+        {% if componentes %}
+        <details class="overflow-hidden rounded border border-borda-sutil bg-superficie-elevada shadow group [&_th]:py-2 [&_th]:leading-5 [&_td]:py-2 [&_td]:leading-5">
+            <summary class="bg-superficie-afundada p-2 font-bold text-sm cursor-pointer flex justify-between items-center list-none">
+                <span>Componentes da OP</span>
+                <i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+            </summary>
+
+            <div class="overflow-x-auto">
+            <table class="min-w-max w-full text-sm text-center">
+                <thead class="bg-superficie-afundada">
+                    <tr>
+                        <th class="border p-1">Componente</th>
+                        <th class="border p-1">Deriv.</th>
+                        <th class="border p-1">Unid.</th>
+                        <th class="border p-1">Descrição</th>
+                        <th class="border p-1">Prev.</th>
+                        <th class="border p-1">Utiliz.</th>
+                        <th class="border p-1">Baixa OP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for c in componentes %}
+                    <tr>
+                        <td class="border p-1">{{ c.codcmp }}</td>
+                        <td class="border p-1">{{ c.codder }}</td>
+                        <td class="border p-1">{{ c.unimed }}</td>
+                        <td class="border p-1">{{ c.descmp }}</td>
+                        <td class="border p-1">{{ c.qtdprv }}</td>
+                        <td class="border p-1">{{ c.qtduti }}</td>
+                        <td class="border p-1">{{ c.bxaorp }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+
+        </details>
+        {% endif %}
+
+        <!-- OPERAÇÕES -->
+        {% if operacoes %}
+        <details class="overflow-hidden rounded border border-borda-sutil bg-superficie-elevada shadow group [&_th]:py-2 [&_th]:leading-5 [&_td]:py-2 [&_td]:leading-5">
+            <summary class="bg-superficie-afundada p-2 font-bold text-sm cursor-pointer flex justify-between items-center list-none">
+                <span>Operações</span>
+                <i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+            </summary>
+
+            <div class="overflow-x-auto">
+            <table class="min-w-max w-full text-sm text-center">
+                <thead class="bg-superficie-afundada">
+                    <tr>
+                        <th class="border p-1">Seq</th>
+                        <th class="border p-1">Estágio</th>
+                        <th class="border p-1">Operação</th>
+                        <th class="border p-1">Descrição</th>
+                        <th class="border p-1">Recurso</th>
+                        <th class="border p-1">Prev.</th>
+                        <th class="border p-1">Prod.</th>
+                        <th class="border p-1">Ref.</th>
+                        <th class="border p-1">Início</th>
+                        <th class="border p-1">Fim</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for o in operacoes %}
+                    <tr>
+                        <td class="border p-1">{{ o.seqrot }}</td>
+                        <td class="border p-1">{{ o.codetg }}</td>
+                        <td class="border p-1">{{ o.codopr }}</td>
+                        <td class="border p-1">{{ o.desopr }}</td>
+                        <td class="border p-1">{{ o.descre }}</td>
+                        <td class="border p-1">{{ o.qtdprv }}</td>
+                        <td class="border p-1">{{ o.qtdre1 }}</td>
+                        <td class="border p-1">{{ o.qtdrfg }}</td>
+                        <td class="border p-1">{{ o.dtinicio }}</td>
+                        <td class="border p-1">{{ o.dtfim }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+
+            </table>
+            </div>
+
+        </details>
+        {% endif %}
+
+        <!-- HISTÓRICO ERP-->
+        {% if historico %}
+        <details class="overflow-hidden rounded border border-borda-sutil bg-superficie-elevada shadow group [&_th]:py-2 [&_th]:leading-5 [&_td]:py-2 [&_td]:leading-5">
+            <summary class="bg-superficie-afundada p-2 font-bold text-sm cursor-pointer flex justify-between items-center list-none">
+                <span>Histórico ERP</span>
+                <i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+            </summary>
+
+            <div class="overflow-x-auto overflow-y-auto max-h-[800px]">
+                <table class="min-w-max w-full text-sm text-center">
+                    <thead class="bg-superficie-afundada sticky top-0 z-10">
+                        <tr>
+                            <th class="border p-1 bg-superficie-afundada">Seq</th>
+                            <th class="border p-1 bg-superficie-afundada">Estágio</th>
+                            <th class="border p-1 bg-superficie-afundada">Seq. Op.</th>
+                            <th class="border p-1 bg-superficie-afundada">Operação</th>
+                            <th class="border p-1 bg-superficie-afundada">Operador</th>
+                            <th class="border p-1 bg-superficie-afundada">Prod.</th>
+                            <th class="border p-1 bg-superficie-afundada">Refugo</th>
+                            <th class="border p-1 bg-superficie-afundada">Lote</th>
+                            <th class="border p-1 bg-superficie-afundada">Bobina</th>
+                            <th class="border p-1 bg-superficie-afundada">Início</th>
+                            <th class="border p-1 bg-superficie-afundada">Fim</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                    {% for h in historico %}
+                        <tr>
+                            <td class="border p-1">{{ h.seqeoq }}</td>
+                            <td class="border p-1">{{ h.codetg }}</td>
+                            <td class="border p-1">{{ h.seqrot }}</td>
+                            <td class="border p-1">{{ h.desopr }}</td>
+                            <td class="border p-1">{{ h.nomope }} ({{ h.numcad }})</td>
+                            <td class="border p-1">{{ h.qtdre1 }}</td>
+                            <td class="border p-1">{{ h.qtdrfg }}</td>
+                            <td class="border p-1">{{ h.codelote }}</td>
+                            <td class="border p-1">{{ h.numbob|default:"" }}</td>
+                            <td class="border p-1">{{ h.dtinicio }}</td>
+                            <td class="border p-1">{{ h.dtfim }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+
+        </details>
+        {% endif %}
+
+    {% endblock %}
+
+    {% block extra_content %}
+    <!-- Modal Corrigir Apontamento -->
+    <div id="modalCorrigirLote" class="hidden fixed inset-0 bg-superficie-inversa/50 backdrop-blur-sm overflow-y-auto h-full w-full z-[60] flex items-center justify-center">
+        <div class="relative mx-auto p-6 border w-[32rem] shadow-lg rounded-md bg-superficie-elevada text-texto-primario">
+            <div class="mt-3 text-center">
+                <h3 class="text-xl leading-6 font-bold text-texto-primario">Corrigir Apontamento</h3>
+                <form method="POST" class="mt-4 text-left" id="formCorrigirLote">
+                    {% csrf_token %}
+                    
+                    <input type="hidden" name="tipo_ajuste" id="inputTipoAjuste">
+                    <input type="hidden" name="acao_correcao" id="inputAcaoCorrecao" value="">
+                    <input type="hidden" name="codemp_erp" id="infoCodEmp">
+                    <input type="hidden" name="codori_erp" id="infoCodOri">
+                    <input type="hidden" name="numorp_erp" id="infoNumOrp">
+                    <input type="hidden" name="codetg_erp" id="infoCodEtg">
+                    <input type="hidden" name="seqeoq_erp" id="infoSeqEoq">
+                    <input type="hidden" name="qtd_original_linha" id="infoQtdOriginalLinha">
+                    <input type="hidden" name="qtd_total_lote" id="infoQtdTotalLote">
+                    
+                    <div class="mb-4">
+                        <label class="block text-texto-secundario text-base font-bold mb-2">Número do Lote</label>
+                        <div class="flex gap-2">
+                            <input type="text" name="lote" id="inputLoteCorrigir" required
+                                   class="shadow appearance-none border rounded w-full py-2 px-3 text-texto-secundario text-base leading-tight  focus:shadow-outline uppercase">
+                            <button type="button" onclick="buscarDadosLote()"
+                                    class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                                <i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i>
+                                Buscar
+                            </button>
+                        </div>
+                        <p id="msgBuscaLote" class="text-xs mt-1 hidden"></p>
+                    </div>
+
+                    <div id="statusIntegracaoInformativo" class="mb-4 hidden">
+                        <p class="text-xs font-bold" id="statusERPInfo"></p>
+                        <p class="text-xs font-bold" id="statusWMSInfo"></p>
+                    </div>
+
+                    <div id="camposCorrecao" class="hidden">
+                        <!-- Tabela para múltiplos registros do ERP (Expansível) -->
+                        <details id="containerTabelaERP" class="mb-4 border rounded border-borda-sutil hidden">
+                            <summary class="text-xs font-bold p-2 bg-superficie-afundada cursor-pointer hover:bg-interacao-hover list-none flex justify-between items-center">
+                                <span>Histórico ERP (Rateio automático ao reduzir)</span>
+                                <i data-lucide="chevron-down" class=" ml-2" aria-hidden="true"></i>
+                            </summary>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs text-center border-collapse">
+                                    <thead class="bg-superficie-afundada font-bold">
+                                        <tr>
+                                            <th class="border border-borda-sutil p-2">Emp.</th>
+                                            <th class="border border-borda-sutil p-2">Ori.</th>
+                                            <th class="border border-borda-sutil p-2">OP</th>
+                                            <th class="border border-borda-sutil p-2">Etg.</th>
+                                            <th class="border border-borda-sutil p-2">Seq. Hist.</th>
+                                            <th class="border border-borda-sutil p-2">Qtd.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyDadosERP">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+
+                        <div id="containerInputQtdRe1" class="mb-4 hidden">
+                            <label id="labelQtdRe1" class="block text-texto-secundario text-base font-bold mb-2">Nova Quantidade Produzida Total do Lote</label>
+                            <input type="text" name="qtdre1" id="inputQtdRe1" required
+                                   oninput="validarQtdAjuste(this)"
+                                   class="shadow appearance-none border rounded w-full py-2 px-3 text-texto-secundario text-base leading-tight  focus:shadow-outline">
+                            
+                            <p id="msgValidacaoQtd" class="text-xs mt-1 text-erro-base hidden"></p>
+                        </div>
+                        
+                        <div id="infoLoteERP" class="mb-4 p-2 bg-informacao-sutil border border-informacao-borda rounded hidden">
+                            <p class="text-xs text-informacao-base">Lote integrado no ERP. A correção será enviada via Webservice.</p>
+                        </div>
+
+                        <div class="mb-4 rounded border border-erro-borda bg-erro-sutil px-3 py-2 text-xs text-erro-base">
+                            Excluir apontamento é irreversível. Após isso, o lote ficará bloqueado para aumento e o numero de bobina nao poderá ser reutilizado.
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-3 mt-6">
+                        <button type="button" id="btnCancelarCorrecao" onclick="fecharModalCorrecao()"
+                                class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                            Cancelar
+                        </button>
+                        <button type="button" id="btnExcluirApontamento"
+                                onclick="excluirApontamentoCorrigido()"
+                                class="botao-perigo-icone" title="Excluir Apontamento" aria-label="Excluir Apontamento"
+                                disabled>
+                            <i data-lucide="trash-2" class="h-5 w-5" aria-hidden="true"></i>
+                        </button>
+                        <button type="submit" id="btnConfirmarCorrecao" disabled
+                                class="botao-primario h-10 whitespace-nowrap px-4 text-sm disabled:opacity-50">
+                            <i data-lucide="check" class="h-5 w-5" aria-hidden="true"></i>
+                            Confirmar Correção
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let qtdOriginalLote = 0; // Soma total do lote
+        let qtdOriginalLinha = 0; // Qtd da linha selecionada (para diminuir)
+        let lteIntegradoERP = false;
+        let contadorExcluirApontamento = null;
+        const limiteCorrecaoMinimo = Number("{{ parametros_apontamento.limite_apontamento_minimo|unlocalize }}");
+        const limiteCorrecaoMaximo = Number("{{ parametros_apontamento.limite_apontamento_maximo|unlocalize }}");
+
+        function alternarBotoesCorrecao(acaoEmProcessamento = '') {
+            const btnCancelar = document.getElementById('btnCancelarCorrecao');
+            const btnExcluir = document.getElementById('btnExcluirApontamento');
+            const btnConfirmar = document.getElementById('btnConfirmarCorrecao');
+
+            if (btnCancelar) btnCancelar.classList.remove('hidden');
+            if (btnExcluir) btnExcluir.classList.remove('hidden');
+            if (btnConfirmar) btnConfirmar.classList.remove('hidden');
+
+            if (acaoEmProcessamento === 'confirmar') {
+                if (btnCancelar) btnCancelar.classList.add('hidden');
+                if (btnExcluir) btnExcluir.classList.add('hidden');
+            } else if (acaoEmProcessamento === 'excluir') {
+                if (btnCancelar) btnCancelar.classList.add('hidden');
+                if (btnConfirmar) btnConfirmar.classList.add('hidden');
+            }
+        }
+
+        function renderizarIconeExcluirApontamento(botao) {
+            botao.innerHTML = '<i data-lucide="trash-2" class="h-5 w-5" aria-hidden="true"></i>';
+            window.inicializarIconesLucide?.();
+        }
+
+        function resetarBotaoExcluirApontamento() {
+            const btnExcluir = document.getElementById('btnExcluirApontamento');
+            if (!btnExcluir) return;
+            clearInterval(contadorExcluirApontamento);
+            contadorExcluirApontamento = null;
+            btnExcluir.disabled = true;
+            renderizarIconeExcluirApontamento(btnExcluir);
+            btnExcluir.title = 'Excluir Apontamento';
+        }
+
+        function iniciarContadorExcluirApontamento() {
+            const btnExcluir = document.getElementById('btnExcluirApontamento');
+            if (!btnExcluir || qtdOriginalLote <= 0) return;
+            clearInterval(contadorExcluirApontamento);
+            let segundos = 10;
+            btnExcluir.disabled = true;
+            renderizarIconeExcluirApontamento(btnExcluir);
+            btnExcluir.title = `Excluir Apontamento (${segundos}s)`;
+            contadorExcluirApontamento = setInterval(() => {
+                segundos -= 1;
+                if (segundos <= 0) {
+                    clearInterval(contadorExcluirApontamento);
+                    contadorExcluirApontamento = null;
+                    btnExcluir.disabled = false;
+                    renderizarIconeExcluirApontamento(btnExcluir);
+                    btnExcluir.title = 'Excluir Apontamento';
+                    return;
+                }
+                renderizarIconeExcluirApontamento(btnExcluir);
+                btnExcluir.title = `Excluir Apontamento (${segundos}s)`;
+            }, 1000);
+        }
+
+        function validarQtdAjuste(input) {
+            const novaQtd = parseFloat(input.value);
+            const msg = document.getElementById('msgValidacaoQtd');
+            const btn = document.getElementById('btnConfirmarCorrecao');
+            const btnExcluir = document.getElementById('btnExcluirApontamento');
+            const inputTipo = document.getElementById('inputTipoAjuste');
+            const inputAcao = document.getElementById('inputAcaoCorrecao');
+            const containerERP = document.getElementById('containerTabelaERP');
+            
+            msg.classList.add('hidden');
+            btn.disabled = false;
+            if (inputAcao.value !== 'excluir') {
+                inputAcao.value = '';
+            }
+
+            if (isNaN(novaQtd)) {
+                btn.disabled = true;
+                if (btnExcluir) resetarBotaoExcluirApontamento();
+                return;
+            }
+
+            if (qtdOriginalLote <= 0) {
+                msg.innerText = "Não é permitido corrigir lote com quantidade atual zero.";
+                msg.className = "text-xs mt-1 text-erro-base";
+                msg.classList.remove('hidden');
+                btn.disabled = true;
+                if (btnExcluir) resetarBotaoExcluirApontamento();
+                return;
+            }
+
+            if (novaQtd < limiteCorrecaoMinimo || novaQtd > limiteCorrecaoMaximo) {
+                msg.innerText = `Quantidade deve ficar entre ${limiteCorrecaoMinimo} e ${limiteCorrecaoMaximo}.`;
+                msg.className = "text-xs mt-1 text-erro-base";
+                msg.classList.remove('hidden');
+                btn.disabled = true;
+                return;
+            }
+
+            // Define tipo de ajuste automático e controla exibição da tabela ERP
+            if (novaQtd > qtdOriginalLote) {
+                inputTipo.value = 'aumentar';
+            } else if (novaQtd < qtdOriginalLote) {
+                inputTipo.value = 'diminuir';
+            } else {
+                inputTipo.value = ''; // Quantidade igual
+            }
+
+            // Exibe a tabela de sequências se o lote estiver integrado no ERP
+            if (lteIntegradoERP) {
+                containerERP.classList.remove('hidden');
+            } else {
+                containerERP.classList.add('hidden');
+            }
+        }
+
+        function excluirApontamentoCorrigido() {
+            if (qtdOriginalLote <= 0) {
+                return;
+            }
+            if (!confirm("Excluir apontamento é irreversível. Após isso, o lote ficará bloqueado para aumento e o numero de bobina nao poderá ser reutilizado. Deseja continuar?")) {
+                return;
+            }
+            alternarBotoesCorrecao('excluir');
+            const btnExcluir = document.getElementById('btnExcluirApontamento');
+            if (btnExcluir) {
+                btnExcluir.disabled = true;
+                renderizarIconeExcluirApontamento(btnExcluir);
+                btnExcluir.title = 'Excluindo...';
+            }
+            document.getElementById('inputQtdRe1').value = '0';
+            document.getElementById('inputTipoAjuste').value = 'excluir';
+            document.getElementById('inputAcaoCorrecao').value = 'excluir';
+            document.getElementById('formCorrigirLote').submit();
+        }
+
+        function buscarDadosLote() {
+            const loteInput = document.getElementById('inputLoteCorrigir');
+            const lote = loteInput.value.toUpperCase().trim();
+            loteInput.value = lote; // Normaliza no campo também
+            const msg = document.getElementById('msgBuscaLote');
+            const campos = document.getElementById('camposCorrecao');
+            const btn = document.getElementById('btnConfirmarCorrecao');
+            const infoERP = document.getElementById('infoLoteERP');
+            const statusInfo = document.getElementById('statusIntegracaoInformativo');
+            const statusERP = document.getElementById('statusERPInfo');
+            const statusWMS = document.getElementById('statusWMSInfo');
+            
+            if (!lote) return;
+
+            // Limpar campos de quantidade e informativos antes da nova busca
+            document.getElementById('inputQtdRe1').value = "";
+            const tbody = document.getElementById('tbodyDadosERP');
+            tbody.innerHTML = "";
+            document.getElementById('containerTabelaERP').classList.add('hidden');
+            
+            // Limpar campos ocultos
+            document.getElementById('infoCodEmp').value = "";
+            document.getElementById('infoCodOri').value = "";
+            document.getElementById('infoNumOrp').value = "";
+            document.getElementById('infoCodEtg').value = "";
+            document.getElementById('infoSeqEoq').value = "";
+            document.getElementById('inputTipoAjuste').value = "";
+            document.getElementById('inputAcaoCorrecao').value = "";
+
+            msg.innerText = "Buscando...";
+            msg.className = "text-xs mt-1 text-informacao-base";
+            msg.classList.remove('hidden');
+            statusInfo.classList.add('hidden');
+            campos.classList.add('hidden');
+            
+            fetch(`{% url 'buscar_dados_lote_erp' %}?lote=${lote}`)
+                .then(response => response.json())
+                .then(data => {
+                    campos.classList.remove('hidden');
+                    statusInfo.classList.remove('hidden');
+                    document.getElementById('containerInputQtdRe1').classList.remove('hidden');
+                    
+                    lteIntegradoERP = data.integrado_erp;
+                    if (data.integrado_erp) {
+                        statusERP.innerText = "ERP: Lote Integrado";
+                        statusERP.className = "text-xs font-bold text-sucesso-base";
+                        infoERP.classList.remove('hidden');
+                        document.getElementById('containerTabelaERP').classList.remove('hidden');
+                        document.getElementById('containerInputQtdRe1').classList.remove('hidden');
+                    } else if (data.existe_local) {
+                        statusERP.innerText = "ERP: Lote não integrado (Log Local)";
+                        statusERP.className = "text-xs font-bold text-atencao-base";
+                        infoERP.classList.add('hidden');
+                        document.getElementById('containerInputQtdRe1').classList.remove('hidden');
+                    } else {
+                        statusERP.innerText = "ERP: Não localizado no ERP.";
+                        statusERP.className = "text-xs font-bold text-erro-base";
+                        infoERP.classList.add('hidden');
+                        document.getElementById('containerInputQtdRe1').classList.add('hidden');
+                    }
+
+                    // WMS Status Info (Informativo apenas)
+                    statusWMS.classList.add('hidden');
+
+                    if (data.error) {
+                        msg.innerText = data.error;
+                        msg.className = "text-xs mt-1 text-erro-base";
+                        btn.disabled = true;
+                        document.getElementById('containerInputQtdRe1').classList.add('hidden');
+                    } else {
+                        msg.innerText = "Lote encontrado. Informe a nova quantidade total.";
+                        msg.className = "text-xs mt-1 text-sucesso-base";
+                        
+                        qtdOriginalLote = parseFloat(data.qtdre1 || 0);
+                        document.getElementById('inputQtdRe1').value = qtdOriginalLote;
+
+                        // Dados base para o form
+                        document.getElementById('infoCodEmp').value = data.codemp || "-";
+                        document.getElementById('infoCodOri').value = data.codori || "-";
+                        document.getElementById('infoNumOrp').value = data.numorp || "-";
+                        document.getElementById('infoCodEtg').value = data.codetg || "-";
+                        document.getElementById('infoSeqEoq').value = data.seqeoq || "-";
+                        document.getElementById('infoQtdTotalLote').value = data.qtdre1 || "0";
+
+                        // Se houver dados detalhados do ERP, preenche a tabela
+                        if (data.erp_rows && data.erp_rows.length > 0) {
+                            const tbody = document.getElementById('tbodyDadosERP');
+                            data.erp_rows.forEach((row, index) => {
+                                const tr = document.createElement('tr');
+                                [row.codemp, row.codori, row.numorp, row.codetg, row.seqeoq, row.qtdre1]
+                                    .forEach((valor, indice) => {
+                                        const td = document.createElement('td');
+                                        td.className = `border border-borda-sutil p-1${indice === 5 ? ' font-bold' : ''}`;
+                                        td.textContent = valor ?? '';
+                                        tr.appendChild(td);
+                                    });
+                                tbody.appendChild(tr);
+                            });
+                        }
+                        
+                        btn.disabled = qtdOriginalLote <= 0;
+                        resetarBotaoExcluirApontamento();
+                        if (qtdOriginalLote > 0) {
+                            iniciarContadorExcluirApontamento();
+                        }
+                        validarQtdAjuste(document.getElementById('inputQtdRe1'));
+                    }
+                })
+                .catch(err => {
+                    msg.innerText = "Erro ao buscar dados.";
+                    msg.className = "text-xs mt-1 text-erro-base";
+                    console.error(err);
+                });
+        }
+
+        document.getElementById('formCorrigirLote').addEventListener('submit', function (event) {
+            const form = event.currentTarget;
+            if (form.dataset.submitting === '1') {
+                event.preventDefault();
+                return;
+            }
+
+            form.dataset.submitting = '1';
+            const btnConfirmar = document.getElementById('btnConfirmarCorrecao');
+            const btnExcluir = document.getElementById('btnExcluirApontamento');
+
+            alternarBotoesCorrecao('confirmar');
+            btnConfirmar.disabled = true;
+            btnConfirmar.innerText = 'Enviando...';
+            if (btnExcluir) btnExcluir.disabled = true;
+        });
+
+        function fecharModalCorrecao() {
+            document.getElementById('modalCorrigirLote').classList.add('hidden');
+            const form = document.getElementById('formCorrigirLote');
+            form.reset();
+            delete form.dataset.submitting;
+            alternarBotoesCorrecao();
+            document.getElementById('camposCorrecao').classList.add('hidden');
+            document.getElementById('msgBuscaLote').classList.add('hidden');
+            document.getElementById('statusIntegracaoInformativo').classList.add('hidden');
+            document.getElementById('containerInputQtdRe1').classList.add('hidden');
+            document.getElementById('btnConfirmarCorrecao').disabled = true;
+            document.getElementById('btnConfirmarCorrecao').innerText = 'Confirmar Correção';
+            resetarBotaoExcluirApontamento();
+            document.getElementById('containerTabelaERP').classList.add('hidden');
+            document.getElementById('containerTabelaERP').open = false;
+            document.getElementById('inputAcaoCorrecao').value = '';
+            qtdOriginalLote = 0;
+            lteIntegradoERP = false;
+        }
+    </script>
+    {% endblock %}

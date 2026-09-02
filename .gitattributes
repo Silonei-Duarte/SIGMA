@@ -1,0 +1,10 @@
+# Regras compiladas do Sapiens (.tbs) carregam trechos binários: tratar como
+# binário evita normalização de EOL e falsos avisos de whitespace no diff.
+docs/erp-senior/**/*.tbs binary
+
+# Scripts executados dentro da imagem Linux do Docker: forçar LF mesmo em
+# checkout Windows (core.autocrlf) — CRLF quebra o shebang `#!/bin/bash`
+# dentro do container (erro "bad interpreter").
+docker/*.sh text eol=lf
+deploy/*.sh text eol=lf
+Dockerfile text eol=lf

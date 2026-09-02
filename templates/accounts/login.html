@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - {{ APPLICATION_NAME }}</title>
+    <link rel="icon" href="{% static 'images/favicon.ico' %}">
+    <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}">
+    <script>
+    if (localStorage.getItem("temaSIGMA") === "escuro") document.documentElement.classList.add("tema-escuro");
+    </script>
+</head>
+
+<body class="relative flex min-h-screen flex-col bg-superficie-base text-texto-primario">
+    <main class="login-entrada flex-grow">
+        <div class="login-fundo" aria-hidden="true">
+            <div class="login-efeito login-efeito-claro">
+                <span class="login-feixe"></span>
+                <span class="login-esfera"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+            </div>
+            <div class="login-efeito login-efeito-escuro">
+                <span class="login-feixe"></span>
+                <span class="login-esfera"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+                <span class="login-particula"></span>
+            </div>
+        </div>
+        <img class="login-logo-empresa" src="{% static 'images/logo.png' %}" alt="IPEL">
+
+        <div class="login-vidro text-texto-primario">
+            <div class="login-marca" aria-hidden="true">SIGMA</div>
+            <div class="login-cabecalho">
+                <h1 class="login-titulo"><span>Sistema IPEL de Gest&atilde;o, Movimenta&ccedil;&atilde;o e Apontamentos</span></h1>
+            </div>
+
+            {% if form.errors %}
+            <div class="alerta alerta-erro mb-4">
+                <i data-lucide="circle-alert" class="alerta-icone-erro h-5 w-5 shrink-0" aria-hidden="true"></i>
+                <span class="flex-1">Usu&aacute;rio ou senha incorretos.</span>
+                <button type="button" class="alerta-fechar" onclick="this.parentElement.remove()" aria-label="Fechar">
+                    <i data-lucide="x" class="h-5 w-5" aria-hidden="true"></i>
+                </button>
+            </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                <label for="id_username" class="rotulo">Usu&aacute;rio</label>
+                <input type="text" name="username" id="id_username" required autocomplete="username" placeholder="Digite seu nome de usu&aacute;rio" class="login-campo mt-2 mb-4">
+                <label for="id_password" class="rotulo">Senha</label>
+                <input type="password" name="password" id="id_password" required autocomplete="current-password" placeholder="Digite sua senha" class="login-campo mt-2 mb-4">
+                <button type="submit" class="botao-primario login-entrar w-full">Entrar</button>
+                <input type="hidden" name="next" value="{{ next }}">
+            </form>
+
+            <div class="login-acoes-inferiores login-acoes-centralizadas">
+                <button type="button" id="alternarTemaLogin" class="alternar-tema-login" aria-label="Alternar tema">
+                    <i data-lucide="moon" aria-hidden="true"></i>
+                    <span>Tema claro</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="relative z-10 shrink-0 bg-superficie-elevada px-2 py-0 text-end legenda text-texto-legenda">
+        <button type="button" id="abrir-creditos-sistema" class="text-texto-link hover:underline">&copy; {% now "Y" %} INDAIAL PAPEL EMBALAGENS LTDA. | Cr&eacute;ditos do Sistema</button>
+    </footer>
+
+    <div id="modal-creditos-sistema" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-superficie-inversa/60 p-4" role="dialog" aria-modal="true" aria-labelledby="titulo-creditos-sistema">
+        <div class="w-full max-w-2xl rounded-lg bg-superficie-elevada p-6 text-texto-primario shadow-xl">
+            <div class="flex items-start justify-between gap-4">
+                <h2 id="titulo-creditos-sistema" class="text-lg font-bold">Cr&eacute;ditos e Propriedade Intelectual</h2>
+                <button type="button" class="fechar-creditos-sistema botao-secundario h-9 w-9 p-0" aria-label="Fechar"><i data-lucide="x" class="h-5 w-5" aria-hidden="true"></i></button>
+            </div>
+            <div class="mt-6 space-y-4 text-sm">
+                <section>
+                    <h3 class="font-bold">Propriedade e Direitos Patrimoniais</h3>
+                    <p class="mt-1">Este software e suas atualiza&ccedil;&otilde;es s&atilde;o de propriedade exclusiva e explora&ccedil;&atilde;o comercial de INDAIAL PAPEL EMBALAGENS LTDA. (IPEL), sob os termos da Lei n&ordm; 9.609/1998.</p>
+                </section>
+                <section>
+                    <h3 class="font-bold">Autoria e Desenvolvimento</h3>
+                    <p class="mt-1">Concep&ccedil;&atilde;o original, arquitetura de software e desenvolvimento do n&uacute;cleo do sistema por <a href="https://www.linkedin.com/in/siloneiduarte/" target="_blank" rel="noopener noreferrer" class="text-informacao-base hover:underline">Silonei Duarte</a>.</p>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'vendor/lucide/lucide.min.js' %}"></script>
+    <script>
+        const alternarTemaLogin = document.getElementById("alternarTemaLogin");
+        const atualizarTemaLogin = () => {
+            const escuro = document.documentElement.classList.contains("tema-escuro");
+            alternarTemaLogin.innerHTML = `<i data-lucide="${escuro ? 'sun' : 'moon'}" class="h-4 w-4" aria-hidden="true"></i><span>Tema ${escuro ? 'escuro' : 'claro'}</span>`;
+            alternarTemaLogin.title = escuro ? "Usar tema claro" : "Usar tema escuro";
+            alternarTemaLogin.setAttribute("aria-label", alternarTemaLogin.title);
+            window.lucide?.createIcons();
+        };
+        atualizarTemaLogin();
+        alternarTemaLogin.addEventListener("click", () => {
+            document.documentElement.classList.toggle("tema-escuro");
+            localStorage.setItem("temaSIGMA", document.documentElement.classList.contains("tema-escuro") ? "escuro" : "claro");
+            atualizarTemaLogin();
+        });
+
+        const modalCreditosSistema = document.getElementById("modal-creditos-sistema");
+        const abrirCreditosSistema = document.getElementById("abrir-creditos-sistema");
+        const fecharCreditosSistema = () => modalCreditosSistema.classList.add("hidden");
+        abrirCreditosSistema.addEventListener("click", () => modalCreditosSistema.classList.remove("hidden"));
+        modalCreditosSistema.querySelector(".fechar-creditos-sistema").addEventListener("click", fecharCreditosSistema);
+        modalCreditosSistema.addEventListener("click", evento => {
+            if (evento.target === modalCreditosSistema) fecharCreditosSistema();
+        });
+    </script>
+</body>
+</html>

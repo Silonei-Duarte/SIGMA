@@ -1,0 +1,597 @@
+{% extends "base.html" %}
+
+{% block title %}{{ APPLICATION_NAME }} | Status dos Services{% endblock %}
+
+{% block content %}
+<div class="w-full p-4">
+    <div class="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+            <h1 class="titulo-pagina text-texto-primario">Status dos Services</h1>
+            <p class="text-sm text-texto-legenda">Atualizado em {{ atualizado_em|date:"d/m/Y H:i:s" }}</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button"
+                    onclick="abrirManualServices()"
+                    class="botao-secundario h-9 w-9 p-0 text-sm font-bold"
+                    title="Manual de operação dos services">
+                ?
+            </button>
+            <a href="{% url 'status_services' %}"
+               class="rotulo inline-flex min-h-9 items-center justify-center rounded-full bg-informacao-sutil px-4 text-informacao-base transition-opacity hover:opacity-90 active:opacity-80">
+                Atualizar
+            </a>
+            <label class="inline-flex items-center gap-2 text-sm text-texto-secundario">
+                <span class="font-semibold">Auto</span>
+                <select id="autoRefreshSelect"
+                        class="rounded-md border-borda-padrao bg-superficie-elevada px-3 py-2 text-sm text-texto-primario shadow-sm">
+                    <option value="0">Desligado</option>
+                    <option value="5">5s</option>
+                    <option value="10">10s</option>
+                    <option value="15">15s</option>
+                    <option value="30">30s</option>
+                    <option value="60">60s</option>
+                    <option value="300">5min</option>
+                </select>
+            </label>
+        </div>
+    </div>
+
+    <div id="manualServicesModal"
+         class="fixed inset-0 z-50 hidden items-center justify-center bg-superficie-inversa/50 p-4"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="manualServicesTitulo">
+        <div class="max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-lg border-4 border-borda-padrao bg-superficie-elevada shadow-xl">
+            <div class="flex items-center justify-between border-b border-borda-sutil bg-superficie-afundada px-4 py-3">
+                <h2 id="manualServicesTitulo" class="text-lg font-bold text-texto-primario">Manual de operação dos services</h2>
+                <button type="button"
+                        onclick="fecharManualServices()"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded text-xl font-bold text-texto-legenda hover:bg-interacao-hover"
+                        title="Fechar">
+                    &times;
+                </button>
+            </div>
+            <div class="max-h-[calc(90vh-57px)] overflow-y-auto px-6 py-6 text-sm text-texto-primario md:px-8">
+                <div class="grid gap-x-8 gap-y-5 lg:grid-cols-2">
+                    <div>
+                        <h3 class="mb-2 font-bold text-texto-primario">Arquitetura de execução</h3>
+                        <ul class="list-disc space-y-1.5 pl-6">
+                            <li><span class="font-semibold">accounts/apps.py</span> é o bootstrap dos workers. Ele só inicia em processo elegível, usa <span class="font-mono">pg_try_advisory_lock</span> para evitar dois processos executando os mesmos workers e chama as rotinas <span class="font-mono">start_*</span> principais.</li>
+                            <li><span class="font-semibold">SupervisorWorkersSigma</span> roda em thread daemon e tenta chamar novamente os <span class="font-mono">start_*</span>. Cada worker decide se precisa subir, usando seu próprio controle interno de execução.</li>
+                            <li><span class="font-semibold">producao/services/status.py</span> é o registry operacional em memória do processo. Ele não substitui log persistente; serve para telemetria em tempo real, ciclo atual, duração, erro, thread ativa e decisão de timeout.</li>
+                            <li><span class="font-semibold">MonitorConexoesPostgres</span> verifica a ocupação do PostgreSQL e do PgBouncer a cada 5s sem manter conexão aberta. Ao alcançar 100 conexões de cliente no PostgreSQL, grava no journal uma captura única com origem, aplicação, estado e query; fica pronto para nova captura quando o total cai para 70 ou menos. Também registra uma única ocorrência quando há cliente aguardando vaga no PgBouncer e normaliza ao zerar a fila. Ele não aparece na tabela porque não pertence ao registry operacional.</li>
+                            <li>O acesso normal do SIGMA passa pelo PgBouncer local, em pool por transação, com até 80 conexões normais e 20 de reserva (máximo de 100 conexões reais no PostgreSQL). A trava global dos workers permanece ligada diretamente ao PostgreSQL para preservar o advisory lock.</li>
+                            <li>O PgBouncer encerra conexão ociosa não reutilizada após 10min e query ou transação parada após 5min, evitando que uma sessão travada ocupe o pool indefinidamente.</li>
+                            <li>A faixa <span class="font-semibold">Servidor</span> mostra separadamente o consumo do pool PgBouncer, seu limite e eventuais clientes aguardando, além das conexões reais totais do PostgreSQL.</li>
+                            <li><span class="font-semibold">Services principais</span> mantêm loop próprio. As filas de integração são threads filhas assíncronas, disparadas quando há pendência elegível. A coleta de telemetria roda em uma única thread coordenadora, sem pool nem paralelismo: coleta uma fonte HTTP por vez e é orientada a eventos, não por polling fixo.</li>
+                            <li>O número de bobina de cada recurso (MP-III, MP-IV, MP-V) é calculado dentro do próprio coletor de telemetria, a partir das chaves <span class="font-mono">contagemBobinas</span> e <span class="font-mono">estouroDeContagem</span> do JSON coletado — não existe um worker separado de importação de bobinas.</li>
+                            <li><span class="font-semibold">Importação de paletes WMS</span> chama imediatamente ao iniciar e depois a cada hora o WebService <span class="font-mono">ImportaWMS</span>. A chamada usa timeout de 3 minutos e lock próprio para impedir duas importações simultâneas.</li>
+                            <li><span class="font-semibold">Envio automático de pendências, Sincronização de OPs encerradas, Consolidação de tempos ERP e Relatório diário de falhas por e-mail</span> têm limite de ciclo de 60s; <span class="font-semibold">Recalcula Planejado OEE</span> tem limite de 3 minutos. Todos são monitorados pelo supervisor geral.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="mb-2 font-bold text-texto-primario">Orquestrador de integrações</h3>
+                        <ul class="list-disc space-y-1.5 pl-6">
+                            <li><span class="font-semibold">Envio automático de pendências</span> coordena o disparo das filas. Ele não processa os registros diretamente e não espera a fila filha terminar; apenas verifica locks, libera interrupções confirmadas e dispara nova thread quando aplicável.</li>
+                            <li>Antes de disparar novas filas, o orquestrador chama o controle de timeout das filas e services de apoio monitorados: Consulta de Lotes, Logs Apontamentos, Log Apontamento Componentes, Baixa Componentes, WMS Integrações, Envio automático de pendências, Relatório diário de falhas por e-mail, Sincronização de OPs encerradas, Consolidação de tempos ERP e Recalcula Planejado OEE. A importação de paletes mantém monitoramento próprio no seu scheduler.</li>
+                            <li>Logs Apontamentos, Log Tempos ERP, Log Apontamento Componentes, Baixa Componentes, WMS Integrações e Consulta de Lotes são disparadas automaticamente quando existem pendências elegíveis e o lock da fila está livre. Logs Apontamentos, Log Apontamento Componentes e Baixa Componentes enviam no máximo 10 grupos/lotes em paralelo; Log Tempos ERP processa uma chave de OP por vez.</li>
+                            <li>A chave empresa/origem/OP/estágio/sequência evita duplicar o envio da mesma OP/estágio; ela não define paralelismo. Logs Apontamentos e Log Apontamento Componentes usam até 10 workers para chaves diferentes; Baixa Componentes usa a mesma lógica pela chave de lote (<span class="font-mono">CodLot</span>), só liberando a próxima baixa do mesmo lote depois que a anterior for integrada. Os grupos excedentes aguardam o executor e a atividade da fila é renovada antes de cada webservice; o ciclo só é tratado como travado após 1.800s (30min) sem atividade válida.</li>
+                            <li>A Fila Baixa Componentes também é disparada imediatamente após cada apontamento bem-sucedido ou repesagem na tela Multi-OP, além do disparo automático do orquestrador e do envio manual pela tela própria (individual ou para todas as pendentes); mantém lock próprio (<span class="font-mono">PROCESSAMENTO_BAIXAS_COMPONENTES_LOCK</span>) e devolve para pendente os registros travados em processamento.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="mb-2 font-bold text-texto-primario">Reserva e status dos registros</h3>
+                        <ul class="list-disc space-y-1.5 pl-6">
+                            <li><span class="font-mono">status=0</span>: pendente, disponível para reserva/envio. Falha de envio também volta para este status, com o motivo registrado no log — não existe status de erro separado.</li>
+                            <li><span class="font-mono">status=1</span>: integrado com sucesso.</li>
+                            <li><span class="font-mono">status=2</span>: processando, igual em todas as filas desta tela — inclusive Log Tempos ERP.</li>
+                            <li><span class="font-mono">status=3</span>: excluído. Existe em Apontamentos e Componentes. <span class="font-mono">status=4</span>: local, sem integração, existe apenas em Consulta de Lotes. Nenhum dos dois é status operacional comum a todas as filas desta tela.</li>
+                            <li>A reserva é feita no banco antes do envio. Nas filas que usam concorrência, o código usa transação e <span class="font-mono">select_for_update(skip_locked=True)</span> para reduzir captura duplicada entre execuções concorrentes.</li>
+                            <li>Registros no status de processamento voltam para pendente em dois cenários seguros: depois de uma interrupção de timeout confirmada, ou quando o lock da fila está livre e a reserva ficou parada por mais tempo que o timeout webservice daquela fila.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="mb-2 font-bold text-texto-primario">Controle de ciclo e timeout</h3>
+                        <ul class="list-disc space-y-1.5 pl-6">
+                            <li>Cada service registrado informa intervalo e, quando aplicável, limite máximo de ciclo. O registry calcula ciclo em andamento, próximo ciclo, duração e condição de travamento.</li>
+                            <li>Durante cada chamada externa, a fila ou service marca uma atividade válida até o timeout configurado. Enquanto esse prazo estiver vigente, o ciclo não é tratado como travado.</li>
+                            <li>Se o ciclo ultrapassar o limite e não houver chamada externa ainda dentro do prazo de retorno, o orquestrador solicita interrupção da thread registrada.</li>
+                            <li>A interrupção é sinalizada no registry. No ciclo seguinte, quando o lock da fila não estiver mais preso, os registros reservados daquela fila são devolvidos para pendente e reenviados.</li>
+                            <li>Se uma thread filha morrer sem registrar timeout, o orquestrador também libera reservas antigas: com lock livre, registros em processamento há mais tempo que o timeout webservice da fila voltam para <span class="font-mono">status=0</span>.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="mb-2 font-bold text-texto-primario">Leitura das filas de integração</h3>
+                        <ul class="list-disc space-y-1.5 pl-6">
+                            <li><span class="font-semibold">Pendentes</span> são registros ainda não reservados para envio.</li>
+                            <li><span class="font-semibold">Elegíveis</span> considera regras de negócio da fila, como reunião fechada para WMS e Consulta de Lotes.</li>
+                            <li><span class="font-semibold">Bloqueados</span> são pendências que existem, mas não podem ser enviadas naquele momento por regra de negócio.</li>
+                            <li><span class="font-semibold">Processando</span> são registros reservados por uma thread ativa ou por uma execução anterior que ainda não foi liberada pelo timeout ou pela regra de lock livre baseada no timeout webservice.</li>
+                            <li><span class="font-semibold">Timeout webservice</span> mostra quanto tempo cada chamada externa daquela fila pode aguardar retorno.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="mb-2 font-bold text-texto-primario">Limites conhecidos</h3>
+                        <ul class="list-disc space-y-1.5 pl-6">
+                            <li>O painel reflete o estado do processo Django que está executando os workers. Como o registry é em memória, reiniciar o processo limpa a telemetria exibida.</li>
+                            <li>A trava global dos workers depende do PostgreSQL. Se a aplicação não estiver usando PostgreSQL como banco principal, o bootstrap não adquire essa trava.</li>
+                            <li>O timeout de ciclo protege fila presa; o timeout de webservice protege chamada externa. São responsabilidades diferentes e ambas aparecem separadas na tela.</li>
+                            <li>A coluna <span class="font-semibold">Erro</span> exibe a última falha conhecida pelo registry, não o histórico completo de logs do registro integrado.</li>
+                            <li>Capturas de saturação PostgreSQL e fila PgBouncer são persistentes no journal do servidor e podem ser consultadas com <span class="font-mono">journalctl -u sigma.service | grep -E 'POSTGRES_CONEXOES|PGBOUNCER_FILA'</span>.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="conexoesPostgresModal"
+         class="fixed inset-0 z-50 hidden items-center justify-center bg-superficie-inversa/50 p-4"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="conexoesPostgresTitulo">
+        <div class="max-h-[90vh] w-full max-w-7xl overflow-hidden rounded-lg border-4 border-borda-padrao bg-superficie-elevada shadow-xl">
+            <div class="flex items-center justify-between border-b border-borda-sutil bg-superficie-afundada px-4 py-3">
+                <div>
+                    <h2 id="conexoesPostgresTitulo" class="text-lg font-bold text-texto-primario">Conexões PostgreSQL e PgBouncer</h2>
+                    <p class="text-xs text-texto-legenda">Snapshot obtido nesta atualização da tela.</p>
+                </div>
+                <button type="button"
+                        onclick="fecharConexoesPostgres()"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded text-xl font-bold text-texto-legenda hover:bg-interacao-hover"
+                        title="Fechar">
+                    &times;
+                </button>
+            </div>
+            <div class="max-h-[calc(90vh-57px)] space-y-6 overflow-y-auto px-6 py-6 text-sm text-texto-primario md:px-8">
+                {% if pgbouncer.habilitado and pgbouncer.disponivel %}
+                    <section>
+                        <h3 class="mb-2 font-bold text-texto-primario">PgBouncer — banco sigma</h3>
+                        <div class="grid gap-2 sm:grid-cols-4">
+                            <div class="rounded border border-borda-sutil bg-superficie-afundada p-2"><span class="block text-xs text-texto-legenda">Conexões reais</span><span class="font-semibold">{{ pgbouncer.usadas }}/{{ pgbouncer.limite }}</span></div>
+                            <div class="rounded border border-borda-sutil bg-superficie-afundada p-2"><span class="block text-xs text-texto-legenda">Clientes ativos</span><span class="font-semibold">{{ pgbouncer.clientes_ativos }}</span></div>
+                            <div class="rounded border border-borda-sutil bg-superficie-afundada p-2"><span class="block text-xs text-texto-legenda">Aguardando pool</span><span class="font-semibold">{{ pgbouncer.esperando }}</span></div>
+                            <div class="rounded border border-borda-sutil bg-superficie-afundada p-2"><span class="block text-xs text-texto-legenda">Modo</span><span class="font-semibold">{{ pgbouncer.pool.pool_mode }}</span></div>
+                        </div>
+                    </section>
+                {% endif %}
+                <section>
+                    <h3 class="mb-2 font-bold text-texto-primario">Sessões reais no PostgreSQL</h3>
+                    <div class="overflow-hidden rounded border border-borda-sutil">
+                        <table class="w-full table-fixed text-left text-xs">
+                            <colgroup>
+                                <col class="w-[5%]"><col class="w-[7%]"><col class="w-[12%]"><col class="w-[10%]"><col class="w-[11%]"><col class="w-[12%]"><col class="w-[14%]"><col class="w-[29%]">
+                            </colgroup>
+                            <thead class="bg-superficie-afundada text-texto-secundario">
+                                <tr>
+                                    <th class="px-3 py-2">PID</th><th class="px-3 py-2">Rota</th><th class="px-3 py-2">Aplicação</th><th class="px-3 py-2">Estado</th><th class="px-3 py-2">Origem</th><th class="px-3 py-2">Espera</th><th class="px-3 py-2">Início</th><th class="px-3 py-2">Última query</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                {% for conexao in conexoes_postgres.sessoes %}
+                                    <tr>
+                                        <td class="truncate px-3 py-2 font-mono">{{ conexao.pid }}</td>
+                                        <td class="truncate px-3 py-2 font-semibold">{{ conexao.rota }}</td>
+                                        <td class="truncate px-3 py-2" title="{{ conexao.application_name|default:'-' }}">{{ conexao.application_name|default:"-" }}</td>
+                                        <td class="truncate px-3 py-2" title="{{ conexao.state|default:'-' }}">{{ conexao.estado_descricao }}</td>
+                                        <td class="truncate px-3 py-2" title="{{ conexao.client_addr|default:'-' }}">{{ conexao.client_addr }}</td>
+                                        <td class="truncate px-3 py-2" title="{{ conexao.wait_event|default:'-' }}">{{ conexao.espera_descricao }}</td>
+                                        <td class="truncate px-3 py-2" title="{{ conexao.backend_start|date:'d/m/Y H:i:s' }}">{{ conexao.backend_start|date:"d/m/Y H:i:s" }}</td>
+                                        <td class="truncate select-text px-3 py-2 font-mono text-xs text-texto-legenda"
+                                            title="{{ conexao.query|default:'-' }}">{{ conexao.query|default:"-" }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr><td colspan="8" class="px-3 py-3 text-center text-texto-legenda">Nenhuma sessão de cliente encontrada.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-4 rounded-lg border border-borda-sutil bg-superficie-elevada px-4 py-2 text-sm text-texto-primario shadow-sm">
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-1">
+            <div class="font-bold text-texto-primario">Servidor</div>
+            <div class="text-xs text-texto-legenda">{{ servidor.hostname }} | {{ servidor.sistema }}</div>
+            <div><span class="font-semibold">CPU:</span> {{ servidor.cpu_percentual_formatado }}</div>
+            <div><span class="font-semibold">Memória:</span> {{ servidor.memoria_percentual_formatada }} <span class="text-xs text-texto-legenda">({{ servidor.memoria_usada_formatada }}/{{ servidor.memoria_total_formatada }})</span></div>
+            <div><span class="font-semibold">Disco {{ servidor.disco.path }}:</span> {{ servidor.disco_percentual_formatado }} <span class="text-xs text-texto-legenda">({{ servidor.disco_usado_formatado }}/{{ servidor.disco_total_formatado }})</span></div>
+            <div><span class="font-semibold">Núcleos:</span> {{ servidor.cpu_nucleos|default:"-" }}</div>
+            {% if servidor.cpu_por_nucleo %}
+                <div class="flex flex-wrap items-center gap-1">
+                    <span class="font-semibold">CPU/núcleo:</span>
+                    {% for nucleo in servidor.cpu_por_nucleo %}
+                        <span class="rounded bg-superficie-afundada px-1.5 py-0.5 text-xs text-texto-secundario"
+                              title="Núcleo {{ nucleo.numero }}">
+                            {{ nucleo.numero }}: {{ nucleo.percentual_formatado }}
+                        </span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% if certificado_https.disponivel %}
+                <div class="{% if certificado_https.critico %}text-erro-base{% elif certificado_https.alerta %}text-atencao-base{% endif %}"
+                     title="Certificado apresentado por {{ certificado_https.dominio }} na porta 443.">
+                    <span class="font-semibold">HTTPS:</span>
+                    expira em {{ certificado_https.expira_em|date:"d/m/Y H:i" }}
+                    <span class="text-xs text-texto-legenda">({{ certificado_https.dias_restantes }} dia{{ certificado_https.dias_restantes|pluralize }})</span>
+                </div>
+            {% elif certificado_https.habilitado %}
+                <div class="text-atencao-base" title="{{ certificado_https.mensagem }}">
+                    <span class="font-semibold">HTTPS:</span> indisponível
+                </div>
+            {% endif %}
+            {% if conexoes_postgres.disponivel %}
+                <div title="Total de conexões de cliente no PostgreSQL. A capacidade normal exclui as conexões reservadas para superusuário.">
+                    <span class="font-semibold">PostgreSQL:</span> {{ conexoes_postgres.total }}/{{ conexoes_postgres.capacidade_normal }} ({{ conexoes_postgres.percentual }}%)
+                    <span class="text-xs text-texto-legenda">| Ativas: {{ conexoes_postgres.ativas }}</span>
+                </div>
+            {% else %}
+                <div class="text-atencao-base" title="Não foi possível consultar pg_stat_activity nesta atualização.">
+                    <span class="font-semibold">PostgreSQL:</span> indisponível
+                </div>
+            {% endif %}
+            {% if pgbouncer.habilitado and pgbouncer.disponivel %}
+                <div title="Conexões reais mantidas pelo PgBouncer para o banco SIGMA. Esperando são clientes aguardando uma conexão livre do pool.">
+                    <span class="font-semibold">PgBouncer:</span> {{ pgbouncer.usadas }}/{{ pgbouncer.limite }} ({{ pgbouncer.percentual }}%)
+                    <span class="text-xs text-texto-legenda">| Esperando: {{ pgbouncer.esperando }}</span>
+                </div>
+            {% elif pgbouncer.habilitado %}
+                <div class="text-atencao-base" title="Não foi possível consultar o pool PgBouncer nesta atualização.">
+                    <span class="font-semibold">PgBouncer:</span> indisponível
+                </div>
+            {% endif %}
+            {% if conexoes_postgres.disponivel %}
+                <button type="button"
+                        onclick="abrirConexoesPostgres()"
+                        class="rounded border border-borda-sutil bg-superficie-elevada px-2 py-1 text-xs font-semibold text-texto-secundario hover:bg-interacao-hover"
+                        title="Ver detalhes das conexões">
+                    Detalhar conexões
+                </button>
+            {% endif %}
+        </div>
+        {% if servidor.observacao %}
+            <div class="mt-1 text-xs text-atencao-base">{{ servidor.observacao }}</div>
+        {% endif %}
+    </div>
+
+    <div class="overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-left text-sm text-texto-primario">
+                <thead class="bg-superficie-afundada text-texto-primario">
+                    <tr>
+                        <th class="border border-borda-sutil p-2">Service <span title="Nome e descrição da rotina interna." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Execução <span title="Services contínuos aparecem como Sim/Não. Filas aparecem como Executando/Ociosa." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Status <span title="Estado mais recente informado pelo service: aguardando, executando, parado ou erro." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Intervalo <span title="Tempo configurado entre um ciclo e outro." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Iniciado em <span title="Data e hora em que a thread foi iniciada neste processo." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Uptime <span title="Há quanto tempo a thread está ativa." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Último ciclo <span title="Última execução concluída; se estiver executando, mostra o início do ciclo atual." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Duração <span title="Quanto tempo o último ciclo levou para terminar." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Limite ciclo <span title="Tempo máximo esperado para um ciclo antes de ser tratado como travado." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Próximo ciclo <span title="Tempo aproximado até a próxima tentativa automática." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Erro <span title="Último erro registrado no ciclo, quando houver." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for service in services %}
+                    <tr class="transition hover:bg-interacao-hover">
+                        <td class="border border-borda-sutil p-2">
+                            <div class="flex items-center gap-2 font-bold text-texto-primario">
+                                {% if service.codigo == "envia_pendencias" and filas_workers %}
+                                <button type="button"
+                                        onclick="toggleFilasWorkers()"
+                                        class="mr-1 inline-flex items-center"
+                                        title="Expandir filas">
+                                    <i id="filasWorkersSeta" data-lucide="chevron-right" class="h-4 w-4 transition-transform" aria-hidden="true"></i>
+                                </button>
+                                {% endif %}
+                                {% if service.codigo == "coleta_telemetria" %}
+                                <button type="button"
+                                        onclick="toggleRecursosTelemetria()"
+                                        class="mr-1 inline-flex items-center"
+                                        title="Expandir recursos monitorados">
+                                    <i id="recursosTelemetriaSeta" data-lucide="chevron-right" class="h-4 w-4 transition-transform" aria-hidden="true"></i>
+                                </button>
+                                {% endif %}
+                                <span>{{ service.nome }}</span>
+                                {% if service.descricao %}
+                                <span title="{{ service.descricao }}" class="cursor-help rounded-full border border-borda-sutil px-1.5 py-0.5 text-xs font-bold text-texto-legenda">?</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="border border-borda-sutil p-2">
+                            {% if service.eh_fila %}
+                                {% if service.rodando %}
+                                    <span class="rounded bg-informacao-sutil px-2 py-1 text-xs font-bold text-informacao-base">Executando</span>
+                                {% else %}
+                                    <span class="rounded bg-superficie-afundada px-2 py-1 text-xs font-bold text-texto-secundario">Ociosa</span>
+                                {% endif %}
+                            {% else %}
+                                {% if service.rodando %}
+                                    <span class="rounded bg-sucesso-sutil px-2 py-1 text-xs font-bold text-sucesso-base">Sim</span>
+                                {% else %}
+                                    <span class="rounded bg-erro-sutil px-2 py-1 text-xs font-bold text-erro-base">Não</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2">
+                            {% if service.ciclo_travado %}
+                                <span class="rounded bg-erro-sutil px-2 py-1 text-xs font-bold text-erro-base">Travado há {{ service.ciclo_atual_formatado }}</span>
+                            {% elif service.ciclo_em_andamento %}
+                                <span class="rounded bg-informacao-sutil px-2 py-1 text-xs font-bold text-informacao-base">{{ service.ultimo_status }}</span>
+                            {% else %}
+                                {{ service.ultimo_status }}
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2 whitespace-nowrap">
+                            {% if service.codigo == "coleta_telemetria" %}
+                                <span title="A pausa é definida individualmente para cada recurso.">Contínuo</span>
+                            {% else %}
+                                {{ service.intervalo_formatado }}
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2 whitespace-nowrap">{{ service.iniciado_em|date:"d/m/Y H:i:s"|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2 whitespace-nowrap">{{ service.uptime_formatado }}</td>
+                        <td class="border border-borda-sutil p-2 whitespace-nowrap">
+                            {% if service.ultimo_ciclo_fim %}
+                                {{ service.ultimo_ciclo_fim|date:"d/m/Y H:i:s" }}
+                            {% elif service.ultimo_ciclo_inicio %}
+                                {{ service.ultimo_ciclo_inicio|date:"d/m/Y H:i:s" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2 whitespace-nowrap">
+                            {% if service.ciclo_em_andamento %}
+                                Em execução há {{ service.ciclo_atual_formatado }}
+                            {% else %}
+                                {{ service.duracao_formatada }}
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2 whitespace-nowrap">{{ service.limite_ciclo_formatado }}</td>
+                        <td class="border border-borda-sutil p-2 whitespace-nowrap">
+                            {% if service.ciclo_em_andamento %}
+                                Em execução
+                            {% else %}
+                                {{ service.proximo_formatado }}
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2 max-w-sm truncate" title="{{ service.ultimo_erro }}">
+                            {{ service.ultimo_erro|default:"-" }}
+                        </td>
+                    </tr>
+                    {% if service.codigo == "coleta_telemetria" %}
+                    <tr id="recursosTelemetriaRow" class="hidden bg-superficie-afundada">
+                        <td colspan="11" class="border border-borda-sutil p-3">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-superficie-afundada text-texto-primario">
+                                    <tr><th class="border border-borda-sutil p-1">URL</th><th class="border border-borda-sutil p-1">Timeout</th><th class="border border-borda-sutil p-1">Pausa sucesso</th><th class="border border-borda-sutil p-1">Espera erro</th><th class="border border-borda-sutil p-1">Situação</th><th class="border border-borda-sutil p-1">Próxima coleta</th><th class="border border-borda-sutil p-1">Última coleta</th><th class="border border-borda-sutil p-1">Log</th></tr>
+                                </thead>
+                                <tbody>
+                                    {% for coleta in service.fontes_telemetria %}
+                                    <tr class="transition">
+                                        <td class="max-w-40 truncate border border-borda-sutil p-1" title="{{ coleta.url }}">{{ coleta.url }}</td>
+                                        <td class="border border-borda-sutil p-1">{{ coleta.timeout_segundos }}s</td>
+                                        <td class="border border-borda-sutil p-1">{{ coleta.pausa_sucesso_segundos }}s</td>
+                                        <td class="border border-borda-sutil p-1">{{ coleta.backoff_erro_segundos }}s</td>
+                                        <td class="border border-borda-sutil p-1">{{ coleta.situacao }}</td>
+                                        <td class="border border-borda-sutil p-1">{% if coleta.proxima_segundos is None %}-{% else %}{{ coleta.proxima_segundos|floatformat:1 }}s{% endif %}</td>
+                                        <td class="border border-borda-sutil p-1">{{ coleta.ultima_coleta_em|date:"d/m/Y H:i:s"|default:"-" }}</td>
+                                        <td class="max-w-40 truncate border border-borda-sutil p-1" title="{{ coleta.log }}">{{ coleta.log|default:"-" }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td class="border border-borda-sutil p-2" colspan="8">Nenhuma fonte ativa para telemetria.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% if service.codigo == "envia_pendencias" and filas_workers %}
+                        {% for fila_service in filas_workers %}
+                        <tr class="fila-worker-row hidden bg-superficie-afundada transition hover:bg-interacao-hover">
+                            <td class="border border-borda-sutil p-2 pl-8">
+                                <div class="flex items-center gap-2 font-bold text-texto-primario">
+                                    <span>{{ fila_service.nome }}</span>
+                                    {% if fila_service.descricao %}
+                                    <span title="{{ fila_service.descricao }}" class="cursor-help rounded-full border border-borda-sutil px-1.5 py-0.5 text-xs font-bold text-texto-legenda">?</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="border border-borda-sutil p-2">
+                                {% if fila_service.rodando %}
+                                    <span class="rounded bg-informacao-sutil px-2 py-1 text-xs font-bold text-informacao-base">Executando</span>
+                                {% else %}
+                                    <span class="rounded bg-superficie-afundada px-2 py-1 text-xs font-bold text-texto-secundario">Ociosa</span>
+                                {% endif %}
+                            </td>
+                            <td class="border border-borda-sutil p-2">
+                                {% if fila_service.ciclo_travado %}
+                                    <span class="rounded bg-erro-sutil px-2 py-1 text-xs font-bold text-erro-base">Travado há {{ fila_service.ciclo_atual_formatado }}</span>
+                                {% elif fila_service.ciclo_em_andamento %}
+                                    <span class="rounded bg-informacao-sutil px-2 py-1 text-xs font-bold text-informacao-base">{{ fila_service.ultimo_status }}</span>
+                                {% else %}
+                                    {{ fila_service.ultimo_status }}
+                                {% endif %}
+                            </td>
+                            <td class="border border-borda-sutil p-2 whitespace-nowrap">{{ fila_service.intervalo_formatado }}</td>
+                            <td class="border border-borda-sutil p-2 whitespace-nowrap">{{ fila_service.iniciado_em|date:"d/m/Y H:i:s"|default:"-" }}</td>
+                            <td class="border border-borda-sutil p-2 whitespace-nowrap">{{ fila_service.uptime_formatado }}</td>
+                            <td class="border border-borda-sutil p-2 whitespace-nowrap">
+                                {% if fila_service.ultimo_ciclo_fim %}
+                                    {{ fila_service.ultimo_ciclo_fim|date:"d/m/Y H:i:s" }}
+                                {% elif fila_service.ultimo_ciclo_inicio %}
+                                    {{ fila_service.ultimo_ciclo_inicio|date:"d/m/Y H:i:s" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="border border-borda-sutil p-2 whitespace-nowrap">
+                                {% if fila_service.ciclo_em_andamento %}
+                                    Em execução há {{ fila_service.ciclo_atual_formatado }}
+                                {% else %}
+                                    {{ fila_service.duracao_formatada }}
+                                {% endif %}
+                            </td>
+                            <td class="border border-borda-sutil p-2 whitespace-nowrap">{{ fila_service.limite_ciclo_formatado }}</td>
+                            <td class="border border-borda-sutil p-2 whitespace-nowrap">
+                                {% if fila_service.ciclo_em_andamento %}
+                                    Em execução
+                                {% else %}
+                                    {{ fila_service.proximo_formatado }}
+                                {% endif %}
+                            </td>
+                            <td class="border border-borda-sutil p-2 max-w-sm truncate" title="{{ fila_service.ultimo_erro }}">
+                                {{ fila_service.ultimo_erro|default:"-" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endif %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="11" class="border border-borda-sutil p-6 text-center text-texto-legenda italic">
+                            Nenhum service registrado neste processo.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-6 overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+        <div class="border-b border-borda-sutil bg-superficie-afundada px-4 py-3">
+            <h2 class="text-lg font-bold text-texto-primario">Filas de integração</h2>
+            <p class="text-xs text-texto-legenda">Contadores atuais das filas acionadas pelo envio automático de pendências.</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-left text-sm text-texto-primario">
+                <thead class="bg-superficie-afundada text-texto-primario">
+                    <tr>
+                        <th class="border border-borda-sutil p-2">Fila <span title="Tela/fila de origem dos registros pendentes." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Pendentes <span title="Total com status pendente." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Elegíveis <span title="Pendentes que podem ser enviados agora. Em WMS e Consulta de Lotes, ignora reunião aberta." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Bloqueados <span title="Pendentes bloqueados por regra, como reunião aberta." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Processando <span title="Registros reservados para processamento." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                        <th class="border border-borda-sutil p-2">Timeout webservice <span title="Tempo máximo aguardado pelo retorno de cada chamada externa da fila." class="cursor-help rounded bg-superficie-elevada/20 px-1">?</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fila in filas_integracao %}
+                    <tr class="transition hover:bg-interacao-hover">
+                        <td class="border border-borda-sutil p-2">
+                            <div class="font-bold">
+                                {% if fila.url %}
+                                    <a href="{{ fila.url }}" class="link-logs-services text-informacao-base underline decoration-informacao-base underline-offset-2 hover:text-informacao-base hover:decoration-informacao-base">
+                                        {{ fila.nome }}
+                                    </a>
+                                {% else %}
+                                    {{ fila.nome }}
+                                {% endif %}
+                            </div>
+                            <div class="text-xs text-texto-legenda">{{ fila.observacao }}</div>
+                        </td>
+                        <td class="border border-borda-sutil p-2 font-semibold">{{ fila.pendentes }}</td>
+                        <td class="border border-borda-sutil p-2">{{ fila.pendentes_elegiveis|default_if_none:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ fila.bloqueados|default_if_none:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ fila.processando }}</td>
+                        <td class="border border-borda-sutil p-2 whitespace-nowrap">{{ fila.timeout_webservice }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="border border-borda-sutil p-6 text-center text-texto-legenda italic">
+                            Nenhuma fila carregada.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script>
+    function abrirManualServices() {
+        const modal = document.getElementById('manualServicesModal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function fecharManualServices() {
+        const modal = document.getElementById('manualServicesModal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function abrirConexoesPostgres() {
+        const modal = document.getElementById('conexoesPostgresModal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function fecharConexoesPostgres() {
+        const modal = document.getElementById('conexoesPostgresModal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function toggleFilasWorkers() {
+        const rows = document.querySelectorAll('.fila-worker-row');
+        const seta = document.getElementById('filasWorkersSeta');
+        if (!rows.length) return;
+        const abrir = rows[0].classList.contains('hidden');
+        rows.forEach(row => row.classList.toggle('hidden', !abrir));
+        if (seta) {
+            seta.classList.toggle('rotate-90', abrir);
+        }
+    }
+
+    function toggleRecursosTelemetria() {
+        const row = document.getElementById('recursosTelemetriaRow');
+        const seta = document.getElementById('recursosTelemetriaSeta');
+        if (!row) return;
+        const abrir = row.classList.contains('hidden');
+        row.classList.toggle('hidden', !abrir);
+        if (seta) {
+            seta.classList.toggle('rotate-90', abrir);
+        }
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') fecharManualServices();
+    });
+
+    document.getElementById('manualServicesModal')?.addEventListener('click', function(event) {
+        if (event.target === this) fecharManualServices();
+    });
+
+    (function configurarAutoRefresh() {
+        const select = document.getElementById('autoRefreshSelect');
+        if (!select) return;
+
+        const storageKey = 'statusServicesAutoRefreshSegundos';
+        const valorSalvo = localStorage.getItem(storageKey) || '0';
+        select.value = valorSalvo;
+
+        let timer = null;
+        function aplicarAutoRefresh() {
+            if (timer) clearTimeout(timer);
+            const segundos = parseInt(select.value || '0', 10);
+            localStorage.setItem(storageKey, String(segundos));
+            if (segundos > 0) {
+                timer = setTimeout(function() {
+                    window.location.reload();
+                }, segundos * 1000);
+            }
+        }
+
+        select.addEventListener('change', aplicarAutoRefresh);
+        aplicarAutoRefresh();
+    })();
+</script>
+{% endblock %}

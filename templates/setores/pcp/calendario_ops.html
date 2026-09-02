@@ -1,0 +1,514 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Calendário de OPs{% endblock %}
+
+{% block extra_css %}
+<style>
+    #pagina-calendario-ops {
+        --cor-evento-superficie: var(--color-superficie-elevada);
+        --cor-evento-texto: var(--color-texto-primario);
+    }
+    #calendario-ops .fc {
+        --fc-page-bg-color: var(--color-superficie-elevada);
+        --fc-neutral-bg-color: var(--color-superficie-afundada);
+        --fc-today-bg-color: color-mix(in srgb, var(--color-marca-sutil) 55%, transparent);
+        --fc-more-link-bg-color: var(--color-interacao-pressionado);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="pagina-calendario-ops" class="mt-4 space-y-4 text-sm text-texto-primario [&_select]:!bg-superficie-elevada [&_select]:!text-texto-primario [&_select_option]:!bg-superficie-elevada [&_select_option]:!text-texto-primario [&_.fc]:!text-texto-primario [&_.filtro-multiplo]:relative [&_details]:w-full [&_summary]:cursor-pointer [&_summary]:rounded-xl [&_summary]:border [&_summary]:border-borda-padrao [&_summary]:bg-superficie-elevada [&_summary]:px-3 [&_summary]:py-2 [&_details.tem-filtro>summary]:border-informacao-borda [&_details.tem-filtro>summary]:text-informacao-base [&_.opcoes-filtro]:absolute [&_.opcoes-filtro]:z-30 [&_.opcoes-filtro]:max-h-64 [&_.opcoes-filtro]:w-full [&_.opcoes-filtro]:overflow-y-auto [&_.opcoes-filtro]:rounded [&_.opcoes-filtro]:border [&_.opcoes-filtro]:border-borda-sutil [&_.opcoes-filtro]:bg-superficie-elevada [&_.opcoes-filtro]:p-2 [&_.opcoes-filtro]:shadow-lg [&_.opcoes-filtro_label]:block [&_.opcoes-filtro_label]:p-1 [&_.busca-opcoes]:mb-2 [&_.busca-opcoes]:w-full [&_.busca-opcoes]:rounded [&_.busca-opcoes]:border [&_.busca-opcoes]:border-borda-padrao [&_.busca-opcoes]:px-2 [&_.busca-opcoes]:py-1.5 [&_.fc-event-title]:text-xs [&_.fc-toolbar-title]:after:block [&_.fc-toolbar-title]:after:content-['%_=_percentual_comprometido_da_OP'] [&_.fc-toolbar-title]:after:text-[.65rem] [&_.fc-daygrid-day-top]:relative [&_.fc-daygrid-day-top]:z-2 [&_.fc-daygrid-day-top]:flex-row [&_.fc-daygrid-day-number]:relative [&_.fc-daygrid-day-number]:z-3 [&_.fc-daygrid-day-events]:relative [&_.fc-daygrid-day-events]:z-1 [&_.fc-event]:cursor-pointer [&_.fc-col-header-cell]:bg-superficie-afundada [&_.fc-col-header-cell-cushion]:text-texto-primario [&_.fc-col-header-cell]:!bg-superficie-afundada [&_.fc-col-header-cell-cushion]:!text-texto-primario [&_.fc-theme-standard_td]:!border-borda-sutil [&_.fc-theme-standard_th]:!border-borda-sutil [&_.fc-scrollgrid]:!border-borda-sutil">
+    <div class="border-b border-borda-sutil pb-4">
+        <h1 class="titulo-pagina text-texto-primario">Calendário de OPs</h1>
+
+        <form id="filtros-calendario" class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-5">
+            <div class="filtro-multiplo">
+                <span class="mb-1 block font-medium">Máquina</span>
+                <details class="[&.tem-filtro>summary]:!border-2">
+                    <summary>Todas as máquinas</summary>
+                    <div class="opcoes-filtro !text-texto-primario [&_*]:!text-texto-primario">
+                    {% for maquina in opcoes.maquinas %}
+                    <label><input type="checkbox" name="maquina" value="{{ maquina.codigo }}" {% if maquina.codigo in filtros.maquinas %}checked{% endif %}> {{ maquina.descricao }}</label>
+                    {% endfor %}
+                    </div>
+                </details>
+            </div>
+            <div class="filtro-multiplo">
+                <span class="mb-1 block font-medium">Origem da OP</span>
+                <details class="[&.tem-filtro>summary]:!border-2">
+                    <summary>Todas as origens</summary>
+                    <div class="opcoes-filtro !text-texto-primario [&_*]:!text-texto-primario">
+                    {% for origem in opcoes.origens %}
+                    <label><input type="checkbox" name="origem" value="{{ origem.codigo }}" {% if origem.codigo in filtros.origens %}checked{% endif %}> {{ origem.codigo }} - {{ origem.descricao }}</label>
+                    {% endfor %}
+                    </div>
+                </details>
+            </div>
+            <div class="filtro-multiplo">
+                <span class="mb-1 block font-medium">Produto-Derivação</span>
+                <details class="[&.tem-filtro>summary]:!border-2">
+                    <summary>Todos os produtos-derivações</summary>
+                    <div class="opcoes-filtro !text-texto-primario [&_*]:!text-texto-primario">
+                        <input type="search" class="busca-opcoes !bg-superficie-elevada !text-texto-primario" placeholder="Digite código ou descrição" data-busca-opcoes="produtos">
+                        <div data-opcoes="produtos">
+                        {% for produto in opcoes.produtos %}
+                        <label><input type="checkbox" name="produto" value="{{ produto.codigo }}" {% if produto.codigo in filtros.produtos %}checked{% endif %}> {{ produto.exibicao }}: {{ produto.descricao }}</label>
+                        {% endfor %}
+                        </div>
+                    </div>
+                </details>
+            </div>
+            <div class="filtro-multiplo">
+                <span class="mb-1 block font-medium">Situação</span>
+                <details class="[&.tem-filtro>summary]:!border-2">
+                    <summary>Situações</summary>
+                    <div class="opcoes-filtro !text-texto-primario [&_*]:!text-texto-primario">
+                    {% for codigo, descricao in situacoes %}
+                    <label><input type="checkbox" name="situacao" value="{{ codigo }}" {% if codigo in filtros.situacoes %}checked{% endif %}> {{ codigo }} - {{ descricao }}</label>
+                    {% endfor %}
+                    </div>
+                </details>
+            </div>
+            <div class="flex items-end gap-2">
+                <button class="botao-primario h-10 whitespace-nowrap px-4 text-sm"><i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i> Filtrar</button>
+                <button id="limpar-filtros" type="button" class="botao-secundario h-10 whitespace-nowrap px-4 text-sm"><i data-lucide="refresh-cw" class="h-5 w-5" aria-hidden="true"></i> Limpar</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="rounded border border-borda-sutil bg-superficie-elevada p-3 shadow">
+        <div id="calendario-ops"></div>
+    </div>
+</div>
+
+<div id="modal-detalhes-op" class="fixed inset-0 z-[1200] flex items-center justify-center overflow-y-auto bg-superficie-inversa/50 p-4 backdrop-blur-sm" hidden>
+    <div class="max-h-[calc(100vh-2rem)] w-full max-w-6xl overflow-y-auto rounded-2xl border border-borda-sutil bg-superficie-elevada text-texto-primario shadow-2xl [&_.tabela-detalhes]:overflow-x-auto [&_.tabela-detalhes]:rounded-lg [&_.tabela-detalhes]:border [&_.tabela-detalhes]:border-borda-sutil [&_.tabela-detalhes_table]:min-w-full [&_.tabela-detalhes_table]:text-sm [&_.tabela-detalhes_th]:bg-superficie-afundada [&_.tabela-detalhes_th]:px-3 [&_.tabela-detalhes_th]:py-2 [&_.tabela-detalhes_th]:text-left [&_.tabela-detalhes_td]:border-t [&_.tabela-detalhes_td]:border-borda-sutil [&_.tabela-detalhes_td]:px-3 [&_.tabela-detalhes_td]:py-2 [&_section>h3]:mb-2 [&_section>h3]:text-base [&_section>h3]:font-bold" role="dialog" aria-modal="true" aria-labelledby="titulo-detalhes-op">
+        <div class="sticky top-0 z-10 border-b border-borda-sutil bg-superficie-afundada px-6 py-3">
+            <div class="flex items-center justify-between gap-3">
+                <h2 id="titulo-detalhes-op" class="min-w-0 text-lg font-bold">Detalhamento do comprometimento</h2>
+                <button id="fechar-detalhes-op" class="botao-secundario h-9 w-9 shrink-0 p-0" type="button" aria-label="Fechar"><i data-lucide="x" class="h-5 w-5" aria-hidden="true"></i></button>
+            </div>
+            <div id="acoes-simulacao" class="mt-3 flex flex-wrap items-center gap-2 text-sm" hidden>
+                <label class="flex items-center gap-2">Data de corte <input id="data-corte-simulacao" class="rounded-xl border border-borda-padrao bg-superficie-elevada px-3 py-2" type="date"></label>
+                <button id="simular-detalhes-op" class="botao-primario h-9 px-3" type="button">Simular</button>
+            </div>
+        </div>
+        <div class="p-6">
+            <div id="resumo-detalhes-op" class="mb-6 rounded-lg border border-borda-sutil bg-superficie-afundada p-3"></div>
+            <section id="secao-detalhes-estoque" class="mb-6">
+            <h3>Estoque — E210EST</h3>
+            <p class="mb-1 text-xs text-texto-legenda">Depósitos ignorados: 01.25, AV.01, 05.14, 01.14, 01.23, 01.DV, C1.25, OP.25, P01.01, P01.02, P01.03 e 01.30.</p>
+            <div class="tabela-detalhes"><table><thead><tr><th>Depósito</th><th>Estoque</th></tr></thead><tbody id="detalhes-estoque"></tbody></table></div>
+            </section>
+            <section id="secao-detalhes-producao" class="mb-6">
+            <h3>Produção das OPs — E900QDO</h3>
+            <div class="tabela-detalhes"><table><thead><tr><th>Origem</th><th>OP</th><th>Situação</th><th>Fim previsto</th><th>Previsto</th><th>Realizado</th><th>Pendente</th></tr></thead><tbody id="detalhes-producao"></tbody></table></div>
+            </section>
+            <section id="secao-detalhes-consumo" class="mb-6">
+            <h3>Consumo das OPs — E900CMO</h3>
+            <div class="tabela-detalhes"><table><thead><tr><th>Origem</th><th>OP</th><th>Situação</th><th>Fim previsto</th><th>Previsto</th><th>Realizado</th><th>Pendente</th></tr></thead><tbody id="detalhes-consumo"></tbody></table></div>
+            </section>
+            <section id="secao-detalhes-reservas">
+            <h3>Reservas de Pedidos — USU_TRESPED</h3>
+            <div class="tabela-detalhes"><table><thead><tr><th>Pedido</th><th>Origem OP</th><th>OP</th><th>Reservado</th><th>Previsão de estoque</th></tr></thead><tbody id="detalhes-reservas"></tbody></table></div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'vendor/fullcalendar/index.global.min.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const formulario = document.getElementById('filtros-calendario');
+    const quadroCalendario = document.getElementById('calendario-ops');
+    const csrfToken = '{{ csrf_token }}';
+    const corAzulUnica = getComputedStyle(document.documentElement).getPropertyValue('--color-informacao-base').trim();
+    let usarCoresPorOp = {{ cores_op_coloridas|yesno:"true,false" }};
+    const tooltip = document.createElement('div');
+    const faixasTooltip = [];
+    const modalDetalhes = document.getElementById('modal-detalhes-op');
+    const tituloDetalhes = document.getElementById('titulo-detalhes-op');
+    const resumoDetalhes = document.getElementById('resumo-detalhes-op');
+    const dataCorteSimulacao = document.getElementById('data-corte-simulacao');
+    const acoesSimulacao = document.getElementById('acoes-simulacao');
+    let dadosEventoDetalhes = null;
+    tooltip.id = 'tooltip-calendario-ops';
+    tooltip.className = 'fixed z-[1100] max-w-md rounded-md bg-superficie-inversa px-3 py-2 text-xs leading-[1.35] text-texto-sobre-inversa whitespace-pre-line pointer-events-none invisible';
+    document.body.appendChild(tooltip);
+
+    function atualizarDestaqueFiltros() {
+        formulario.querySelectorAll('details').forEach(function(detalhe) {
+            detalhe.classList.toggle('tem-filtro', Boolean(detalhe.querySelector('input:checked')));
+        });
+    }
+    atualizarDestaqueFiltros();
+    formulario.addEventListener('change', atualizarDestaqueFiltros);
+
+    function atualizarRotuloBotaoCores() {
+        document.querySelectorAll('.fc-coloracao-button').forEach(function(botao) {
+            botao.textContent = usarCoresPorOp ? 'Colorido' : 'Azul único';
+        });
+    }
+
+    function formatarQuantidade(dados, quantidade) {
+        return quantidade === null
+            ? 'Não informada'
+            : new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 }).format(quantidade) + (dados.unidade_medida ? ' ' + dados.unidade_medida : '');
+    }
+
+    function corComSuperficie(cor) {
+        return 'color-mix(in srgb, ' + cor + ' 30%, var(--cor-evento-superficie))';
+    }
+
+    function textoTooltip(dados) {
+        return [
+            'Origem: ' + dados.origem,
+            'OP: ' + dados.op,
+            'Estágio: ' + dados.estagio,
+            'Situação: ' + dados.situacao,
+            'Máquina: ' + dados.maquina,
+            'Previsão: ' + dados.previsto_inicio + ' a ' + dados.previsto_fim,
+            'Real: ' + dados.real_inicio + ' a ' + dados.real_fim,
+            'Quantidade prevista: ' + formatarQuantidade(dados, dados.quantidade_prevista),
+            'Quantidade produzida: ' + formatarQuantidade(dados, dados.quantidade_produzida),
+            !dados.calcular_comprometimento ? '' :
+                'Quantidade reservada: ' + formatarQuantidade(dados, dados.quantidade_reservada),
+            !dados.calcular_comprometimento ? '' :
+                'Quantidade comprometida: ' + formatarQuantidade(dados, dados.quantidade_comprometida),
+            dados.saldo_disponivel === null ? '' :
+                'Saldo disponível: ' + formatarQuantidade(dados, dados.saldo_disponivel),
+            dados.saldo_restante === null ? '' :
+                'Saldo restante: ' + formatarQuantidade(dados, dados.saldo_restante),
+            !dados.calcular_comprometimento ? '' :
+                'Comprometido: ' + new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(dados.percentual_comprometido || 0) + '%',
+            (dados.produto_derivacao_codigo || 'Sem código') + ': ' + (dados.produto_derivacao || 'Não informado'),
+            'Pedidos reservados: ' + (dados.pedidos_reservados || 'Sem reserva de pedido')
+        ].filter(Boolean).join('\n');
+    }
+
+    function exibirTooltip(evento, dados) {
+        tooltip.textContent = textoTooltip(dados);
+        tooltip.style.visibility = 'visible';
+        const esquerda = Math.min(evento.clientX + 12, window.innerWidth - tooltip.offsetWidth - 12);
+        const topo = Math.min(evento.clientY + 12, window.innerHeight - tooltip.offsetHeight - 12);
+        tooltip.style.left = Math.max(12, esquerda) + 'px';
+        tooltip.style.top = Math.max(12, topo) + 'px';
+    }
+
+    function formatarValor(quantidade, unidade) {
+        return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 }).format(quantidade || 0)
+            + (unidade ? ' ' + unidade : '');
+    }
+
+    function formatarData(valor) {
+        if (!valor) return 'Não informado';
+        return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(new Date(valor));
+    }
+
+    function preencherTabela(id, linhas, campos, unidade, dataCorte, dataAtual, ignorarAnteriores) {
+        const corpo = document.getElementById(id);
+        corpo.replaceChildren();
+        if (!linhas.length) {
+            const linha = document.createElement('tr');
+            const celula = document.createElement('td');
+            celula.colSpan = campos.length;
+            celula.textContent = 'Nenhum registro encontrado.';
+            linha.appendChild(celula);
+            corpo.appendChild(linha);
+            return;
+        }
+        linhas.forEach(function(linhaDados) {
+            const linha = document.createElement('tr');
+            campos.forEach(function(campo) {
+                const celula = document.createElement('td');
+                const valor = linhaDados[campo.nome];
+                if (campo.tipo === 'quantidade') {
+                    celula.textContent = formatarValor(valor, unidade);
+                } else if (campo.tipo === 'data') {
+                    celula.textContent = formatarData(valor);
+                    if (campo.nome === 'dtpfim' && valor && dataCorte && dataAtual) {
+                        const dataFim = String(valor).slice(0, 10);
+                        if (!ignorarAnteriores || dataFim >= String(dataAtual).slice(0, 10)) {
+                            const antesOuNoCorte = dataFim <= String(dataCorte).slice(0, 10);
+                            const marcador = document.createElement('span');
+                            marcador.className = antesOuNoCorte
+                                ? 'ml-2 inline-block h-0 w-0 align-middle border-y-[0.35rem] border-y-transparent border-r-[0.6rem] border-r-erro'
+                                : 'ml-2 inline-block h-0 w-0 align-middle border-y-[0.35rem] border-y-transparent border-l-[0.6rem] border-l-sucesso';
+                            marcador.setAttribute('aria-label', antesOuNoCorte ? 'Até a data de corte' : 'Após a data de corte');
+                            celula.appendChild(marcador);
+                        }
+                    }
+                } else {
+                    celula.textContent = valor ?? '';
+                }
+                linha.appendChild(celula);
+            });
+            corpo.appendChild(linha);
+        });
+    }
+
+    function preencherResumo(dadosEvento, dadosCalculo) {
+        resumoDetalhes.replaceChildren();
+        const calculaPorProduto = Boolean(dadosCalculo.calcula_por_produto);
+
+        function adicionarFormula(itens) {
+            const linha = document.createElement('div');
+            linha.className = 'flex items-stretch gap-2 overflow-x-auto py-1';
+            itens.forEach(function(item) {
+                const elemento = document.createElement('span');
+                if (item.tipo === 'cartao') {
+                    elemento.className = 'w-40 shrink-0 rounded border border-borda-sutil bg-superficie-elevada p-2';
+                    const rotulo = document.createElement('strong');
+                    const valor = document.createElement('span');
+                    rotulo.className = 'block text-xs';
+                    valor.className = 'block font-semibold';
+                    rotulo.textContent = item.rotulo;
+                    valor.textContent = item.valor;
+                    elemento.append(rotulo, valor);
+                } else {
+                    elemento.className = 'self-center text-2xl font-bold text-texto-secundario';
+                    elemento.textContent = item.valor;
+                }
+                linha.appendChild(elemento);
+            });
+            resumoDetalhes.appendChild(linha);
+        }
+
+        function adicionarLegenda(texto) {
+            const legenda = document.createElement('div');
+            legenda.className = 'mt-2 border-l-4 border-informacao-base bg-informacao-sutil px-2 py-1 text-sm font-bold';
+            legenda.textContent = texto;
+            resumoDetalhes.appendChild(legenda);
+        }
+
+        function adicionarTextoCalculo(texto, classe) {
+            const linha = document.createElement('div');
+            linha.className = 'overflow-x-auto py-0.5 text-sm whitespace-nowrap'
+                + (classe === 'saldo-critico' ? ' font-semibold text-erro-base' : '')
+                + (classe === 'saldo-positivo' ? ' font-semibold text-sucesso-base' : '');
+            linha.textContent = texto;
+            resumoDetalhes.appendChild(linha);
+        }
+
+        if (calculaPorProduto) {
+            const indicadores = dadosCalculo.indicadores_comprometimento || dadosEvento.indicadores_comprometimento || {};
+            const dataCorte = formatarData(dadosCalculo.data_corte);
+            function adicionarIndicador(rotulo, indicador) {
+                adicionarLegenda(rotulo);
+                adicionarTextoCalculo(
+                    'Estoque ' + formatarValor(indicador.estoque, dadosCalculo.unidade_medida)
+                    + ' + Produção pendente ' + formatarValor(indicador.producao, dadosCalculo.unidade_medida)
+                    + ' = Disponível ' + formatarValor(indicador.disponivel, dadosCalculo.unidade_medida)
+                );
+                adicionarTextoCalculo(
+                    'Consumo pendente ' + formatarValor(indicador.consumo, dadosCalculo.unidade_medida)
+                    + ' + Reservas ' + formatarValor(indicador.reservas, dadosCalculo.unidade_medida)
+                    + ' = Comprometido ' + formatarValor(indicador.comprometido, dadosCalculo.unidade_medida)
+                );
+                adicionarTextoCalculo(
+                    'Disponível ' + formatarValor(indicador.disponivel, dadosCalculo.unidade_medida)
+                    + ' − Comprometido ' + formatarValor(indicador.comprometido, dadosCalculo.unidade_medida)
+                    + ' = Saldo ' + formatarValor(indicador.saldo, dadosCalculo.unidade_medida)
+                    + '; Comprometido representa ' + new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(indicador.percentual || 0) + '% do disponível',
+                    Number(indicador.percentual || 0) >= 100 ? 'saldo-critico' : 'saldo-positivo'
+                );
+            }
+            adicionarIndicador('Comprometido até a data de corte ' + dataCorte, indicadores.ate_corte || {});
+            adicionarIndicador('Comprometido após ' + dataCorte, indicadores.reservas || {});
+            adicionarIndicador('Comprometido TOTAL', indicadores.total || {});
+        } else {
+            adicionarFormula([
+                { tipo: 'cartao', rotulo: 'Quantidade reservada da OP para Pedidos', valor: formatarValor(dadosEvento.quantidade_reservada, dadosCalculo.unidade_medida) },
+                { tipo: 'operador', valor: '÷' },
+                { tipo: 'cartao', rotulo: 'Quantidade prevista da OP', valor: formatarValor(dadosEvento.quantidade_prevista, dadosCalculo.unidade_medida) },
+                { tipo: 'operador', valor: '× 100' },
+                { tipo: 'operador', valor: '=' },
+                { tipo: 'cartao', rotulo: '% Comprometido', valor: new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(dadosEvento.percentual_comprometido || 0) + '%' }
+            ]);
+        }
+    }
+
+    function consultarDetalhes(dadosEvento, dataCorte) {
+        if (!dadosEvento.calcular_comprometimento) return;
+        const parametros = new URLSearchParams({
+            codori: String(dadosEvento.origem).split(' - ')[0],
+            numorp: dadosEvento.op,
+            codpro: dadosEvento.codpro,
+            codder: dadosEvento.codder
+        });
+        if (dataCorte) parametros.set('data_corte', dataCorte);
+        fetch('{% url "pcp:detalhes_calendario_ops" %}?' + parametros.toString())
+            .then(function(resposta) {
+                if (!resposta.ok) throw new Error('Não foi possível consultar o detalhamento no ERP.');
+                return resposta.json();
+            })
+            .then(function(dadosCalculo) {
+                dataCorteSimulacao.value = String(dadosCalculo.data_corte).slice(0, 10);
+                dataCorteSimulacao.min = String(dadosCalculo.data_atual).slice(0, 10);
+                acoesSimulacao.hidden = !dadosCalculo.calcula_por_produto;
+                tituloDetalhes.textContent = (dadosEvento.codigo_origem || '') + '-' + dadosEvento.op
+                    + ' · ' + (dadosEvento.produto_derivacao_codigo || 'produto')
+                    + ' - ' + (dadosEvento.produto_derivacao || 'Sem descrição')
+                    + ' · ' + String(dadosEvento.maquina || 'sem máquina').split(' - ')[0]
+                    + ' · ' + dadosEvento.previsto_fim;
+                preencherResumo(dadosEvento, dadosCalculo);
+                document.getElementById('secao-detalhes-estoque').hidden = false;
+                document.getElementById('secao-detalhes-producao').hidden = false;
+                document.getElementById('secao-detalhes-consumo').hidden = false;
+                preencherTabela('detalhes-estoque', dadosCalculo.estoque, [
+                    { nome: 'coddep' }, { nome: 'estoque', tipo: 'quantidade' }
+                ], dadosCalculo.unidade_medida);
+                const camposOps = [
+                    { nome: 'codori' }, { nome: 'numorp' }, { nome: 'sitorp' }, { nome: 'dtpfim', tipo: 'data' },
+                    { nome: 'previsto', tipo: 'quantidade' }, { nome: 'realizado', tipo: 'quantidade' }, { nome: 'pendente', tipo: 'quantidade' }
+                ];
+                preencherTabela('detalhes-producao', dadosCalculo.producao, camposOps, dadosCalculo.unidade_medida, dadosCalculo.data_corte, dadosCalculo.data_atual, true);
+                preencherTabela('detalhes-consumo', dadosCalculo.consumo, camposOps, dadosCalculo.unidade_medida, dadosCalculo.data_corte, dadosCalculo.data_atual, false);
+                preencherTabela('detalhes-reservas', dadosCalculo.reservas, [
+                    { nome: 'numped' }, { nome: 'origem_op' }, { nome: 'numorp' },
+                    { nome: 'reservado', tipo: 'quantidade' }, { nome: 'previsao_estoque', tipo: 'data' }
+                ], dadosCalculo.unidade_medida);
+                modalDetalhes.hidden = false;
+            })
+            .catch(function(erro) { window.alert(erro.message); });
+    }
+
+    function abrirDetalhes(dadosEvento) {
+        dadosEventoDetalhes = dadosEvento;
+        consultarDetalhes(dadosEvento);
+    }
+
+    document.getElementById('fechar-detalhes-op').addEventListener('click', function() { modalDetalhes.hidden = true; });
+    document.getElementById('simular-detalhes-op').addEventListener('click', function() {
+        if (!dadosEventoDetalhes || !dataCorteSimulacao.value) return;
+        consultarDetalhes(dadosEventoDetalhes, dataCorteSimulacao.value);
+    });
+    modalDetalhes.addEventListener('click', function(evento) {
+        if (evento.target === modalDetalhes) modalDetalhes.hidden = true;
+    });
+
+    quadroCalendario.addEventListener('mousemove', function(evento) {
+        let faixa = null;
+        for (let indice = faixasTooltip.length - 1; indice >= 0; indice -= 1) {
+            const item = faixasTooltip[indice];
+            const limite = item.elemento.getBoundingClientRect();
+            if (evento.clientX >= limite.left && evento.clientX <= limite.right
+                && evento.clientY >= limite.top && evento.clientY <= limite.bottom) {
+                faixa = item;
+                break;
+            }
+        }
+        if (faixa) {
+            exibirTooltip(evento, faixa.dados);
+        } else {
+            tooltip.style.visibility = 'hidden';
+        }
+    });
+    quadroCalendario.addEventListener('mouseleave', function() {
+        tooltip.style.visibility = 'hidden';
+    });
+
+    const calendario = new FullCalendar.Calendar(quadroCalendario, {
+        initialView: 'dayGridMonth',
+        locale: 'pt-br',
+        firstDay: 0,
+        buttonText: { today: 'Hoje', month: 'Mês', week: 'Semana' },
+        customButtons: {
+            coloracao: {
+                text: usarCoresPorOp ? 'Colorido' : 'Azul único',
+                hint: 'Alternar as cores das OPs',
+                click: function(evento, botao) {
+                    const novoModo = !usarCoresPorOp;
+                    fetch('{% url "pcp:salvar_cores_calendario_ops" %}', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'colorido=' + novoModo
+                    })
+                        .then(function(resposta) {
+                            if (!resposta.ok) throw new Error('Não foi possível salvar a preferência de cores.');
+                            return resposta.json();
+                        })
+                        .then(function(dados) {
+                            usarCoresPorOp = dados.colorido;
+                            atualizarRotuloBotaoCores();
+                            calendario.refetchEvents();
+                        })
+                        .catch(function(erro) { window.alert(erro.message); });
+                }
+            }
+        },
+        headerToolbar: { left: 'prev,next today coloracao', center: 'title', right: 'dayGridMonth,dayGridWeek' },
+        datesSet: atualizarRotuloBotaoCores,
+        height: 'auto',
+        eventDisplay: 'block',
+        events: function(info, sucesso, falha) {
+            const parametros = new URLSearchParams(new FormData(formulario));
+            parametros.set('start', info.startStr);
+            parametros.set('end', info.endStr);
+            fetch('{% url "pcp:eventos_calendario_ops" %}?' + parametros.toString())
+                .then(function(resposta) {
+                    if (!resposta.ok) throw new Error('Falha ao consultar OPs no ERP.');
+                    return resposta.json();
+                })
+                .then(sucesso)
+                .catch(falha);
+        },
+        eventDidMount: function(info) {
+            const dados = info.event.extendedProps;
+            const percentual = Math.max(0, Math.min(100, dados.percentual_visual || 0));
+            const cor = usarCoresPorOp ? dados.cor_op : corAzulUnica;
+            if (cor) {
+                info.el.style.background = 'linear-gradient(90deg, ' + cor + ' 0%, ' + cor + ' ' + percentual + '%, '
+                    + corComSuperficie(cor) + ' ' + percentual + '%, ' + corComSuperficie(cor) + ' 100%)';
+                info.el.style.borderColor = cor;
+                info.el.style.color = 'var(--cor-evento-texto)';
+                const conteudoEvento = info.el.querySelector('.fc-event-main');
+                if (conteudoEvento) conteudoEvento.style.color = 'var(--cor-evento-texto)';
+            }
+            if (!dados.calcular_comprometimento) info.el.style.cursor = 'default';
+            const faixaEvento = info.el.closest('.fc-daygrid-event-harness');
+            if (!faixaEvento) return;
+            faixasTooltip.push({
+                elemento: faixaEvento,
+                evento: info.el,
+                dados: info.event.extendedProps,
+            });
+        },
+        eventWillUnmount: function(info) {
+            const indice = faixasTooltip.findIndex(function(item) {
+                return item.evento === info.el;
+            });
+            if (indice >= 0) {
+                faixasTooltip.splice(indice, 1);
+            }
+        },
+        eventClick: function(info) {
+            tooltip.style.visibility = 'hidden';
+            abrirDetalhes(info.event.extendedProps);
+        }
+    });
+
+    formulario.addEventListener('submit', function(evento) {
+        evento.preventDefault();
+        calendario.refetchEvents();
+    });
+    document.getElementById('limpar-filtros').addEventListener('click', function() {
+        formulario.reset();
+        atualizarDestaqueFiltros();
+        calendario.refetchEvents();
+    });
+    document.querySelectorAll('[data-busca-opcoes]').forEach(function(campo) {
+        campo.addEventListener('input', function() {
+            const termo = campo.value.toLocaleLowerCase('pt-BR');
+            const opcoes = document.querySelector('[data-opcoes="' + campo.dataset.buscaOpcoes + '"]');
+            opcoes.querySelectorAll('label').forEach(function(opcao) {
+                opcao.hidden = !opcao.textContent.toLocaleLowerCase('pt-BR').includes(termo);
+            });
+        });
+    });
+    calendario.render();
+});
+</script>
+{% endblock %}

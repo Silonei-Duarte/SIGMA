@@ -1,0 +1,1024 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ APPLICATION_NAME }} | {{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="w-full px-4 mt-4 pb-4 text-sm text-texto-primario [&_.linha-area-vermelha-selecionada]:bg-interacao-selecionado [&_.linha-area-vermelha-selecionada]:text-texto-primario">
+
+    <div class="mb-6 border-b border-borda-sutil pb-4">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <h2 class="titulo-pagina text-texto-primario">Reunião da Área Vermelha</h2>
+                {% if reuniao_aberta %}
+                <p class="mt-1 text-xs text-texto-legenda">Aberta em {{ reuniao_aberta.data_hora_inicio|date:"d/m/Y H:i" }}</p>
+                {% else %}
+                <p class="mt-1 text-xs text-texto-legenda">Nenhuma reunião aberta.</p>
+                {% endif %}
+            </div>
+
+            {% if pode_destinar_area_vermelha %}
+            <form method="POST" class="flex items-center gap-2">
+                {% csrf_token %}
+                {% if reuniao_aberta %}
+                <button type="submit" name="reuniao_action" value="fechar"
+                        class="botao-perigo h-10 px-4">
+                    Fechar Reunião
+                </button>
+                {% else %}
+                <button type="submit" name="reuniao_action" value="abrir"
+                        class="botao-primario h-10 px-4">
+                    Abrir Reunião
+                </button>
+                {% endif %}
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+        {% if reuniao_aberta %}
+        <div class="mb-6 rounded-2xl border border-borda-sutil bg-superficie-elevada p-4 shadow-sm">
+        <div class="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(520px,640px)]">
+            <div class="rounded-xl border border-borda-sutil">
+                <div class="border-b border-borda-sutil bg-superficie-afundada px-3 py-2 text-xs font-bold uppercase text-texto-secundario">Participantes</div>
+                <div class="max-h-32 overflow-y-auto p-3">
+                    {% for participante in reuniao_aberta.participantes.all %}
+                    <div class="flex items-center justify-between gap-2 border-b border-borda-sutil py-1 text-sm text-texto-secundario last:border-b-0">
+                        <span>
+                            {{ participante.nome }}
+                            {% if participante.setor %}
+                            <span class="ml-1 rounded-full border border-borda-sutil bg-superficie-afundada px-2 py-0.5 text-xs font-bold uppercase text-texto-secundario">{{ participante.get_setor_display }}</span>
+                            {% endif %}
+                        </span>
+                        {% if pode_destinar_area_vermelha %}
+                        <form method="POST" onsubmit="return confirm('Excluir este participante?')">
+                            {% csrf_token %}
+                            <input type="hidden" name="participante_id" value="{{ participante.id }}">
+                            <button type="submit" name="reuniao_action" value="excluir_participante"
+                                    class="botao-perigo-icone" title="Excluir" aria-label="Excluir"><i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="text-sm text-texto-legenda">Nenhum participante informado.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if pode_destinar_area_vermelha %}
+            <form method="POST" class="flex flex-col gap-2 rounded-xl border border-borda-sutil bg-superficie-afundada p-3">
+                {% csrf_token %}
+                <label for="nome-participante" class="text-xs font-bold uppercase text-texto-legenda">Adicionar participante</label>
+                <div class="grid gap-2 md:grid-cols-[minmax(260px,1fr)_160px_auto] md:items-end">
+                    <div class="relative">
+                        <label for="busca-participante" class="mb-1 block text-xs font-bold uppercase text-texto-legenda">Participante</label>
+                        <input type="text" id="busca-participante" autocomplete="off"
+                               class="h-10 w-full rounded-xl border px-3 text-sm shadow-sm"
+                               placeholder="Digite 3 caracteres">
+                        <input type="hidden" name="nome" id="nome-participante">
+                        <div id="opcoes-participante" class="absolute left-0 right-0 top-16 z-50 hidden max-h-56 overflow-y-auto rounded-xl border border-borda-padrao bg-superficie-elevada text-left shadow-xl"></div>
+                    </div>
+                    <div>
+                        <label for="setor-participante" class="mb-1 block text-xs font-bold uppercase text-texto-legenda">Setor</label>
+                        <select name="setor" id="setor-participante" required class="h-10 w-full rounded-xl border bg-superficie-elevada px-3 text-sm shadow-sm">
+                            <option value="">---</option>
+                            {% for valor, label in setores_participante %}
+                            <option value="{{ valor }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" name="reuniao_action" value="adicionar_participante"
+                            class="botao-primario h-10 px-4 text-sm">
+                        Adicionar
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+        {% if reuniao_aberta %}
+        <div class="mt-4 overflow-hidden rounded-xl border border-borda-sutil bg-superficie-elevada">
+        <div class="flex flex-col gap-2 border-b border-borda-sutil bg-superficie-afundada px-4 py-3 md:flex-row md:items-center md:justify-between">
+            <div class="text-sm font-bold text-texto-secundario">Registros da reunião</div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-xs text-center">
+                <thead class="bg-superficie-afundada text-texto-primario">
+                    <tr>
+                        <th class="border border-borda-sutil p-2">Bobina</th>
+                        <th class="border border-borda-sutil p-2">Lote</th>
+                        <th class="border border-borda-sutil p-2">Local</th>
+                        <th class="border border-borda-sutil p-2">Produto</th>
+                        <th class="border border-borda-sutil p-2">Der.</th>
+                        <th class="border border-borda-sutil p-2">Dep. Atual</th>
+                        <th class="border border-borda-sutil p-2">Recurso</th>
+                        <th class="border border-borda-sutil p-2">Qtd. Total</th>
+                        <th class="border border-borda-sutil p-2">Qtd. Liberada</th>
+                        <th class="border border-borda-sutil p-2">Qtd. Refugada</th>
+                        <th class="border border-borda-sutil p-2">Qtd. Reclassificada</th>
+                        <th class="border border-borda-sutil p-2">Qtd. Prensa</th>
+                        <th class="border border-borda-sutil p-2">Produto Recl.</th>
+                        <th class="border border-borda-sutil p-2">Der. Recl.</th>
+                        <th class="border border-borda-sutil p-2">Motivo</th>
+                        <th class="border border-borda-sutil p-2">Obs. Etiqueta</th>
+                        <th class="border border-borda-sutil p-2">Obs. Geral</th>
+                        <th class="border border-borda-sutil p-2">Usuário</th>
+                        <th class="border border-borda-sutil p-2">Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for grupo in grupos_liberacoes %}
+                    <tr class="cursor-pointer border-t-2 border-borda-padrao bg-superficie-elevada hover:bg-interacao-hover" onclick="document.querySelectorAll('.grupo-destino-{{ forloop.counter }}').forEach((row) => row.classList.toggle('hidden')); document.getElementById('seta-grupo-{{ forloop.counter }}').classList.toggle('rotate-90')">
+                        <td class="border border-borda-sutil p-2">
+                            <i id="seta-grupo-{{ forloop.counter }}" data-lucide="chevron-right" class="mr-2 inline-block h-4 w-4 transition-transform" aria-hidden="true"></i>{{ grupo.numbob|default_if_none:"" }}
+                        </td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.codlot }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.local|default:"" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.codpro }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.codder }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.coddep }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.codigo_integrador }}</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.qtdtot|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if grupo.total_libe > 0 %} bg-sucesso-sutil text-sucesso-base font-bold{% endif %} p-2">{{ grupo.total_libe|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if grupo.total_refu > 0 %} bg-erro-sutil text-erro-base font-bold{% endif %} p-2">{{ grupo.total_refu|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if grupo.total_recl > 0 %} bg-atencao-sutil text-atencao-base font-bold{% endif %} p-2">{{ grupo.total_recl|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if grupo.total_prensa > 0 %} bg-informacao-sutil text-informacao-base font-bold{% endif %} p-2">{{ grupo.total_prensa|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil p-2">-</td>
+                        <td class="border border-borda-sutil p-2">-</td>
+                        <td class="border border-borda-sutil p-2">-</td>
+                        <td class="border border-borda-sutil p-2">-</td>
+                        <td class="border border-borda-sutil p-2">-</td>
+                        <td class="border border-borda-sutil p-2">{{ grupo.usuario }}</td>
+                        <td class="border border-borda-sutil p-2" onclick="event.stopPropagation()">
+                            {% if grupo.pode_excluir and pode_destinar_area_vermelha %}
+                            <form method="POST" onsubmit="return confirm('Excluir a destinação desta bobina/lote?')">
+                                {% csrf_token %}
+                                <input type="hidden" name="codemp" value="{{ grupo.codemp }}">
+                                <input type="hidden" name="codlot" value="{{ grupo.codlot }}">
+                                <input type="hidden" name="codpro" value="{{ grupo.codpro }}">
+                                <input type="hidden" name="codder" value="{{ grupo.codder }}">
+                                <button type="submit" name="reuniao_action" value="excluir_destinacao_lote"
+                                        class="botao-perigo-icone" title="Excluir" aria-label="Excluir"><i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                                </button>
+                            </form>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% for registro in grupo.registros %}
+                    <tr class="grupo-destino-{{ forloop.parentloop.counter }} hidden">
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2 pl-8 font-bold">{{ registro.numbob|default_if_none:"" }}</td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2 font-bold">{{ registro.lottrf|default:registro.codlot }}</td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2">{{ registro.local_wms|default:"" }}</td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2">{{ registro.codpro }}</td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2">{{ registro.codder }}</td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2">{{ registro.coddep }}</td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2">{{ registro.codigo_integrador }}</td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2">{{ registro.qtdtot|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if registro.qtdlibe > 0 %} bg-sucesso-sutil text-sucesso-base font-bold{% else %} bg-superficie-afundada{% endif %} p-2">{{ registro.qtdlibe|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if registro.qtdrefu > 0 %} bg-erro-sutil text-erro-base font-bold{% else %} bg-superficie-afundada{% endif %} p-2">{{ registro.qtdrefu|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if registro.qtdrecl > 0 %} bg-atencao-sutil text-atencao-base font-bold{% else %} bg-superficie-afundada{% endif %} p-2">{{ registro.qtdrecl|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil{% if registro.qtdprensa > 0 %} bg-informacao-sutil text-informacao-base font-bold{% else %} bg-superficie-afundada{% endif %} p-2">{{ registro.qtdprensa|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2">{{ registro.codpro_recl|default:"-" }}</td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2">{{ registro.codder_recl|default:"-" }}</td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2">{{ registro.coddft|default:"-" }}</td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2 text-left">
+                            <span class="block max-w-44 truncate" title="{{ registro.etiqueta.descricao|default:'-' }}">{{ registro.etiqueta.descricao|default:"-" }}</span>
+                        </td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2 text-left">
+                            <span class="block max-w-44 truncate" title="{{ registro.observacao_geral|default:'-' }}">{{ registro.observacao_geral|default:"-" }}</span>
+                        </td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2">{{ registro.usuario }}</td>
+                        <td class="border border-borda-sutil bg-superficie-afundada p-2"></td>
+                    </tr>
+                    {% endfor %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="18" class="border border-borda-sutil p-4 text-center text-texto-legenda">Nenhum registro salvo nesta reunião.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        </div>
+        {% endif %}
+        </div>
+        {% endif %}
+
+    <div class="overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+        <div class="flex flex-col gap-3 border-b border-borda-sutil bg-superficie-afundada px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="text-sm font-bold text-texto-secundario">Lotes do ERP</div>
+            <div class="flex w-full flex-col items-stretch gap-2 md:flex-row md:items-center lg:w-auto lg:justify-end">
+                <form method="GET" action="{% url 'qualidade:area_vermelha' %}" class="flex w-full gap-2 md:w-96">
+                    <input type="text" name="search" value="{{ search_query }}"
+                           placeholder="Buscar por Lote, Bobina, Recurso ou descrição..."
+                           class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm">
+                    <button type="submit" class="botao-primario h-10 shrink-0 whitespace-nowrap px-4 text-sm">
+                        <i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i> Filtrar
+                    </button>
+                    {% if search_query %}
+                    <a href="{% url 'qualidade:area_vermelha' %}" class="flex items-center justify-center rounded-xl bg-erro-sutil px-3 py-2 text-erro-base shadow-sm transition hover:bg-erro-destaque hover:text-texto-sobre-marca"><i data-lucide="x" class="" aria-hidden="true"></i>
+                    </a>
+                    {% endif %}
+                </form>
+
+                <form method="POST" id="acao-bobina-form" class="{% if not selected_row.codlot %}hidden{% endif %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="codemp" id="selected-codemp" value="{{ selected_row.codemp }}">
+                    <input type="hidden" name="usu_numbob" id="selected-usu_numbob" value="{{ selected_row.usu_numbob }}">
+                    <input type="hidden" name="codlot" id="selected-codlot" value="{{ selected_row.codlot }}">
+                    <input type="hidden" name="local" id="selected-local" value="{{ selected_row.local }}">
+                    <input type="hidden" name="local_origem" id="selected-local-origem" value="{{ selected_row.local_origem }}">
+                    <input type="hidden" name="coddep" id="selected-coddep" value="{{ selected_row.coddep }}">
+                    <input type="hidden" name="codpro" id="selected-codpro" value="{{ selected_row.codpro }}">
+                    <input type="hidden" name="codder" id="selected-codder" value="{{ selected_row.codder }}">
+                    <input type="hidden" name="despro" id="selected-despro" value="{{ selected_row.despro }}">
+                    <input type="hidden" name="codcre" id="selected-codcre" value="{{ selected_row.codcre }}">
+                    <input type="hidden" name="codori" id="selected-codori" value="{{ selected_row.codori }}">
+                    <input type="hidden" name="origem_produto" id="selected-origem-produto" value="{{ selected_row.origem_produto }}">
+                    <input type="hidden" name="numorp" id="selected-numorp" value="{{ selected_row.numorp }}">
+                    <input type="hidden" name="qtdest" id="selected-qtdest" value="{{ selected_row.qtdest }}">
+                    {% if reuniao_aberta and pode_destinar_area_vermelha %}
+                    <button type="button" id="btn-registrar-reuniao"
+                            class="hidden botao-perigo h-10 whitespace-nowrap px-4 text-sm">
+                        <i data-lucide="triangle-alert" class="h-5 w-5" aria-hidden="true"></i> Destinar lote
+                    </button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-xs text-center">
+                <thead class="bg-superficie-afundada text-texto-primario">
+                    <tr>
+                        <th class="border border-borda-sutil p-2">Selecionar</th>
+                        <th class="border border-borda-sutil p-2">Rastrear</th>
+                        <th class="border border-borda-sutil p-2">Bobina</th>
+                        <th class="border border-borda-sutil p-2">Lote</th>
+                        <th class="border border-borda-sutil p-2">Local</th>
+                        <th class="border border-borda-sutil p-2">Origem</th>
+                        <th class="border border-borda-sutil p-2">OP</th>
+                        <th class="border border-borda-sutil p-2">Dep. Atual</th>
+                        <th class="border border-borda-sutil p-2">Produto</th>
+                        <th class="border border-borda-sutil p-2">Cod. Der.</th>
+                        <th class="border border-borda-sutil p-2">Nome Produto</th>
+                        <th class="border border-borda-sutil p-2">Recurso</th>
+                        <th class="border border-borda-sutil p-2">Qtd produzida</th>
+                        <th class="border border-borda-sutil p-2">Data Produção</th>
+                        <th class="border border-borda-sutil p-2">Hora Produção</th>
+                        <th class="border border-borda-sutil p-2">Análise</th>
+                        <th class="whitespace-nowrap border border-borda-sutil p-2">Situação</th>
+                        <th class="border border-borda-sutil p-2">Observação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bobina in bobinas %}
+                    <tr class="{% if bobina.destinado_reuniao %}cursor-not-allowed bg-superficie-afundada text-texto-desabilitado{% else %}js-select-row cursor-pointer transition hover:bg-interacao-hover{% endif %} {% if selected_row.codlot == bobina.codlot and selected_row.usu_numbob|stringformat:'s' == bobina.usu_numbob|stringformat:'s' %}linha-area-vermelha-selecionada{% endif %}"
+                        data-usu_numbob="{{ bobina.usu_numbob|default_if_none:'' }}"
+                        data-codemp="{{ bobina.codemp }}"
+                        data-codlot="{{ bobina.codlot }}"
+                        data-local="{{ bobina.local|default_if_none:'' }}"
+                        data-local_origem="{{ bobina.local_origem|default_if_none:'' }}"
+                        data-coddep="{{ bobina.coddep }}"
+                        data-codpro="{{ bobina.codpro }}"
+                        data-codder="{{ bobina.codder }}"
+                        data-despro="{{ bobina.despro }}"
+                        data-codcre="{{ bobina.codcre|default_if_none:'' }}"
+                        data-codori="{{ bobina.codori }}"
+                        data-origem_produto="{{ bobina.origem_produto }}"
+                        data-numorp="{{ bobina.numorp }}"
+                        data-qtdest="{{ bobina.qtdest }}"
+                        data-produto_refugo="{{ bobina.produto_refugo }}"
+                        data-derivacao_refugo="{{ bobina.derivacao_refugo }}"
+                        data-origem_produto_refugo="{{ bobina.origem_produto_refugo }}">
+                        <td class="border border-borda-sutil p-2">
+                            {% if bobina.destinado_reuniao %}
+                            <span class="text-xs font-bold text-texto-legenda">{% if bobina.local_nao_definido %}Local não definido{% elif bobina.avaliado_erp %}Avaliado{% elif bobina.excluida_erp %}Excluído{% elif bobina.aguardando_repesagem %}Aguar. Repesagem{% else %}Destinado{% endif %}</span>
+                            {% else %}
+                            <input type="radio" name="bobina_selecionada"
+                                   class="form-radio h-3 w-3 text-sucesso-base js-select-radio"
+                                   {% if selected_row.codlot == bobina.codlot and selected_row.usu_numbob|stringformat:'s' == bobina.usu_numbob|stringformat:'s' %}checked{% endif %}>
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2">
+                            <a href="{% url 'qualidade:rastreamento_lote' %}?codemp={{ bobina.codemp }}&codlot={{ bobina.codlot|urlencode }}"
+                               target="_blank" rel="noopener" onclick="event.stopPropagation();"
+                               class="botao-primario h-9 w-9 p-0"
+                               title="Rastrear lote">
+                                <i data-lucide="workflow" class="" aria-hidden="true"></i>
+                            </a>
+                        </td>
+                        <td class="border border-borda-sutil p-2 font-bold">{{ bobina.usu_numbob|default_if_none:"-" }}</td>
+                        <td class="border border-borda-sutil p-2 font-bold">{{ bobina.codlot }}</td>
+                        <td class="border border-borda-sutil p-2">
+                            {% if bobina.local %}
+                            <span class="inline-flex flex-col items-center leading-tight">
+                                <span>{{ bobina.local }}</span>
+                                {% if bobina.local_origem == "wms" %}
+                                <span class="text-xs text-informacao-base" title="Local encontrado para este lote no WMS">WMS</span>
+                                {% else %}
+                                <span class="text-xs text-texto-legenda" title="Local definido pela configuração do recurso ou da filial">Padrão</span>
+                                {% endif %}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.codori|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.numorp|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.coddep|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.codpro|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.codder|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2 text-left">{{ bobina.despro|default:"-" }}</td>
+
+                        <td class="border border-borda-sutil p-2">
+                            {% if bobina.codcre or bobina.abrcre %}
+                                <span>{{ bobina.codcre|default_if_none:"" }}</span>
+                                {% if bobina.abrcre %}
+                                    <span> - {{ bobina.abrcre }}</span>
+                                {% endif %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        <td class="border border-borda-sutil p-2">{{ bobina.qtdest|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.datrea|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.horrea|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">
+                            {% if bobina.analise_flag == 0 %}
+                            <span class="inline-block w-4 h-4 border border-borda-sutil bg-superficie-elevada rounded-sm" title="Não testada"></span>
+                            {% elif bobina.analise_flag == 1 %}
+                            <span class="inline-block w-4 h-4 border border-erro-base bg-erro-base rounded-sm" title="Vermelha"></span>
+                            {% elif bobina.analise_flag == 2 %}
+                            <span class="inline-block w-4 h-4 border border-marca-base bg-marca-base rounded-sm" title="Verde"></span>
+                            {% elif bobina.analise_flag == 3 %}
+                            <span class="inline-block w-4 h-4 border border-atencao-borda bg-atencao-destaque rounded-sm" title="Amarela"></span>
+                            {% else %}
+                            <span class="text-texto-legenda">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="whitespace-nowrap border border-borda-sutil p-2">
+                            {% if bobina.sitlot == "A" %}
+                            <span class="inline-flex whitespace-nowrap rounded-full border border-sucesso-borda bg-sucesso-sutil px-2 py-0.5 text-xs font-bold uppercase text-sucesso-base">Avaliada</span>
+                            {% elif bobina.sitlot == "V" %}
+                            <span class="inline-flex whitespace-nowrap rounded-full border border-atencao-borda bg-atencao-sutil px-2 py-0.5 text-xs font-bold uppercase text-atencao-base">Área Vermelha</span>
+                            {% elif bobina.sitlot == "E" %}
+                            <span class="inline-flex whitespace-nowrap rounded-full border border-erro-borda bg-erro-sutil px-2 py-0.5 text-xs font-bold uppercase text-erro-base">Excluída</span>
+                            {% else %}
+                            <span class="inline-flex whitespace-nowrap rounded-full border border-atencao-borda bg-atencao-sutil px-2 py-0.5 text-xs font-bold uppercase text-atencao-base">Pendente</span>
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2 text-left">{{ bobina.observacao|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="17" class="border border-borda-sutil p-6 text-center text-texto-legenda">
+                            Nenhuma bobina encontrada.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if bobinas.has_other_pages %}
+    <div class="mt-6 mb-8 flex justify-center">
+        <nav class="inline-flex rounded-xl shadow-sm">
+            {% if bobinas.has_previous %}
+                <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Primeira</a>
+                <a href="?page={{ bobinas.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Anterior</a>
+            {% endif %}
+
+            <span class="botao-primario text-sm">
+                Página {{ bobinas.number }} de {{ bobinas.paginator.num_pages }}
+            </span>
+
+            {% if bobinas.has_next %}
+                <a href="?page={{ bobinas.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Próxima</a>
+                <a href="?page={{ bobinas.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Última</a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<div id="modal-registro-reuniao" class="hidden fixed inset-0 bg-superficie-inversa/50 z-50 items-center justify-center">
+    <div class="mx-4 max-h-[90vh] w-[98vw] max-w-[1600px] overflow-y-auto rounded-2xl border-2 border-borda-padrao bg-superficie-elevada p-4 text-texto-primario shadow-xl">
+        <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-base font-bold">Registrar avaliação na reunião</h3>
+            <button type="button" id="fechar-modal-registro" class="botao-secundario h-9 w-9 shrink-0 p-0" aria-label="Fechar"><i data-lucide="x" class="h-5 w-5" aria-hidden="true"></i></button>
+        </div>
+        <form method="POST" id="form-registro-reuniao" class="space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="reuniao_action" value="registrar_liberacao_lote">
+            <input type="hidden" name="codemp" id="registro-codemp">
+            <input type="hidden" name="numbob" id="registro-numbob">
+            <input type="hidden" name="codlot" id="registro-codlot">
+            <input type="hidden" name="local" id="registro-local">
+            <input type="hidden" name="local_origem" id="registro-local-origem">
+            <input type="hidden" name="coddep" id="registro-coddep">
+            <input type="hidden" name="codpro" id="registro-codpro">
+            <input type="hidden" name="codder" id="registro-codder">
+            <input type="hidden" name="codigo_integrador" id="registro-codigo_integrador">
+            <input type="hidden" name="codori" id="registro-codori">
+            <input type="hidden" name="origem_produto" id="registro-origem-produto">
+            <input type="hidden" name="numorp" id="registro-numorp">
+            <input type="hidden" name="qtdtot" id="registro-qtdtot">
+
+            <div class="rounded-xl border border-borda-sutil bg-superficie-afundada px-3 py-2 text-sm">
+                <div class="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                    <div class="flex flex-wrap gap-x-6 gap-y-1">
+                        <div><span class="font-bold">Produto:</span> <span id="registro-info-produto">-</span></div>
+                        <div><span class="font-bold">Cod. Der.:</span> <span id="registro-info-codder">-</span></div>
+                        <div><span class="font-bold">Nome Produto:</span> <span id="registro-info-nome-produto">-</span></div>
+                    </div>
+                    <a id="registro-link-rastreamento" href="#" target="_blank" rel="noopener"
+                       class="botao-primario h-9 w-9 shrink-0 p-0"
+                       title="Rastrear lote">
+                        <i data-lucide="workflow" class="" aria-hidden="true"></i>
+                    </a>
+                </div>
+                <div class="mt-1 flex flex-wrap gap-x-6 gap-y-1">
+                    <div><span class="font-bold">Lote:</span> <span id="registro-info-lote">-</span></div>
+                    <div><span class="font-bold">Local:</span> <span id="registro-info-local">-</span></div>
+                    <div><span class="font-bold">Bobina:</span> <span id="registro-info-bobina">-</span></div>
+                </div>
+                <div class="mt-1">
+                    <span class="font-bold">Quantidade total:</span> <span id="registro-info-qtd">0</span>
+                </div>
+                <div class="mt-1">
+                    <span class="font-bold">Produto refugo:</span> <span id="registro-info-produto-refugo">-</span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-borda-sutil">
+                <table class="min-w-[1450px] w-full border-collapse text-xs text-center">
+                    <thead class="bg-superficie-afundada text-texto-primario">
+                        <tr>
+                            <th class="border border-borda-sutil p-2">Qtd.</th>
+                            <th class="border border-borda-sutil p-2">Destino</th>
+                            <th class="border border-borda-sutil p-2">Produto Recl.</th>
+                            <th class="border border-borda-sutil p-2">Der. Recl.</th>
+                            <th class="border border-borda-sutil p-2">Motivo</th>
+                            <th class="border border-borda-sutil p-2">Obs. Etiqueta</th>
+                            <th class="border border-borda-sutil p-2">Obs. Geral</th>
+                            <th class="border border-borda-sutil p-2">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-destinacoes"></tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-start">
+                <button type="button" id="adicionar-linha-destinacao"
+                        class="botao-secundario h-10 px-4 text-sm">
+                    <i data-lucide="plus" class="h-5 w-5" aria-hidden="true"></i> Adicionar linha
+                </button>
+            </div>
+
+            <p class="text-xs text-texto-legenda">A soma das quantidades deve ser igual à quantidade total da linha.</p>
+
+            <div class="flex justify-end gap-2">
+                <button type="button" id="cancelar-modal-registro"
+                        class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                    Cancelar
+                </button>
+                <button type="submit"
+                        class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                    <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i>
+                    Salvar Registro
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const rows = document.querySelectorAll(".js-select-row");
+        const form = document.getElementById("acao-bobina-form");
+        const hiddenFields = {
+            codemp: document.getElementById("selected-codemp"),
+            usu_numbob: document.getElementById("selected-usu_numbob"),
+            codlot: document.getElementById("selected-codlot"),
+            local: document.getElementById("selected-local"),
+            local_origem: document.getElementById("selected-local-origem"),
+            coddep: document.getElementById("selected-coddep"),
+            codpro: document.getElementById("selected-codpro"),
+            codder: document.getElementById("selected-codder"),
+            despro: document.getElementById("selected-despro"),
+            codcre: document.getElementById("selected-codcre"),
+            codori: document.getElementById("selected-codori"),
+            origem_produto: document.getElementById("selected-origem-produto"),
+            numorp: document.getElementById("selected-numorp"),
+            qtdest: document.getElementById("selected-qtdest"),
+            produto_refugo: null,
+            derivacao_refugo: null,
+            origem_produto_refugo: null
+        };
+        const btnRegistrarReuniao = document.getElementById("btn-registrar-reuniao");
+        const modalRegistroReuniao = document.getElementById("modal-registro-reuniao");
+        const fecharModalRegistro = document.getElementById("fechar-modal-registro");
+        const cancelarModalRegistro = document.getElementById("cancelar-modal-registro");
+        const formRegistroReuniao = document.getElementById("form-registro-reuniao");
+        const tbodyDestinacoes = document.getElementById("tbody-destinacoes");
+        const adicionarLinhaDestinacao = document.getElementById("adicionar-linha-destinacao");
+        const linkRastreamentoRegistro = document.getElementById("registro-link-rastreamento");
+        const buscaParticipante = document.getElementById("busca-participante");
+        const nomeParticipante = document.getElementById("nome-participante");
+        const opcoesParticipante = document.getElementById("opcoes-participante");
+
+        function updateButtonsState() {
+            const hasSelection = Boolean(hiddenFields.codlot.value);
+            form.classList.toggle("hidden", !hasSelection);
+            if (btnRegistrarReuniao) {
+                btnRegistrarReuniao.classList.toggle("hidden", !hasSelection);
+                btnRegistrarReuniao.classList.toggle("flex", hasSelection);
+            }
+        }
+
+        function parseQuantidade(valor) {
+            return parseFloat((valor || "0").replace(",", ".")) || 0;
+        }
+
+        function formatarQuantidade(valor) {
+            return Number(Math.max(valor, 0).toFixed(4)).toString();
+        }
+
+        function escapeHtml(valor) {
+            return String(valor || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        async function buscarParticipantesErp() {
+            if (!buscaParticipante || !opcoesParticipante || !nomeParticipante) return;
+            const termo = buscaParticipante.value.trim();
+            nomeParticipante.value = "";
+            clearTimeout(buscaParticipante._timerBusca);
+            if (termo.length < 3) {
+                opcoesParticipante.classList.add("hidden");
+                opcoesParticipante.innerHTML = "";
+                return;
+            }
+
+            buscaParticipante._timerBusca = setTimeout(async () => {
+                try {
+                    const params = new URLSearchParams({ q: termo });
+                    const response = await fetch("{% url 'qualidade:buscar_usuarios_erp' %}?" + params.toString());
+                    const data = await response.json();
+                    if (!response.ok || !data.resultados || data.resultados.length === 0) {
+                        opcoesParticipante.innerHTML = '<div class="px-3 py-2 text-xs text-texto-legenda">Nenhum usuário encontrado.</div>';
+                        opcoesParticipante.classList.remove("hidden");
+                        return;
+                    }
+                    opcoesParticipante.innerHTML = data.resultados.map((usuario) => `
+                        <button type="button"
+                                class="js-selecionar-participante block w-full border-b border-borda-sutil px-3 py-2 text-left text-xs hover:bg-interacao-hover last:border-b-0"
+                                data-nome="${escapeHtml(usuario.nomusu)}">
+                            <span class="block font-bold text-texto-primario">${escapeHtml(usuario.nomusu)}</span>
+                            <span class="block text-texto-legenda">${escapeHtml(usuario.codusu)}</span>
+                        </button>
+                    `).join("");
+                    opcoesParticipante.classList.remove("hidden");
+                } catch (error) {
+                    opcoesParticipante.innerHTML = '<div class="px-3 py-2 text-xs text-erro-base">Erro ao buscar usuários.</div>';
+                    opcoesParticipante.classList.remove("hidden");
+                }
+            }, 250);
+        }
+
+        function obterLinhasDestinacao() {
+            return Array.from(tbodyDestinacoes.querySelectorAll(".js-linha-destinacao"));
+        }
+
+        function criarLinhaDestinacao() {
+            const tr = document.createElement("tr");
+            tr.className = "js-linha-destinacao h-16";
+            tr.innerHTML = `
+                <td class="border border-borda-sutil p-2">
+                    <div class="flex items-center gap-2">
+                        <input type="text" name="quantidade" class="js-qtd-registro h-10 min-w-[100px] flex-1 rounded-xl border px-3 text-sm" value="0">
+                        <button type="button" title="Preencher restante" aria-label="Preencher restante"
+                                class="js-preencher-restante botao-secundario h-9 w-9 shrink-0 p-0">
+                            <i data-lucide="arrow-up-to-line" class="h-5 w-5" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </td>
+                <td class="border border-borda-sutil p-2">
+                    <select name="destino" class="js-destino h-10 w-full rounded-xl border bg-superficie-elevada px-2 text-sm">
+                        <option value="liberar">Liberar</option>
+                        <option value="refugar">Refugar</option>
+                        <option value="reclassificar">Reclassificar</option>
+                        <option value="para_prensa">Para Prensa</option>
+                    </select>
+                </td>
+                <td class="border border-borda-sutil p-2 align-top">
+                    <div class="relative">
+                        <input type="text" name="codpro_recl" autocomplete="off"
+                               class="js-reclassificacao js-produto-recl h-10 w-full rounded-xl border px-3 text-sm">
+                        <div class="js-opcoes-reclassificacao fixed z-[70] hidden max-h-56 overflow-y-auto rounded-xl border border-borda-sutil bg-superficie-elevada text-left shadow-xl"></div>
+                        <div class="js-descricao-reclassificacao mt-1 hidden truncate text-left text-xs leading-4 text-texto-legenda"></div>
+                    </div>
+                </td>
+                <td class="border border-borda-sutil p-2 align-top">
+                    <input type="text" name="codder_recl" class="js-reclassificacao js-derivacao-recl h-10 w-full rounded-xl border px-3 text-sm" readonly>
+                </td>
+                <td class="border border-borda-sutil p-2 align-top">
+                    <select name="coddft" required class="js-coddft h-10 w-full rounded-xl border bg-superficie-elevada px-2 text-sm">
+                        <option value="">Selecione</option>
+                        {% regroup motivos_area_vermelha by grupo as motivos_agrupados %}
+                        {% for grupo in motivos_agrupados %}
+                        <optgroup label="{{ grupo.grouper }}">
+                            {% for motivo in grupo.list %}
+                            <option value="{{ motivo.coddft }}">{{ motivo.coddft }} - {{ motivo.desdft }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td class="border border-borda-sutil p-2 align-top">
+                    <select name="id_etiqueta" required class="js-id-etiqueta h-10 w-full max-w-56 rounded-xl border bg-superficie-elevada px-2 text-sm">
+                        <option value="">Selecione</option>
+                        {% for observacao in observacoes_etiqueta %}
+                        <option value="{{ observacao.id }}">{{ observacao.descricao }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td class="border border-borda-sutil p-2 align-top">
+                    <input type="text" name="observacao_geral" class="js-observacao-geral h-10 w-full rounded-xl border px-3 text-sm">
+                </td>
+                <td class="border border-borda-sutil p-2">
+                    <button type="button" title="Excluir linha"
+                            class="js-remover-linha botao-perigo-icone" aria-label="Excluir linha"><i data-lucide="trash-2" class="h-5 w-5" aria-hidden="true"></i>
+                    </button>
+                </td>
+            `;
+            tbodyDestinacoes.appendChild(tr);
+            window.lucide?.createIcons({ root: tr });
+            atualizarLinhaDestinacao(tr);
+        }
+
+        function atualizarLinhaDestinacao(tr) {
+            const destino = tr.querySelector(".js-destino").value;
+            const camposReclassificacao = tr.querySelectorAll(".js-reclassificacao");
+            camposReclassificacao.forEach((input) => {
+                input.readOnly = destino !== "reclassificar" || input.classList.contains("js-derivacao-recl");
+                input.classList.toggle("bg-superficie-afundada", destino !== "reclassificar");
+                input.classList.toggle("text-texto-desabilitado", destino !== "reclassificar");
+                if (destino !== "reclassificar" && destino !== "refugar" && destino !== "para_prensa") {
+                    input.value = "";
+                }
+            });
+            if (destino === "refugar" || destino === "para_prensa") {
+                const produto = tr.querySelector(".js-produto-recl");
+                const derivacao = tr.querySelector(".js-derivacao-recl");
+                if (produto) produto.value = hiddenFields.produto_refugo || "";
+                if (derivacao) derivacao.value = hiddenFields.derivacao_refugo || "";
+            }
+            const opcoes = tr.querySelector(".js-opcoes-reclassificacao");
+            const descricao = tr.querySelector(".js-descricao-reclassificacao");
+            if (destino !== "reclassificar") {
+                if (opcoes) opcoes.classList.add("hidden");
+                if (descricao) {
+                    descricao.innerText = "";
+                    descricao.classList.add("hidden");
+                }
+            }
+        }
+
+        function limparSelecaoReclassificacao(tr) {
+            const derivacao = tr.querySelector(".js-derivacao-recl");
+            const descricao = tr.querySelector(".js-descricao-reclassificacao");
+            if (derivacao) derivacao.value = "";
+            if (descricao) {
+                descricao.innerText = "";
+                descricao.classList.add("hidden");
+            }
+        }
+
+        function posicionarOpcoesReclassificacao(input, opcoes) {
+            const rect = input.getBoundingClientRect();
+            const espacoAbaixo = window.innerHeight - rect.bottom - 12;
+            const abrirParaCima = espacoAbaixo < 180 && rect.top > espacoAbaixo;
+            const alturaMaxima = Math.min(224, abrirParaCima ? rect.top - 12 : espacoAbaixo);
+
+            opcoes.style.left = `${rect.left}px`;
+            opcoes.style.width = `${rect.width}px`;
+            opcoes.style.maxHeight = `${Math.max(120, alturaMaxima)}px`;
+            opcoes.style.top = abrirParaCima ? "auto" : `${rect.bottom + 4}px`;
+            opcoes.style.bottom = abrirParaCima ? `${window.innerHeight - rect.top + 4}px` : "auto";
+        }
+
+        async function buscarProdutosReclassificacao(input) {
+            const tr = input.closest(".js-linha-destinacao");
+            if (!tr || tr.querySelector(".js-destino").value !== "reclassificar") {
+                return;
+            }
+
+            const termo = input.value;
+            const opcoes = tr.querySelector(".js-opcoes-reclassificacao");
+            limparSelecaoReclassificacao(tr);
+            if (!opcoes || termo.length < 3) {
+                if (opcoes) opcoes.classList.add("hidden");
+                return;
+            }
+
+            input.dataset.buscaAtual = termo;
+            try {
+                const params = new URLSearchParams({ produto: termo });
+                const response = await fetch("{% url 'qualidade:buscar_descricao_transformacao' %}?" + params.toString());
+                const data = await response.json();
+                if (input.dataset.buscaAtual !== termo) {
+                    return;
+                }
+                if (!response.ok || !data.resultados || data.resultados.length === 0) {
+                    opcoes.innerHTML = '<div class="px-3 py-2 text-xs text-texto-legenda">Nenhum produto encontrado.</div>';
+                    posicionarOpcoesReclassificacao(input, opcoes);
+                    opcoes.classList.remove("hidden");
+                    return;
+                }
+
+                opcoes.innerHTML = data.resultados.map((item) => `
+                    <button type="button"
+                            class="js-selecionar-reclassificacao block w-full border-b border-borda-sutil px-3 py-2 text-left text-xs hover:bg-interacao-hover last:border-b-0"
+                            data-codpro="${escapeHtml(item.codpro)}"
+                            data-codder="${escapeHtml(item.codder)}"
+                            data-descricao="${escapeHtml(item.descricao)}">
+                        <span class="block font-bold text-texto-primario">${escapeHtml(item.codpro)}${item.codder ? " / " + escapeHtml(item.codder) : ""}</span>
+                        <span class="block text-texto-legenda">${escapeHtml(item.descricao)}</span>
+                    </button>
+                `).join("");
+                posicionarOpcoesReclassificacao(input, opcoes);
+                opcoes.classList.remove("hidden");
+            } catch (error) {
+                opcoes.innerHTML = '<div class="px-3 py-2 text-xs text-erro-base">Erro ao buscar produto.</div>';
+                posicionarOpcoesReclassificacao(input, opcoes);
+                opcoes.classList.remove("hidden");
+            }
+        }
+
+        function agendarBuscaProdutosReclassificacao(input) {
+            const tr = input.closest(".js-linha-destinacao");
+            const opcoes = tr ? tr.querySelector(".js-opcoes-reclassificacao") : null;
+            const termo = input.value;
+
+            clearTimeout(input._timerBuscaReclassificacao);
+            if (tr) {
+                limparSelecaoReclassificacao(tr);
+            }
+
+            if (!opcoes || termo.length < 3) {
+                if (opcoes) opcoes.classList.add("hidden");
+                return;
+            }
+
+            input._timerBuscaReclassificacao = setTimeout(() => {
+                buscarProdutosReclassificacao(input);
+            }, 2000);
+        }
+
+        function selecionarProdutoReclassificacao(botao) {
+            const tr = botao.closest(".js-linha-destinacao");
+            const produto = tr.querySelector(".js-produto-recl");
+            const derivacao = tr.querySelector(".js-derivacao-recl");
+            const descricao = tr.querySelector(".js-descricao-reclassificacao");
+            const opcoes = tr.querySelector(".js-opcoes-reclassificacao");
+
+            produto.value = botao.dataset.codpro || "";
+            derivacao.value = botao.dataset.codder || "";
+            descricao.innerText = botao.dataset.descricao || "";
+            descricao.classList.toggle("hidden", !descricao.innerText);
+            opcoes.classList.add("hidden");
+        }
+
+        function abrirModalRegistroReuniao() {
+            if (!hiddenFields.codlot.value) {
+                alert("Selecione uma bobina antes de registrar.");
+                return;
+            }
+
+            document.getElementById("registro-codemp").value = hiddenFields.codemp.value;
+            document.getElementById("registro-numbob").value = hiddenFields.usu_numbob.value;
+            document.getElementById("registro-codlot").value = hiddenFields.codlot.value;
+            document.getElementById("registro-local").value = hiddenFields.local.value;
+            document.getElementById("registro-local-origem").value = hiddenFields.local_origem.value;
+            document.getElementById("registro-coddep").value = hiddenFields.coddep.value;
+            document.getElementById("registro-codpro").value = hiddenFields.codpro.value;
+            document.getElementById("registro-codder").value = hiddenFields.codder.value;
+            document.getElementById("registro-codigo_integrador").value = hiddenFields.codcre.value;
+            document.getElementById("registro-codori").value = hiddenFields.codori.value;
+            document.getElementById("registro-origem-produto").value = hiddenFields.origem_produto.value;
+            document.getElementById("registro-numorp").value = hiddenFields.numorp.value;
+            document.getElementById("registro-qtdtot").value = hiddenFields.qtdest.value;
+            document.getElementById("registro-info-produto").innerText = hiddenFields.codpro.value || "-";
+            document.getElementById("registro-info-codder").innerText = hiddenFields.codder.value || "-";
+            document.getElementById("registro-info-nome-produto").innerText = hiddenFields.despro.value || "-";
+            document.getElementById("registro-info-bobina").innerText = hiddenFields.usu_numbob.value || "-";
+            document.getElementById("registro-info-lote").innerText = hiddenFields.codlot.value || "-";
+            document.getElementById("registro-info-local").innerText = hiddenFields.local.value || "-";
+            document.getElementById("registro-info-qtd").innerText = hiddenFields.qtdest.value || "0";
+            const produtoRefugoInfo = document.getElementById("registro-info-produto-refugo");
+            if (produtoRefugoInfo) {
+                const produtoRefugo = hiddenFields.produto_refugo || "";
+                const derivacaoRefugo = hiddenFields.derivacao_refugo || "";
+                const origemRefugo = hiddenFields.origem_produto_refugo || "";
+                produtoRefugoInfo.innerText = produtoRefugo
+                    ? `${produtoRefugo}${derivacaoRefugo ? " / " + derivacaoRefugo : ""}${origemRefugo ? " (" + origemRefugo + ")" : ""}`
+                    : "-";
+            }
+            if (linkRastreamentoRegistro) {
+                const params = new URLSearchParams({
+                    codemp: hiddenFields.codemp.value || "",
+                    codlot: hiddenFields.codlot.value || ""
+                });
+                linkRastreamentoRegistro.href = "{% url 'qualidade:rastreamento_lote' %}?" + params.toString();
+            }
+            tbodyDestinacoes.innerHTML = "";
+            criarLinhaDestinacao();
+            modalRegistroReuniao.classList.remove("hidden");
+            modalRegistroReuniao.classList.add("flex");
+        }
+
+        function fecharModalRegistroReuniao() {
+            modalRegistroReuniao.classList.add("hidden");
+            modalRegistroReuniao.classList.remove("flex");
+        }
+
+        function validarRegistroReuniao() {
+            const qtdTotal = parseQuantidade(document.getElementById("registro-qtdtot").value);
+            let soma = 0;
+            const linhas = obterLinhasDestinacao();
+            linhas.forEach((tr) => {
+                soma += parseQuantidade(tr.querySelector('[name="quantidade"]').value);
+            });
+            if (soma <= 0) {
+                alert("Informe ao menos uma quantidade para registrar.");
+                return false;
+            }
+            if (Math.abs(soma - qtdTotal) > 0.0001) {
+                alert("A soma das quantidades deve ser igual à quantidade total.");
+                return false;
+            }
+            const destinos = linhas.map((linha) => linha.querySelector('[name="destino"]').value);
+            if (new Set(destinos).size !== destinos.length) {
+                alert("Cada destino pode ser informado no máximo uma vez.");
+                return false;
+            }
+            for (const tr of linhas) {
+                const quantidade = parseQuantidade(tr.querySelector('[name="quantidade"]').value);
+                const destino = tr.querySelector('[name="destino"]').value;
+                const codproRecl = tr.querySelector('[name="codpro_recl"]').value;
+                const coddft = tr.querySelector('[name="coddft"]').value;
+                const obsEtiqueta = tr.querySelector('[name="id_etiqueta"]').value;
+                if (quantidade <= 0) {
+                    alert("Todas as linhas devem ter quantidade maior que zero.");
+                    return false;
+                }
+                if (!coddft) {
+                    alert("Informe o motivo em todas as linhas.");
+                    return false;
+                }
+                if (!obsEtiqueta) {
+                    alert("Informe a observação de etiqueta em todas as linhas.");
+                    return false;
+                }
+                if (destino === "reclassificar" && !codproRecl) {
+                    alert("Informe o produto para toda linha reclassificada.");
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function preencherRestante(trDestino) {
+            const qtdTotal = parseQuantidade(document.getElementById("registro-qtdtot").value);
+            let somaOutros = 0;
+            obterLinhasDestinacao().forEach((tr) => {
+                if (tr !== trDestino) {
+                    const input = tr.querySelector('[name="quantidade"]');
+                    somaOutros += parseQuantidade(input.value);
+                }
+            });
+            const inputDestino = trDestino.querySelector('[name="quantidade"]');
+            if (inputDestino) {
+                inputDestino.value = formatarQuantidade(qtdTotal - somaOutros);
+            }
+        }
+
+        function selectRow(row) {
+            rows.forEach((currentRow) => {
+                currentRow.classList.remove("linha-area-vermelha-selecionada");
+                const radio = currentRow.querySelector(".js-select-radio");
+                if (radio) {
+                    radio.checked = false;
+                }
+            });
+
+            row.classList.add("linha-area-vermelha-selecionada");
+            const radio = row.querySelector(".js-select-radio");
+            if (radio) {
+                radio.checked = true;
+            }
+
+            Object.keys(hiddenFields).forEach((key) => {
+                if (hiddenFields[key]) {
+                    hiddenFields[key].value = row.dataset[key] || "";
+                } else {
+                    hiddenFields[key] = row.dataset[key] || "";
+                }
+            });
+            updateButtonsState();
+        }
+
+        rows.forEach((row) => {
+            row.addEventListener("click", function (event) {
+                if (event.target.tagName === "INPUT") {
+                    selectRow(row);
+                    return;
+                }
+                selectRow(row);
+            });
+        });
+
+        if (btnRegistrarReuniao) {
+            btnRegistrarReuniao.addEventListener("click", abrirModalRegistroReuniao);
+        }
+        if (fecharModalRegistro) fecharModalRegistro.addEventListener("click", fecharModalRegistroReuniao);
+        if (cancelarModalRegistro) cancelarModalRegistro.addEventListener("click", fecharModalRegistroReuniao);
+        if (formRegistroReuniao) formRegistroReuniao.addEventListener("submit", function (event) {
+            if (!validarRegistroReuniao()) {
+                event.preventDefault();
+            }
+        });
+        if (adicionarLinhaDestinacao) {
+            adicionarLinhaDestinacao.addEventListener("click", criarLinhaDestinacao);
+        }
+        if (tbodyDestinacoes) {
+            tbodyDestinacoes.addEventListener("click", function (event) {
+                const remover = event.target.closest(".js-remover-linha");
+                const preencher = event.target.closest(".js-preencher-restante");
+                const selecionarReclassificacao = event.target.closest(".js-selecionar-reclassificacao");
+                if (selecionarReclassificacao) {
+                    selecionarProdutoReclassificacao(selecionarReclassificacao);
+                    return;
+                }
+                if (remover) {
+                    const linhas = obterLinhasDestinacao();
+                    if (linhas.length <= 1) {
+                        linhas[0].querySelector('[name="quantidade"]').value = "0";
+                        linhas[0].querySelector('[name="destino"]').value = "liberar";
+                        atualizarLinhaDestinacao(linhas[0]);
+                    } else {
+                        remover.closest(".js-linha-destinacao").remove();
+                    }
+                }
+                if (preencher) {
+                    preencherRestante(preencher.closest(".js-linha-destinacao"));
+                }
+            });
+            tbodyDestinacoes.addEventListener("change", function (event) {
+                const destino = event.target.closest(".js-destino");
+                if (destino) {
+                    atualizarLinhaDestinacao(destino.closest(".js-linha-destinacao"));
+                }
+            });
+            tbodyDestinacoes.addEventListener("input", function (event) {
+                const produtoReclassificacao = event.target.closest(".js-produto-recl");
+                if (produtoReclassificacao) {
+                    agendarBuscaProdutosReclassificacao(produtoReclassificacao);
+                }
+            });
+        }
+
+        if (buscaParticipante) {
+            buscaParticipante.addEventListener("input", buscarParticipantesErp);
+        }
+        if (opcoesParticipante) {
+            opcoesParticipante.addEventListener("click", function (event) {
+                const botao = event.target.closest(".js-selecionar-participante");
+                if (!botao) return;
+                buscaParticipante.value = botao.dataset.nome || "";
+                nomeParticipante.value = botao.dataset.nome || "";
+                opcoesParticipante.classList.add("hidden");
+            });
+        }
+
+        document.addEventListener("click", function (event) {
+            if (!event.target.closest(".js-produto-recl") && !event.target.closest(".js-opcoes-reclassificacao")) {
+                document.querySelectorAll(".js-opcoes-reclassificacao").forEach((opcoes) => {
+                    opcoes.classList.add("hidden");
+                });
+            }
+            if (!event.target.closest("#busca-participante") && !event.target.closest("#opcoes-participante") && opcoesParticipante) {
+                opcoesParticipante.classList.add("hidden");
+            }
+        });
+
+        updateButtonsState();
+    })();
+</script>
+{% endblock %}

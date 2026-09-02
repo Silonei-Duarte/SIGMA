@@ -1,0 +1,471 @@
+{% extends 'producao/apontamento_base.html' %}
+{% block apontamento_content %}
+{% if erro %}
+<div class="mb-3 flex items-center justify-between rounded-xl bg-erro-base px-4 py-3 text-texto-sobre-marca shadow-sm">
+    <span>{{ erro }}</span>
+    <button onclick="this.parentElement.remove()" class="ml-4 text-xl font-bold leading-none">x</button>
+</div>
+{% endif %}
+
+{% if tem_multiplas_ops_ativas %}
+<div class="mb-3 rounded-xl border border-atencao-borda bg-atencao-sutil px-4 py-3 text-atencao-base shadow-sm">
+    Este recurso possui mais de uma OP ativa. As ações desta tela estão bloqueadas porque a V2 trabalha com uma única OP.
+</div>
+{% endif %}
+
+<div class="overflow-x-auto rounded-2xl border border-borda-sutil bg-superficie-elevada text-xl shadow-sm md:text-2xl">
+    <div class="flex min-w-[640px] items-center justify-between bg-superficie-afundada px-4 py-4 text-texto-primario">
+        <span class="text-2xl font-bold md:text-3xl">
+            Apontamento de Componente {% if recurso_selecionado %}- {{ recurso_selecionado.descricao }}{% endif %}
+        </span>
+        <div class="flex items-center gap-2">
+        {% if dados_op and recurso_id %}
+        <a href="{% url 'log_tempo_producao' %}?recurso={{ recurso_id }}&origem={{ dados_op.codori }}&op={{ dados_op.numorp }}&estagio={{ codetg }}&seqrot={{ seqrot }}"
+           class="inline-flex h-10 items-center whitespace-nowrap rounded-full border border-informacao-borda bg-informacao-sutil px-4 text-sm font-bold text-informacao-base shadow-sm transition hover:opacity-90">
+            <i data-lucide="history" class="h-5 w-5" aria-hidden="true"></i> Log Tempos
+        </a>
+        {% endif %}
+        {% if pode_abrir_parada_manual %}
+        <form method="post" action="{% url 'abrir_parada_manual_apontamento' recurso_id %}">
+            {% csrf_token %}
+            <input type="hidden" name="numcad" value="{{ numcad }}">
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" onclick="return confirm('Abrir parada manual agora?')" class="botao-perigo whitespace-nowrap px-3 py-2 text-base md:text-lg">
+                <i data-lucide="circle-stop" class=" mr-2" aria-hidden="true"></i> Abrir Parada
+            </button>
+        </form>
+        {% endif %}
+        </div>
+    </div>
+
+    <div class="min-w-[640px] space-y-8 bg-superficie-afundada p-6">
+        {% if codbar and not dados_op %}
+        <div class="rounded-xl border border-atencao-borda bg-atencao-sutil px-4 py-3 text-base text-atencao-base">
+            View 2 carregada, mas os dados da OP não foram retornados. Verifique a mensagem de erro acima ou a conexão com o ERP.
+        </div>
+        {% endif %}
+
+        {% if dados_op %}
+        <div class="grid grid-cols-2 items-end gap-3 lg:grid-cols-12">
+            <div class="col-span-2 lg:col-span-1">
+                <label class="text-xl font-semibold md:text-3xl">Origem</label>
+                <input class="h-[58px] w-full rounded border bg-superficie-afundada p-1 text-xl md:text-3xl"
+                       value="{{ dados_op.codori }}" readonly tabindex="-1">
+            </div>
+            <div class="col-span-2 lg:col-span-2">
+                <label class="text-xl font-semibold md:text-3xl">Ordem</label>
+                <input class="h-[58px] w-full rounded border bg-superficie-afundada p-1 text-xl md:text-3xl"
+                       value="{{ dados_op.numorp }}" readonly tabindex="-1">
+            </div>
+            <div class="col-span-2 lg:col-span-2">
+                <label class="text-xl font-semibold md:text-3xl">Status OP</label>
+                <input class="h-[58px] w-full rounded border bg-superficie-afundada p-1 text-xl font-bold md:text-3xl"
+                       value="{{ status_seq|default:'-' }}" readonly tabindex="-1">
+            </div>
+
+            {% if recurso_id and pode_apontar and not tem_multiplas_ops_ativas %}
+            <div class="col-span-2 lg:col-span-5">
+                {% if nome_operador %}
+                <label class="text-xl font-semibold md:text-3xl">Operador</label>
+                <div class="flex h-[58px] items-center truncate rounded-xl bg-marca-base px-3 py-1 text-xl text-texto-sobre-marca shadow-sm md:text-2xl">
+                    <strong>{{ nome_operador }} ({{ numcad }})</strong>
+                </div>
+                {% else %}
+                <label class="text-xl font-semibold md:text-3xl">ID Operador</label>
+                <input type="number" name="numcad" form="formValidarOperador"
+                       class="h-[58px] w-full rounded border p-1 text-xl md:text-3xl"
+                       placeholder="Digite o ID..." required>
+                {% endif %}
+            </div>
+
+            <div class="col-span-2 flex items-end lg:col-span-2">
+                {% if nome_operador %}
+                {% if not parada_aberta %}
+                <form method="post" class="w-full">
+                    {% csrf_token %}
+                    <input type="hidden" name="codbar" value="{{ codbar }}">
+                    <input type="hidden" name="centro" value="{{ centro_id }}">
+                    <input type="hidden" name="recurso" value="{{ recurso_id }}">
+                    <button name="trocar_operador"
+                            class="botao-perigo h-[58px] w-full px-2 py-1 text-xl md:text-2xl">
+                        Trocar
+                    </button>
+                </form>
+                {% endif %}
+                {% else %}
+                <form method="post" id="formValidarOperador" class="w-full">
+                    {% csrf_token %}
+                    <input type="hidden" name="codbar" value="{{ codbar }}">
+                    <input type="hidden" name="centro" value="{{ centro_id }}">
+                    <input type="hidden" name="recurso" value="{{ recurso_id }}">
+                    <button name="validar_operador"
+                            class="botao-primario h-[58px] w-full px-2 py-1 text-xl md:text-2xl">
+                        Validar
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if codbar and dados_op and recurso_id and pode_apontar %}
+        <form method="post" id="formComponente" class="mt-3 grid grid-cols-1 gap-4 md:grid-cols-4">
+            {% csrf_token %}
+            <input type="hidden" name="codbar" value="{{ codbar }}">
+            <input type="hidden" name="centro" value="{{ centro_id }}">
+            <input type="hidden" name="recurso" value="{{ recurso_id }}">
+            <input type="hidden" name="numcad" value="{{ numcad }}">
+
+            {% if status_seq != "Finalizada" and status_seq != "Sequência inexistente" and status_seq != "Não movimenta" %}
+                {% if op_ativa_recurso == codbar and pode_apontar and habilitar_apontamento and not tem_multiplas_ops_ativas %}
+                <div class="col-span-1 md:col-span-2">
+                    <label class="text-xl font-semibold md:text-3xl">Palete do Componente</label>
+                    <input type="text" name="lote_componente" id="lote_componente"
+                           class="h-[58px] w-full rounded border p-1 text-xl uppercase md:text-3xl"
+                           placeholder="Escaneie o Palete" autocomplete="off" inputmode="none" minlength="4" readonly required autofocus>
+                </div>
+                {% endif %}
+
+                <div class="col-span-1 flex items-end md:col-span-2">
+                    {% if op_ativa_recurso != codbar and pode_apontar and habilitar_apontamento and not parada_bloqueante and not tem_multiplas_ops_ativas %}
+                    <button type="submit" name="trocar_op_ativa"
+                            onclick="return confirm('Deseja realmente trocar para esta OP? Isso irá interromper a OP atual no recurso.')"
+                            class="botao-perigo mt-2 h-[58px] w-full px-2 py-2 text-xl md:mt-0 md:text-2xl">
+                        Trocar OP Ativa
+                    </button>
+                    {% elif pode_apontar and habilitar_apontamento and not parada_bloqueante and not tem_multiplas_ops_ativas %}
+                    <button type="submit" name="apontar_componente"
+                            class="botao-primario mt-2 h-[58px] w-full text-xl md:mt-0 md:text-2xl">
+                        Apontar Componente
+                    </button>
+                    {% elif pode_apontar and habilitar_apontamento and not tem_multiplas_ops_ativas %}
+                    <div class="mt-2 flex h-[58px] w-full items-center justify-center rounded-xl bg-erro-sutil px-4 text-center text-base font-bold text-erro-base md:mt-0 md:text-xl">
+                        Justifique todas as paradas para apontar
+                    </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+{% if dados_op %}
+<details class="mt-4 overflow-hidden rounded border border-borda-sutil bg-superficie-elevada shadow group [&_th]:py-2 [&_th]:leading-5 [&_td]:py-2 [&_td]:leading-5">
+    <summary class="flex cursor-pointer list-none items-center justify-between bg-superficie-afundada p-2 text-sm font-bold">
+        <span>Cabeçalho da OP</span>
+        <i data-lucide="chevron-down" class="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+    </summary>
+    <div class="overflow-x-auto">
+    <table class="min-w-max w-full text-center text-sm">
+        <thead class="bg-superficie-afundada">
+            <tr>
+                <th class="border p-1">Ordem</th>
+                <th class="border p-1">Produto</th>
+                <th class="border p-1">Deriv.</th>
+                <th class="border p-1">Descrição</th>
+                <th class="border p-1">Unid.</th>
+                <th class="border p-1">Situação</th>
+                <th class="border p-1">Prev.</th>
+                <th class="border p-1">Prod.</th>
+                <th class="border p-1">Início</th>
+                <th class="border p-1">Fim</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="border p-1">{{ dados_op.codori }} - {{ dados_op.numorp }}</td>
+                <td class="border p-1">{{ dados_op.codpro }}</td>
+                <td class="border p-1">{{ dados_op.codder }}</td>
+                <td class="border p-1">{{ dados_op.despro }}</td>
+                <td class="border p-1">{{ dados_op.unimed }}</td>
+                <td class="border p-1">{{ dados_op.sitorp }}</td>
+                <td class="border p-1">{{ dados_op.qtdprv }}</td>
+                <td class="border p-1">{{ dados_op.qtdre1 }}</td>
+                <td class="border p-1">{{ dados_op.dtrini }}</td>
+                <td class="border p-1">{{ dados_op.dtrfim }}</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+</details>
+{% endif %}
+
+{% if componentes %}
+<details class="mt-4 overflow-hidden rounded border border-borda-sutil bg-superficie-elevada shadow group [&_th]:py-2 [&_th]:leading-5 [&_td]:py-2 [&_td]:leading-5">
+    <summary class="flex cursor-pointer list-none items-center justify-between bg-superficie-afundada p-2 text-sm font-bold">
+        <span>Componentes da OP</span>
+        <i data-lucide="chevron-down" class="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+    </summary>
+    <div class="overflow-x-auto">
+    <table class="min-w-max w-full text-center text-sm">
+        <thead class="bg-superficie-afundada">
+            <tr>
+                <th class="border p-1">Componente</th>
+                <th class="border p-1">Deriv.</th>
+                <th class="border p-1">Unid.</th>
+                <th class="border p-1">Descrição</th>
+                <th class="border p-1">Prev.</th>
+                <th class="border p-1">Utiliz.</th>
+                <th class="border p-1">Receita %</th>
+                <th class="border p-1">Atual %</th>
+                <th class="border p-1">Baixa OP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in componentes %}
+            <tr>
+                <td class="border p-1">{{ c.codcmp }}</td>
+                <td class="border p-1">{{ c.codder }}</td>
+                <td class="border p-1">{{ c.unimed }}</td>
+                <td class="border p-1">{{ c.descmp }}</td>
+                <td class="border p-1">{{ c.qtdprv }}</td>
+                <td class="border p-1">{{ c.qtduti }}</td>
+                <td class="border p-1 font-bold">{{ c.receita|default:0|floatformat:3 }}%</td>
+                <td class="border p-1 {{ c.classe_atual }}">{{ c.atual|default:0|floatformat:3 }}%</td>
+                <td class="border p-1">{{ c.bxaorp }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</details>
+{% endif %}
+
+{% if operacoes %}
+<details class="mt-4 overflow-hidden rounded border border-borda-sutil bg-superficie-elevada shadow group [&_th]:py-2 [&_th]:leading-5 [&_td]:py-2 [&_td]:leading-5">
+    <summary class="flex cursor-pointer list-none items-center justify-between bg-superficie-afundada p-2 text-sm font-bold">
+        <span>Operações</span>
+        <i data-lucide="chevron-down" class="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+    </summary>
+    <div class="overflow-x-auto">
+    <table class="min-w-max w-full text-center text-sm">
+        <thead class="bg-superficie-afundada">
+            <tr>
+                <th class="border p-1">Seq</th>
+                <th class="border p-1">Estágio</th>
+                <th class="border p-1">Operação</th>
+                <th class="border p-1">Descrição</th>
+                <th class="border p-1">Recurso</th>
+                <th class="border p-1">Prev.</th>
+                <th class="border p-1">Prod.</th>
+                <th class="border p-1">Ref.</th>
+                <th class="border p-1">Início</th>
+                <th class="border p-1">Fim</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for o in operacoes %}
+            <tr>
+                <td class="border p-1">{{ o.seqrot }}</td>
+                <td class="border p-1">{{ o.codetg }}</td>
+                <td class="border p-1">{{ o.codopr }}</td>
+                <td class="border p-1">{{ o.desopr }}</td>
+                <td class="border p-1">{{ o.descre }}</td>
+                <td class="border p-1">{{ o.qtdprv }}</td>
+                <td class="border p-1">{{ o.qtdre1 }}</td>
+                <td class="border p-1">{{ o.qtdrfg }}</td>
+                <td class="border p-1">{{ o.dtinicio }}</td>
+                <td class="border p-1">{{ o.dtfim }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</details>
+{% endif %}
+
+{% if dados_op and recurso_id %}
+<details class="mt-4 overflow-hidden rounded border border-borda-sutil bg-superficie-elevada shadow group [&_th]:py-2 [&_th]:leading-5 [&_td]:py-2 [&_td]:leading-5">
+    <summary class="flex cursor-pointer list-none items-center justify-between bg-superficie-afundada p-2 text-sm font-bold">
+        <span class="text-sucesso-base">Integrações</span>
+        <i data-lucide="chevron-down" class="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+    </summary>
+    <div class="overflow-x-auto">
+        <table class="min-w-max w-full text-center text-sm">
+            <thead class="bg-superficie-afundada">
+                <tr>
+                    <th class="border p-1">Operador</th>
+                    <th class="border p-1">Lote/Palete</th>
+                    <th class="border p-1">Data</th>
+                    <th class="border p-1">Hora</th>
+                    <th class="border p-1">Log</th>
+                    <th class="border p-1">Data Hora Log</th>
+                    <th class="border p-1">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in integracoes_pendentes %}
+                <tr>
+                    <td class="border p-1">{{ i.numcad }}</td>
+                    <td class="border p-1">{{ i.lote }}</td>
+                    <td class="border p-1">{{ i.datmov|default:"-" }}</td>
+                    <td class="border p-1">{{ i.hormov|default:"-" }}</td>
+                    <td class="max-w-xs truncate border p-1 text-left" title="{{ i.log|default:'' }}">{{ i.log|default:"-" }}</td>
+                    <td class="border p-1">{{ i.data_hora|date:"d/m/Y H:i:s" }}</td>
+                    <td class="border p-1 font-bold {% if i.status == 'Processando' %}text-informacao-base{% else %}text-atencao-base{% endif %}">
+                        {{ i.status }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="border p-2 text-center text-texto-legenda">Nenhuma integração pendente para esta OP/recurso.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
+{% endif %}
+
+{% if historico %}
+<details class="mt-4 overflow-hidden rounded border border-borda-sutil bg-superficie-elevada shadow group [&_th]:py-2 [&_th]:leading-5 [&_td]:py-2 [&_td]:leading-5">
+    <summary class="flex cursor-pointer list-none items-center justify-between bg-superficie-afundada p-2 text-sm font-bold">
+        <span>Histórico ERP</span>
+        <i data-lucide="chevron-down" class="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true"></i>
+    </summary>
+    <div class="max-h-[800px] overflow-x-auto overflow-y-auto">
+        <table class="min-w-max w-full text-center text-sm">
+            <thead class="sticky top-0 z-10 bg-superficie-afundada">
+                <tr>
+                    <th class="border bg-superficie-afundada p-1">Seq</th>
+                    <th class="border bg-superficie-afundada p-1">Estágio</th>
+                    <th class="border bg-superficie-afundada p-1">Seq. Op.</th>
+                    <th class="border bg-superficie-afundada p-1">Operação</th>
+                    <th class="border bg-superficie-afundada p-1">Operador</th>
+                    <th class="border bg-superficie-afundada p-1">Prod.</th>
+                    <th class="border bg-superficie-afundada p-1">Refugo</th>
+                    <th class="border bg-superficie-afundada p-1">Lote</th>
+                    <th class="border bg-superficie-afundada p-1">Início</th>
+                    <th class="border bg-superficie-afundada p-1">Fim</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for h in historico %}
+            <tr>
+                <td class="border p-1">{{ h.seqeoq }}</td>
+                <td class="border p-1">{{ h.codetg }}</td>
+                <td class="border p-1">{{ h.seqrot }}</td>
+                <td class="border p-1">{{ h.desopr }}</td>
+                <td class="border p-1">{{ h.nomope }} ({{ h.numcad }})</td>
+                <td class="border p-1">{{ h.qtdre1 }}</td>
+                <td class="border p-1">{{ h.qtdrfg }}</td>
+                <td class="border p-1">{{ h.codelote }}</td>
+                <td class="border p-1">{{ h.dtinicio }}</td>
+                <td class="border p-1">{{ h.dtfim }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
+{% endif %}
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const lote = document.getElementById("lote_componente");
+    const form = document.getElementById("formComponente");
+    if (!lote || !form) return;
+
+    let primeiroTempo = null;
+    let ultimoTempo = null;
+    let bloqueado = false;
+    const tempoMaximoEntreTeclasMs = 80;
+    const teclasIgnoradas = ["Tab", "Shift", "Control", "Alt"];
+    const teclasLimpeza = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Home", "End"];
+
+    lote.focus();
+    lote.select();
+
+    function limparLeitura() {
+        bloqueado = true;
+        lote.value = "";
+        primeiroTempo = null;
+        ultimoTempo = null;
+        setTimeout(() => {
+            bloqueado = false;
+            lote.focus();
+        }, 150);
+    }
+
+    lote.addEventListener("paste", (event) => {
+        event.preventDefault();
+        limparLeitura();
+    });
+
+    lote.addEventListener("focus", () => {
+        lote.setAttribute("readonly", "readonly");
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.target && event.target !== lote && ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName)) {
+            return;
+        }
+
+        if (bloqueado) {
+            event.preventDefault();
+            return;
+        }
+
+        const agora = performance.now();
+
+        if (teclasIgnoradas.includes(event.key)) return;
+
+        if (event.repeat) {
+            event.preventDefault();
+            limparLeitura();
+            return;
+        }
+
+        if (teclasLimpeza.includes(event.key)) {
+            event.preventDefault();
+            limparLeitura();
+            return;
+        }
+
+        if (event.key === "Enter") {
+            event.preventDefault();
+            const valor = lote.value.trim().toUpperCase();
+
+            if (valor) {
+                lote.value = valor;
+                window.isPointing = true;
+                form.requestSubmit(form.querySelector('[name="apontar_componente"]'));
+            } else {
+                limparLeitura();
+            }
+            return;
+        }
+
+        if (event.key.length !== 1) {
+            event.preventDefault();
+            return;
+        }
+
+        if (ultimoTempo && agora - ultimoTempo > tempoMaximoEntreTeclasMs) {
+            event.preventDefault();
+            limparLeitura();
+            return;
+        }
+
+        event.preventDefault();
+        if (!primeiroTempo) primeiroTempo = agora;
+        ultimoTempo = agora;
+        lote.value = `${lote.value}${event.key}`.toUpperCase();
+        window.isPointing = true;
+    });
+
+    form.addEventListener("submit", (event) => {
+        const submitter = event.submitter;
+        if (!submitter || submitter.name !== "apontar_componente") return;
+
+        const valor = lote.value.trim().toUpperCase();
+        if (!valor) {
+            event.preventDefault();
+            limparLeitura();
+        }
+    });
+});
+</script>
+{% endblock %}

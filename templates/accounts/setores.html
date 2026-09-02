@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Setores{% endblock %}
+
+{% block content %}
+
+<div class="w-full px-4 mt-4 text-sm text-texto-primario grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- ========================= -->
+    <!-- FORMULÁRIO LATERAL -->
+    <!-- ========================= -->
+    <div class="bg-superficie-elevada border border-borda-sutil rounded shadow">
+
+        <div class="bg-superficie-afundada border-b border-borda-sutil p-3 font-bold">
+            {% if setor_editando %}Editar Setor{% else %}Novo Setor{% endif %}
+        </div>
+
+        <div class="p-4">
+
+            <form method="post">
+                {% csrf_token %}
+
+                <!-- Convertendo form.as_p -->
+                <div class="space-y-4">
+                    {% for field in form %}
+                        <div>
+                            <label class="font-semibold">{{ field.label }}</label>
+                            {{ field|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                            {% if field.errors %}
+                                <div class="text-erro-base text-xs mt-1">
+                                    {% for error in field.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {% if setor_editando %}
+                <div class="bg-atencao-sutil border border-atencao-borda text-texto-primario px-3 py-2 rounded mt-4 text-sm">
+                    Editando setor: <strong>{{ setor_editando.descricao }}</strong>
+                </div>
+                {% endif %}
+
+                <div class="flex justify-between mt-6">
+
+                    <a href="{% url 'home' %}"
+                       class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                        <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i>
+                        Voltar
+                    </a>
+
+                    <div class="flex gap-2">
+                        {% if setor_editando %}
+                        <a href="{% url 'setores' %}"
+                           class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                            Cancelar
+                        </a>
+                        {% endif %}
+
+                        <button type="submit"
+                                class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                            <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i>
+                            {% if setor_editando %} Atualizar {% else %} Salvar {% endif %}
+                        </button>
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+
+    <!-- ========================= -->
+    <!-- LISTAGEM -->
+    <!-- ========================= -->
+    <div class="lg:col-span-2 bg-superficie-elevada border border-borda-sutil rounded shadow">
+
+        <div class="bg-superficie-afundada border-b border-borda-sutil p-3 font-bold">
+            Lista de Setores
+        </div>
+
+<div class="p-4">
+
+            <!-- MENSAGENS REMOVIDOS - USANDO PARTIAL SHARED -->
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead class="bg-superficie-afundada text-texto-primario">
+                        <tr>
+                            <th class="border border-borda-sutil p-2">Filial</th>
+                            <th class="border border-borda-sutil p-2">Departamento</th>
+                            <th class="border border-borda-sutil p-2">Setor</th>
+                            <th class="border border-borda-sutil p-2 text-end">Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for setor in page_obj %}
+                        <tr class="transition hover:bg-interacao-hover">
+                            <td class="border border-borda-sutil p-2">
+                                {{ setor.departamento.filial.empresa.codemp }}.{{ setor.departamento.filial.codfil }}
+                                - {{ setor.departamento.filial.nome }}
+                            </td>
+                            <td class="border border-borda-sutil p-2">{{ setor.departamento.descricao }}</td>
+                            <td class="border border-borda-sutil p-2">{{ setor.descricao }}</td>
+
+                            <td class="border border-borda-sutil p-2">
+                                <div class="flex justify-end gap-2">
+
+                                    <a href="{% url 'editar_setor' setor.id %}"
+                                       class="botao-atencao-icone"
+                                       title="Editar">
+                                        <i data-lucide="square-pen" class="" aria-hidden="true"></i>
+                                    </a>
+
+                                    <form method="post" action="{% url 'deletar_setor' setor.id %}"
+                                          onsubmit="return confirm('Tem certeza que deseja excluir este setor?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="botao-perigo-icone" title="Excluir" aria-label="Excluir">
+                                            <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center p-3 text-texto-legenda">Nenhum setor cadastrado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+
+            <!-- PAGINAÇÃO -->
+            <div class="flex justify-center items-center gap-2 mt-4">
+
+                {% if page_obj.has_previous %}
+                <a href="?page=1" class="botao-secundario text-sm"><i data-lucide="chevrons-left" class="mr-1 inline h-4 w-4 align-text-bottom" aria-hidden="true"></i>Primeiro</a>
+                <a href="?page={{ page_obj.previous_page_number }}"
+                   class="botao-secundario text-sm">Anterior</a>
+                {% endif %}
+
+                <span class="botao-primario text-sm">
+                    {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                </span>
+
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}"
+                   class="botao-secundario text-sm">Próxima</a>
+
+                <a href="?page={{ page_obj.paginator.num_pages }}"
+                   class="botao-secundario text-sm">Última<i data-lucide="chevrons-right" class="ml-1 inline h-4 w-4 align-text-bottom" aria-hidden="true"></i></a>
+                {% endif %}
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% if setor_editando and setor_editando.id == 1 %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const desc = document.getElementById("id_descricao");
+    if (desc) {
+        desc.readOnly = true;
+        desc.classList.add("bg-superficie-afundada");
+    }
+});
+</script>
+{% endif %}
+
+
+{% endblock %}

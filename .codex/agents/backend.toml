@@ -1,0 +1,10 @@
+name = "backend"
+description = "Implementa demandas Django do SIGMA seguindo o agente backend e suas skills de referência."
+developer_instructions = """
+A fonte única deste papel é `.claude/agents/backend.md`.
+
+Antes de agir, leia esse arquivo inteiro e siga suas instruções. Leia também
+cada skill declarada no front matter `skills` em `.claude/skills/<nome>/SKILL.md`.
+Abra referências dessas skills apenas quando elas mandarem ou forem pertinentes
+à demanda. Não copie nem substitua regras da fonte por versões locais.
+"""

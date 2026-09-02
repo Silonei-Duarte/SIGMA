@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Acesso não autorizado | {{ APPLICATION_NAME }}{% endblock %}
+
+{% block content %}
+  <section class="flex flex-1 items-center justify-center px-4 py-12 sm:px-6">
+    <div class="cartao w-full max-w-xl text-center shadow-sm sm:p-8">
+      <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-erro-sutil text-erro-base">
+        <i data-lucide="shield-alert" class="h-7 w-7" aria-hidden="true"></i>
+      </div>
+      <h1 class="titulo-pagina mt-6 text-texto-primario">Acesso não autorizado</h1>
+      <p class="mx-auto mt-3 max-w-md text-texto-secundario">
+        Você não possui permissão para acessar este conteúdo.
+      </p>
+      <a href="{{ url_retorno }}" class="botao-secundario mt-6 h-9 px-4 text-sm">
+        <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i>
+        Voltar
+      </a>
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ APPLICATION_NAME }} | Baixa Componentes{% endblock %}
+{% block content %}
+
+<div class="w-full px-4 mt-4 pb-4 text-sm text-texto-primario">
+    <div class="mb-6 border-b border-borda-sutil pb-4">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <h2 class="titulo-pagina text-texto-primario">Baixa Componentes</h2>
+            </div>
+
+            <div class="flex w-full flex-col items-stretch gap-2 md:flex-row md:items-center lg:w-auto lg:justify-end">
+                <div class="w-full md:w-96">
+                    <form method="GET" action="{% url 'logs_baixa_componentes' %}" class="flex gap-2">
+                        <input type="text" name="search" value="{{ search_query }}"
+                                placeholder="Buscar por {{ rotulos_busca }}..."
+                               class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm">
+                        <button type="submit" class="botao-primario h-10 shrink-0 whitespace-nowrap px-4 text-sm">
+                            <i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i> Filtrar
+                        </button>
+                        {% if search_query %}
+                        <a href="{% url 'logs_baixa_componentes' %}" class="botao-secundario h-10 w-10 p-0" aria-label="Limpar busca"><i data-lucide="x" class="" aria-hidden="true"></i>
+                        </a>
+                        {% endif %}
+                    </form>
+                </div>
+
+                <form method="post" action="{% url 'enviar_todas_baixas_componentes' %}">
+                    {% csrf_token %}
+                <button type="submit"
+                   class="botao-primario text-sm"
+                   onclick="return confirm('Deseja enviar todas as baixas de componentes não integradas?')">
+                    <i data-lucide="send" class=" mr-2" aria-hidden="true"></i> Enviar Todas
+                </button>
+                </form>
+
+                {% if pode_excluir_pendencias %}
+                <form method="post" action="{% url 'excluir_todas_baixas_componentes' %}">
+                    {% csrf_token %}
+                <button type="submit"
+                   class="botao-perigo h-10 px-4" onclick="return confirm('Deseja REALMENTE EXCLUIR TODOS os logs de baixa não integrados? Esta ação não pode ser desfeita.')">
+                    <i data-lucide="trash-2" class=" mr-2" aria-hidden="true"></i> Excluir Todas
+                </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+        <div class="overflow-x-auto overflow-y-auto">
+            <table class="w-full text-xs text-center border-collapse">
+                <thead class="bg-superficie-afundada text-texto-primario">
+                    <tr>
+                        <th class="border border-borda-sutil p-2">Empresa</th>
+                        <th class="border border-borda-sutil p-2">Origem</th>
+                        <th class="border border-borda-sutil p-2">OP</th>
+                        <th class="border border-borda-sutil p-2">Estágio</th>
+                        <th class="border border-borda-sutil p-2">Seq.</th>
+                        <th class="border border-borda-sutil p-2">Componente</th>
+                        <th class="border border-borda-sutil p-2">Deriv.</th>
+                        <th class="border border-borda-sutil p-2">Qtd. Utilizada</th>
+                        <th class="border border-borda-sutil p-2">Lote Consumido</th>
+                        <th class="border border-borda-sutil p-2">Repesagem</th>
+                        <th class="border border-borda-sutil p-2">Consumo Total</th>
+                        <th class="border border-borda-sutil p-2">Cod. Integrador</th>
+                        <th class="border border-borda-sutil p-2">Recurso</th>
+                        <th class="border border-borda-sutil p-2">Data</th>
+                        <th class="border border-borda-sutil p-2">Hora</th>
+                        <th class="border border-borda-sutil p-2">Usuário</th>
+                        <th class="border border-borda-sutil p-2">Log</th>
+                        <th class="border border-borda-sutil p-2">Data/Hora</th>
+                        <th class="border border-borda-sutil p-2">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in baixas %}
+                    <tr class="transition hover:bg-interacao-hover">
+                        <td class="border border-borda-sutil p-2">{{ b.codemp }}</td>
+                        <td class="border border-borda-sutil p-2">{{ b.origem }}</td>
+                        <td class="border border-borda-sutil p-2">{{ b.numorp }}</td>
+                        <td class="border border-borda-sutil p-2">{{ b.codetg }}</td>
+                        <td class="border border-borda-sutil p-2">{{ b.seqrot }}</td>
+                        <td class="border border-borda-sutil p-2">{{ b.codcmp }}</td>
+                        <td class="border border-borda-sutil p-2">{{ b.dercmp|default:"-" }}</td>
+                        <td class="border border-borda-sutil{% if b.qtduti > 0 %} bg-informacao-sutil text-informacao-base font-semibold{% endif %} p-2">{{ b.qtduti }}</td>
+                        <td class="border border-borda-sutil p-2">{{ b.codlot }}</td>
+                        <td class="border border-borda-sutil p-2">
+                            {% if b.repesagem == "S" %}
+                            <span class="text-atencao-base font-bold">Sim</span>
+                            {% else %}
+                            <span class="text-texto-legenda">Não</span>
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2">
+                            {% if b.consumototal == "S" %}
+                            <span class="text-sucesso-base font-bold">Sim</span>
+                            {% else %}
+                            <span class="text-texto-legenda">Não</span>
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2">{{ b.codigo_integrador|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">
+                            {% if b.recurso %}
+                                {{ b.recurso.codigo }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2">{{ b.datmov }}</td>
+                        <td class="border border-borda-sutil p-2">{{ b.hormov }}</td>
+                        <td class="border border-borda-sutil p-2">{{ b.usuario|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2 text-left max-w-xs truncate" title="{{ b.log }}">
+                            {{ b.log|default:"-" }}
+                        </td>
+                        <td class="border border-borda-sutil p-2">{{ b.data_hora|date:"d/m/Y H:i:s" }}</td>
+                        <td class="border border-borda-sutil p-2">
+                            <div class="flex flex-row gap-2 items-center justify-start">
+                            {% if b.status == 1 %}
+                            <span class="w-24 shrink-0 status-integrado text-sucesso-base flex items-center justify-center">
+                                Integrado
+                            </span>
+                            {% elif b.status == 2 %}
+                            <span class="w-24 shrink-0 text-informacao-base flex items-center justify-center">
+                                Processando
+                            </span>
+                            {% elif b.status == 3 %}
+                            <span class="w-24 shrink-0 text-erro-base flex items-center justify-center">
+                                Excluído
+                            </span>
+                            {% else %}
+                                {% if b.id in bloqueados_ids %}
+                                <span class="w-24 shrink-0 text-informacao-base flex items-center justify-center" title="Aguardando integração de baixa anterior do mesmo lote">
+                                    Bloqueado
+                                </span>
+                                {% else %}
+                                <span class="w-24 shrink-0 text-atencao-base flex items-center justify-center">
+                                    Pendente
+                                </span>
+                                <form method="post" action="{% url 'enviar_baixa_componente_log' b.pk %}">
+                                    {% csrf_token %}
+                                <button type="submit"
+                                   class="botao-sucesso-icone"
+                                   title="Enviar">
+                                    <i data-lucide="send" class="" aria-hidden="true"></i>
+                                </button>
+                                </form>
+                                {% endif %}
+                                {% if pode_excluir_pendencias %}
+                                <form method="post" action="{% url 'excluir_baixa_componente' b.pk %}">
+                                    {% csrf_token %}
+                                <button type="submit"
+                                   onclick="return confirm('Tem certeza que deseja excluir este log de baixa?')"
+                                   class="botao-perigo-icone" title="Excluir log" aria-label="Excluir log">
+                                    <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                                </button>
+                                </form>
+                                {% endif %}
+                            {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="18" class="border border-borda-sutil p-6 text-center text-texto-legenda italic">
+                            Nenhuma baixa de componente registrada.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if baixas.has_other_pages %}
+    <div class="mt-6 mb-8 flex justify-center">
+        <nav class="inline-flex rounded-xl shadow-sm">
+            {% if baixas.has_previous %}
+                <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Primeira</a>
+                <a href="?page={{ baixas.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Anterior</a>
+            {% endif %}
+
+            <span class="botao-primario text-sm">
+                Página {{ baixas.number }} de {{ baixas.paginator.num_pages }}
+            </span>
+
+            {% if baixas.has_next %}
+                <a href="?page={{ baixas.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Próxima</a>
+                <a href="?page={{ baixas.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Última</a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

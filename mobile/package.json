@@ -1,0 +1,21 @@
+{
+  "name": "sigma-mobile",
+  "version": "1.0.4",
+  "private": true,
+  "description": "Wrapper Android interno do SIGMA",
+  "scripts": {
+    "sync": "cap sync android",
+    "open:android": "cap open android",
+    "apk:debug": "powershell -NoProfile -ExecutionPolicy Bypass -File ./build-apk.ps1",
+    "apk:release": "powershell -NoProfile -ExecutionPolicy Bypass -File ./build-release.ps1"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.4.2",
+    "@capacitor/core": "8.4.2",
+    "@capacitor/push-notifications": "^8.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.4.2",
+    "typescript": "^5.9.3"
+  }
+}

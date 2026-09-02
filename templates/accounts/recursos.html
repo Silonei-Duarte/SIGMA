@@ -1,0 +1,1350 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% load l10n %}
+
+{% block title %}Recursos{% endblock %}
+
+{% block content %}
+
+<div class="w-full px-4 mt-4 text-sm text-texto-primario">
+
+{% if not recurso_editando and editar_param != "novo" %}
+
+    <!-- ======================== -->
+    <!-- LISTAGEM -->
+    <!-- ======================== -->
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="titulo-pagina text-texto-primario">Recursos Cadastrados</h1>
+        <div class="flex gap-2">
+            <a href="{% url 'home' %}" class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i> Voltar
+            </a>
+            <a href="?editar=novo" class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                <i data-lucide="circle-plus" class="h-5 w-5" aria-hidden="true"></i> Novo Recurso
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-superficie-elevada border border-borda-sutil rounded shadow p-0">
+        <div class="overflow-x-auto p-3">
+
+            <table class="w-full text-left text-sm border-collapse">
+                <thead class="bg-superficie-afundada text-texto-primario">
+                    <tr>
+                        <th class="border border-borda-sutil p-2">Código</th>
+                        <th class="border border-borda-sutil p-2">Descrição</th>
+                        <th class="border border-borda-sutil p-2">Centro de Recurso</th>
+                        <th class="border border-borda-sutil p-2">Setor</th>
+                        <th class="border border-borda-sutil p-2">Departamento</th>
+                        <th class="border border-borda-sutil p-2">Ativo</th>
+                        <th class="border border-borda-sutil p-2">Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for r in recursos %}
+                    <tr class="transition hover:bg-interacao-hover">
+                        <td class="border border-borda-sutil p-2">{{ r.codigo }}</td>
+                        <td class="border border-borda-sutil p-2">{{ r.descricao }}</td>
+                        <td class="border border-borda-sutil p-2">{{ r.centro_recurso.descricao }}</td>
+                        <td class="border border-borda-sutil p-2">{{ r.centro_recurso.setor.descricao }}</td>
+                        <td class="border border-borda-sutil p-2">{{ r.centro_recurso.setor.departamento.descricao }}</td>
+                        <td class="border border-borda-sutil p-2">
+                            {% if r.ativo %}
+                                <span class="bg-sucesso-sutil text-sucesso-base px-2 py-1 rounded text-xs font-bold">Sim</span>
+                            {% else %}
+                                <span class="bg-superficie-afundada text-texto-primario px-2 py-1 rounded text-xs font-bold">Não</span>
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2 flex gap-2">
+                            <a href="?editar={{ r.id }}"
+                               class="botao-atencao-icone"
+                               title="Editar">
+                                <i data-lucide="square-pen" class="" aria-hidden="true"></i>
+                            </a>
+                            <form method="post" action="{% url 'deletar_recurso' r.id %}"
+                                  onsubmit="return confirm('Deseja realmente excluir este recurso?')">
+                                {% csrf_token %}
+                                <button type="submit" class="botao-perigo-icone" title="Excluir" aria-label="Excluir"><i data-lucide="trash-2" class="" aria-hidden="true"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center p-3 text-texto-legenda">Nenhum recurso cadastrado.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+
+{% else %}
+
+    <!-- ======================== -->
+    <!-- FORMULÁRIO -->
+    <!-- ======================== -->
+
+    <div class="flex justify-between items-center mb-4">
+        <h4 class="text-lg font-bold">
+            {% if recurso_editando %}
+                Editar Recurso - {{ recurso_editando.codigo }} - {{ recurso_editando.descricao }}
+            {% else %}
+                Novo Recurso
+            {% endif %}
+        </h4>
+    </div>
+
+    <!-- TABS -->
+    <div class="border-b border-borda-sutil mb-3 flex">
+      <button type="button" data-tab="tab-gerais"
+              class="tab-btn px-4 py-2 border border-borda-sutil border-b-0 bg-superficie-elevada font-semibold">
+          Gerais
+      </button>
+
+      <button type="button" data-tab="tab-oee"
+              class="tab-btn px-4 py-2 border border-borda-sutil border-b-0 bg-superficie-afundada">
+          OEE
+      </button>
+
+      <button type="button" data-tab="tab-parametros"
+              class="tab-btn px-4 py-2 border border-borda-sutil border-b-0 bg-superficie-afundada">
+          Parâmetros
+      </button>
+
+      <button type="button" data-tab="tab-taras"
+              class="tab-btn px-4 py-2 border border-borda-sutil border-b-0 bg-superficie-afundada {% if not recurso_editando %}hidden{% endif %}">
+          Taras
+      </button>
+
+      <button type="button" data-tab="tab-motivos-abrangencia"
+              class="tab-btn px-4 py-2 border border-borda-sutil border-b-0 bg-superficie-afundada {% if not recurso_editando %}hidden{% endif %}">
+          Motivos de Parada
+      </button>
+
+      <button type="button" data-tab="tab-telemetria"
+              class="tab-btn px-4 py-2 border border-borda-sutil border-b-0 bg-superficie-afundada {% if not recurso_editando %}hidden{% endif %}">
+          Telemetria
+      </button>
+
+      <button type="button" data-tab="tab-parada-automatica"
+              class="tab-btn px-4 py-2 border border-borda-sutil border-b-0 bg-superficie-afundada {% if not recurso_editando %}hidden{% endif %}">
+          Parada Automática
+      </button>
+    </div>
+
+    <div class="border border-borda-sutil rounded-b p-4 bg-superficie-elevada mb-20">
+      <form method="post" id="form-recurso" data-recurso-bloqueado="{% if recurso_editando and recurso_editando.id == 1 %}true{% else %}false{% endif %}">
+        {% csrf_token %}
+        {% if recurso_editando %}
+          <input type="hidden" name="recurso_id" value="{{ recurso_editando.id }}">
+        {% endif %}
+
+        <!-- MENSAGENS DE ERRO DO FORMULÁRIO -->
+        {% if form.errors or param_form.errors %}
+        <div class="bg-erro-sutil border border-erro-borda text-erro-base px-4 py-3 rounded relative mb-4" role="alert">
+            <strong class="font-bold">Erro ao salvar!</strong>
+            <button type="button" onclick="this.parentElement.remove()" class="absolute top-0 right-0 px-4 py-3 font-bold text-xl leading-none" aria-label="Fechar"><i data-lucide="x" aria-hidden="true"></i></button>
+            <ul class="list-disc ml-6">
+            {% for field in form %}
+                {% if field.errors %}
+                    <li>{{ field.label }}: {{ field.errors|striptags }}</li>
+                {% endif %}
+            {% endfor %}
+            {% if form.non_field_errors %}
+                <li>{{ form.non_field_errors|striptags }}</li>
+            {% endif %}
+            {% for field in param_form %}
+                {% if field.errors %}
+                    <li>{{ field.label }}: {{ field.errors|striptags }}</li>
+                {% endif %}
+            {% endfor %}
+            {% if param_form.non_field_errors %}
+                <li>{{ param_form.non_field_errors|striptags }}</li>
+            {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- ========== ABA GERAIS ========== -->
+        <div id="tab-gerais" class="tab-content block">
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                <div>
+                    <label class="font-semibold">Código
+                        <span class="group relative ml-1 inline-flex align-middle" tabindex="0" aria-describedby="dica-codigo-recurso">
+                            <i data-lucide="circle-help" class="h-4 w-4 text-informacao-base cursor-help" aria-hidden="true"></i>
+                            <span id="dica-codigo-recurso" role="tooltip" class="pointer-events-none absolute left-full top-1/2 z-30 ml-2 w-max max-w-64 -translate-y-1/2 rounded-md bg-superficie-inversa px-2 py-1 text-xs text-texto-sobre-inversa opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus:opacity-100">Chave do recurso na telemetria HTTP. Usada para localizar sensores, contagem de bobinas e peso da balança.</span>
+                        </span>
+                    </label>
+                    {{ form.codigo|add_class:"border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="font-semibold">Descrição</label>
+                    {{ form.descricao|add_class:"border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+
+                <div>
+                    <label class="font-semibold">Filial</label>
+                    <select id="id_filial" class="border w-full p-1 rounded bg-superficie-elevada"
+                            data-selected="{{ filial_sel|default:'' }}">
+                        <option value="">Selecione...</option>
+                        {% for f in filiais %}
+                            <option value="{{ f.id }}" {% if f.id == filial_sel %}selected{% endif %}>{{ f.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-semibold">Departamento</label>
+                    <select id="id_departamento" class="border w-full p-1 rounded bg-superficie-elevada"
+                            data-selected="{{ dep_sel|default:'' }}">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-semibold">Setor</label>
+                    <select id="id_setor" class="border w-full p-1 rounded bg-superficie-elevada"
+                            data-selected="{{ setor_sel|default:'' }}">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="font-semibold">Centro de Recurso</label>
+                    <select id="id_centro_recurso" name="centro_recurso"
+                            class="border w-full p-1 rounded bg-superficie-elevada" required>
+                        {% if recurso_editando %}
+                          <option value="{{ recurso_editando.centro_recurso.id }}" selected>
+                            {{ recurso_editando.centro_recurso.descricao }}
+                          </option>
+                        {% else %}
+                          <option value="">Selecione...</option>
+                        {% endif %}
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+
+                <div>
+                    {{ form.habilita_oee.label_tag }}
+                    {{ form.habilita_oee|add_class:"w-4 h-4" }}
+                </div>
+
+                <div>
+                    {{ form.ativo.label_tag }}
+                    {{ form.ativo|add_class:"w-4 h-4" }}
+                </div>
+
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                    <label class="font-semibold">Ordenação Visual
+                        <span class="group relative ml-1 inline-flex align-middle" tabindex="0" aria-describedby="dica-ordenacao-visual">
+                            <i data-lucide="circle-help" class="h-4 w-4 text-informacao-base cursor-help" aria-hidden="true"></i>
+                            <span id="dica-ordenacao-visual" role="tooltip" class="pointer-events-none absolute left-full top-1/2 z-30 ml-2 w-max max-w-64 -translate-y-1/2 rounded-md bg-superficie-inversa px-2 py-1 text-xs text-texto-sobre-inversa opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus:opacity-100">Ordenação para os cards de monitoramento e listagens</span>
+                        </span>
+                    </label>
+                    {{ form.ordenacao|add_class:"border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+                <div>
+                    <label class="font-semibold">Ordenação Sequenciamento
+                        <span class="group relative ml-1 inline-flex align-middle" tabindex="0" aria-describedby="dica-ordenacao-sequenciamento">
+                            <i data-lucide="circle-help" class="h-4 w-4 text-informacao-base cursor-help" aria-hidden="true"></i>
+                            <span id="dica-ordenacao-sequenciamento" role="tooltip" class="pointer-events-none absolute left-full top-1/2 z-30 ml-2 w-max max-w-64 -translate-y-1/2 rounded-md bg-superficie-inversa px-2 py-1 text-xs text-texto-sobre-inversa opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus:opacity-100">Ordenação utilizada no módulo de Sequenciamento de Produção</span>
+                        </span>
+                    </label>
+                    {{ form.ordenacao_sequenciamento|add_class:"border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+            </div>
+
+        </div>
+        <!-- ABA GERAIS END -->
+
+        <!-- ========== ABA OEE ========== -->
+        <div id="tab-oee" class="tab-content hidden block">
+
+            <h6 class="font-bold text-informacao-base">Produção</h6>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
+
+                <div>
+                    {{ form.view_id.label_tag }}
+                    {{ form.view_id|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+                <div>
+                    {{ form.modelo_prd.label_tag }}
+                    {{ form.modelo_prd|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+                <div>
+                    {{ form.opers_simut.label_tag }}
+                    {{ form.opers_simut|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+                <div>
+                    {{ form.quant_pes.label_tag }}
+                    {{ form.quant_pes|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+            </div>
+
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+
+                <div>
+                    {{ form.metadis.label_tag }}
+                    {{ form.metadis|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+                <div>
+                    {{ form.metaper.label_tag }}
+                    {{ form.metaper|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+                <div>
+                    {{ form.metaqual.label_tag }}
+                    {{ form.metaqual|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+                <div>
+                    {{ form.metaooee.label_tag }}
+                    {{ form.metaooee|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+            </div>
+
+
+            <h6 class="font-bold text-informacao-base mt-4">Paradas</h6>
+
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+
+                <div>
+                    {{ form.aponta_parada.label_tag }}
+                    {{ form.aponta_parada|attr:"class:w-4 h-4" }}
+                </div>
+
+                <div>
+                    {{ form.exibir_jus.label_tag }}
+                    {{ form.exibir_jus|attr:"class:w-4 h-4" }}
+                </div>
+
+            </div>
+
+            <div class="mt-3">
+                {{ form.alt_just.label_tag }}
+                {{ form.alt_just|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+            </div>
+
+            <div class="mt-6">
+                {{ form.permite_parada_manual.label_tag }}
+                {{ form.permite_parada_manual|attr:"class:w-4 h-4" }}
+            </div>
+
+            <div class="mt-3">
+                {{ form.telemetria_encerra_parada_manual.label_tag }}
+                {{ form.telemetria_encerra_parada_manual|attr:"class:w-4 h-4" }}
+            </div>
+
+            <div class="mt-3">
+                {{ form.tempo_parada_aut.label_tag }}
+                {{ form.tempo_parada_aut|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                {% if form.tempo_parada_aut.help_text %}
+                  <p class="mt-1 text-xs text-texto-legenda">{{ form.tempo_parada_aut.help_text }}</p>
+                {% endif %}
+            </div>
+
+            <div class="mt-3">
+                {{ form.tempo_minimo_parada.label_tag }}
+                {{ form.tempo_minimo_parada|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                {% if form.tempo_minimo_parada.help_text %}
+                  <p class="mt-1 text-xs text-texto-legenda">{{ form.tempo_minimo_parada.help_text }}</p>
+                {% endif %}
+            </div>
+
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+
+                <div>
+                    {{ form.inic_parada_prog.label_tag }}
+                    {{ form.inic_parada_prog|attr:"class:w-4 h-4" }}
+                </div>
+
+                <div>
+                    {{ form.fin_parada_prog.label_tag }}
+                    {{ form.fin_parada_prog|attr:"class:w-4 h-4" }}
+                </div>
+
+            </div>
+
+
+            <div class="mt-3">
+                {{ form.alt_parada_prog.label_tag }}
+                {{ form.alt_parada_prog|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+            </div>
+
+
+            <h6 class="font-bold text-informacao-base mt-4">Horas</h6>
+
+            <div class="mt-2">
+                {{ form.mod_he.label_tag }}
+                {{ form.mod_he|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+            </div>
+
+        </div>
+        <!-- ABA OEE END -->
+
+          <!-- ========== ABA PARÂMETROS ========== -->
+          <div id="tab-parametros" class="tab-content hidden block">
+
+              <div class="mb-4 rounded border border-atencao-borda bg-atencao-sutil px-4 py-3 text-texto-primario">
+                <span class="font-semibold">Atenção:</span>
+                Os parâmetros informados aqui são críticos e irão afetar o comportamento em outras telas e rotinas imediatamente.
+              </div>
+  
+              <div class="bg-informacao-sutil border border-informacao-borda text-informacao-base px-3 py-2 rounded text-sm mb-4">
+                  Deixe tempo e limites em branco para o recurso usar os parâmetros da filial.
+              </div>
+
+            <h6 class="font-bold text-informacao-base mt-2">Apontamento</h6>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                <div>
+                    {{ param_form.tempo_sem_comunicacao_manual.label_tag }}
+                    {{ param_form.tempo_sem_comunicacao_manual|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+                <div>
+                    {{ param_form.limite_apontamento_minimo.label_tag }}
+                    {{ param_form.limite_apontamento_minimo|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+                <div>
+                    {{ param_form.limite_apontamento_maximo.label_tag }}
+                    {{ param_form.limite_apontamento_maximo|attr:"class:border border-borda-sutil w-full p-1 rounded bg-superficie-elevada" }}
+                </div>
+
+                  <div>
+                    {{ param_form.aponta_refugo.label_tag }}
+                    {{ param_form.aponta_refugo|attr:"class:w-4 h-4" }}
+                  </div>
+              </div>
+
+        </div>
+        <!-- ABA PARÂMETROS END -->
+
+        <!-- BOTÕES GLOBAIS DE AÇÃO DO RECURSO (PARA GERAIS E OEE) -->
+        <div id="recurso-form-buttons" class="mt-4 flex gap-2">
+            <button type="submit"
+                    name="{% if recurso_editando %}atualizar{% else %}salvar{% endif %}"
+                    class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i>
+                {% if recurso_editando %}Atualizar{% else %}Salvar{% endif %}
+            </button>
+
+            <a href="{% url 'lista_recursos' %}"
+               class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">Cancelar</a>
+        </div>
+      </form>
+
+      <!-- ========== ABA TARAS (FORA DO FORM-RECURSO) ========== -->
+      <div id="tab-telemetria" class="tab-content hidden block">
+        {% if recurso_editando %}
+        <p class="mb-3 rounded border border-informacao-borda bg-informacao-sutil p-3">A fonte HTTP é configurada no cadastro de sensores. Todos os sensores deste recurso usam a mesma fonte.</p>
+        <h6 class="mb-3 mt-6 font-bold text-informacao-base">Sensores vinculados</h6>
+        <form method="post" action="{% url 'telemetria_configurar_recurso' recurso_editando.id %}" class="mb-3 grid grid-cols-1 gap-3 md:grid-cols-4">
+          {% csrf_token %}<input type="hidden" name="acao" value="vincular">
+          <div class="md:col-span-3"><label class="font-semibold">{{ sensor_recurso_form.sensor.label }}</label>{{ sensor_recurso_form.sensor|add_class:"w-full rounded border border-borda-sutil p-1" }}</div>
+            <div class="self-end"><button class="botao-primario h-10 whitespace-nowrap px-4 text-sm"><i data-lucide="link" class="h-5 w-5" aria-hidden="true"></i>Vincular</button></div>
+          </form>
+        <form method="post" action="{% url 'telemetria_configurar_recurso' recurso_editando.id %}">
+          {% csrf_token %}<input type="hidden" name="acao" value="atualizar_vinculos">
+          <table class="w-full text-left"><thead class="bg-superficie-afundada text-texto-primario"><tr><th class="border border-borda-sutil p-2">Chave</th><th class="border border-borda-sutil p-2">Sensor</th><th class="border border-borda-sutil p-2">Tipo</th><th class="border border-borda-sutil p-2">Monitorar</th><th class="border border-borda-sutil p-2">Tolerância</th><th class="border border-borda-sutil p-2"></th></tr></thead><tbody>
+            {% for vinculo in sensores_recurso %}<tr class="border-b"><td class="border border-borda-sutil p-2">{{ vinculo.sensor.chave_origem }}</td><td class="border border-borda-sutil p-2">{{ vinculo.sensor.nome }}</td><td class="border border-borda-sutil p-2">{{ vinculo.sensor.get_tipo_valor_display }}</td><td class="border border-borda-sutil p-2"><input name="monitorar_variacao_{{ vinculo.id }}" type="checkbox" {% if vinculo.monitorar_variacao %}checked{% endif %}></td>{% if vinculo.sensor.tipo_valor == 'booleano' or vinculo.sensor.tipo_valor == 'texto' %}<td class="border border-borda-sutil p-2 text-texto-legenda">Sem tolerância</td>{% else %}<td class="border border-borda-sutil p-2"><select name="tipo_tolerancia_{{ vinculo.id }}"><option value="absoluta" {% if vinculo.tipo_tolerancia == 'absoluta' %}selected{% endif %}>Absoluta</option><option value="percentual" {% if vinculo.tipo_tolerancia == 'percentual' %}selected{% endif %}>Percentual</option></select><input class="ml-1 w-20 border" name="tolerancia_{{ vinculo.id }}" value="{{ vinculo.tolerancia|unlocalize }}" type="number" min="0" step="any"></td>{% endif %}<td class="border border-borda-sutil p-2"><button formaction="{% url 'telemetria_configurar_recurso' recurso_editando.id %}" formmethod="post" name="acao" value="excluir_vinculo" onclick="this.form.querySelector('[name=vinculo_id]').value='{{ vinculo.id }}'" class="text-erro-base">Desvincular</button></td></tr>{% empty %}<tr><td class="p-3" colspan="6">Nenhum sensor vinculado.</td></tr>{% endfor %}
+          </tbody></table>
+          <input type="hidden" name="vinculo_id" value="">
+          {% if sensores_recurso %}<button class="botao-primario mt-3 h-10 whitespace-nowrap px-4 text-sm"><i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i>Salvar vínculos</button>{% endif %}
+        </form>
+        <div class="mt-6">
+          <label class="font-bold text-informacao-base">Cache carregado pelo coletor</label>
+          {% if cache_telemetria_json %}
+          <pre class="mt-2 overflow-x-auto rounded border border-borda-sutil bg-superficie-afundada p-3 text-xs">{{ cache_telemetria_json }}</pre>
+          {% else %}
+          <div class="mt-2 rounded border border-atencao-borda bg-atencao-sutil p-3 text-sm text-atencao-base">Cache ainda não carregado. A coleta deve estar ativa e o coordenador em execução.</div>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="rounded border border-atencao-borda bg-atencao-sutil p-3 text-sm text-atencao-base">Salve o recurso antes de configurar a telemetria.</div>
+        {% endif %}
+      </div>
+
+      <!-- ========== ABA PARADA AUTOMÁTICA ========== -->
+      <div id="tab-parada-automatica" class="tab-content hidden block">
+        {% if recurso_editando %}
+        <div class="rounded border border-informacao-borda bg-informacao-sutil p-3 text-sm text-texto-primario">
+          <p><strong>Condição:</strong> testa o valor atual de um sensor vinculado, como <em>temperatura maior que 80</em>.</p>
+          <p class="mt-1"><strong>Grupo:</strong> combina condições ou outros grupos. Use <strong>E</strong> quando todas devem ser verdadeiras, <strong>OU</strong> quando basta uma e <strong>NÃO</strong> para inverter um único resultado.</p>
+        </div>
+        <form id="form-regra-parada-automatica" method="post" action="{% url 'telemetria_configurar_recurso' recurso_editando.id %}" class="mt-3 space-y-3">
+          {% csrf_token %}
+          <input type="hidden" name="acao" value="regra_parada">
+          {{ regra_parada_automatica_form.regra }}
+          <label class="inline-flex items-center gap-2 font-semibold">{{ regra_parada_automatica_form.ativa }} {{ regra_parada_automatica_form.ativa.label }}</label>
+          <p id="erro-regra-parada-automatica" class="hidden rounded border border-erro-borda bg-erro-base px-3 py-2 text-sm text-texto-sobre-marca"></p>
+          <div id="editor-regra-parada-automatica" class="space-y-3"></div>
+          {# Tradução da árvore para português ao vivo: o rótulo é fixo e o texto acompanha a edição em atualizarPrevia(). #}
+          <p id="formula-regra-parada-automatica" class="rounded border border-borda-sutil bg-superficie-elevada p-3 text-sm text-texto-primario">
+            <span class="font-semibold text-informacao-base">PARADO SE:</span>
+            <span id="formula-regra-parada-automatica-texto"></span>
+          </p>
+          <button type="submit" class="botao-primario h-10 whitespace-nowrap px-4 text-sm"><i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i>Salvar regra automática</button>
+        </form>
+        <p class="mt-2 text-xs text-texto-legenda">Resultado verdadeiro significa <strong>PARADO</strong>; falso significa <strong>FUNCIONANDO</strong>. Somente sensores ativos vinculados a este recurso podem ser usados.</p>
+        <div class="mt-4">
+          <p class="font-semibold text-informacao-base">JSON que será salvo <span class="text-xs font-normal text-texto-legenda">(somente leitura)</span></p>
+          <pre id="previa-json-regra-parada-automatica" class="mt-2 max-h-72 overflow-auto rounded border border-borda-sutil bg-superficie-afundada p-3 text-xs text-texto-primario"></pre>
+        </div>
+        {{ sensores_regra_parada|json_script:"sensores-regra-parada-automatica" }}
+        {{ regra_parada_automatica_form.instance.regra|json_script:"regra-parada-automatica-inicial" }}
+        {% else %}
+        <div class="rounded border border-atencao-borda bg-atencao-sutil p-3 text-sm text-atencao-base">Salve o recurso antes de configurar a parada automática.</div>
+        {% endif %}
+      </div>
+
+      <div id="tab-taras" class="tab-content hidden block">
+          {% if recurso_editando %}
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <!-- Vincular Nova Tara -->
+              <div class="bg-superficie-afundada p-4 border rounded shadow-sm">
+                  <h5 class="font-bold block mb-3 text-sm">Vincular Tara</h5>
+                  <form method="post" action="{% url 'lista_recursos' %}" class="flex flex-col gap-3">
+                      {% csrf_token %}
+                      <input type="hidden" name="recurso_id" value="{{ recurso_editando.id }}">
+                      <div>
+                          <select name="tara_id" class="border w-full p-2 rounded bg-superficie-elevada text-sm" required>
+                              <option value="">Selecione uma tara...</option>
+                              {% for t in taras_disponiveis %}
+                                  <option value="{{ t.id }}">{{ t.tara }} ({{ t.peso }} kg)</option>
+                              {% endfor %}
+                          </select>
+                      </div>
+                      <button type="submit" name="vincular_tara" class="botao-primario w-full py-2">
+                          Vincular Tara
+                      </button>
+                  </form>
+              </div>
+
+              <!-- Listagem de Vinculadas -->
+              <div class="overflow-hidden">
+                  <h6 class="font-bold text-informacao-base mt-0 mb-4">Taras Vinculadas a este Recurso</h6>
+                  <table class="w-full text-left text-sm border-collapse border border-borda-sutil">
+                      <thead class="bg-superficie-afundada text-texto-primario">
+                          <tr>
+                              <th class="border border-borda-sutil p-2 border border-borda-padrao">Tara</th>
+                              <th class="border border-borda-sutil p-2 border border-borda-padrao text-right">Peso (kg)</th>
+                              <th class="border border-borda-sutil p-2 border border-borda-padrao text-center">Ação</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {% for t in taras_vinculadas %}
+                          <tr class="hover:bg-interacao-hover transition-colors">
+                              <td class="border border-borda-sutil p-2 border border-borda-sutil font-medium text-texto-primario">{{ t.tara }}</td>
+                              <td class="border border-borda-sutil p-2 border border-borda-sutil text-right font-mono text-texto-secundario">{{ t.peso }}</td>
+                              <td class="border border-borda-sutil p-2 border border-borda-sutil text-center">
+                                  <form method="post" action="{% url 'lista_recursos' %}" onsubmit="return confirm('Desvincular esta tara?')">
+                                      {% csrf_token %}
+                                      <input type="hidden" name="recurso_id" value="{{ recurso_editando.id }}">
+                                      <input type="hidden" name="tara_id" value="{{ t.id }}">
+                                      <button type="submit" name="desvincular_tara" class="text-erro-base hover:text-erro-base font-bold px-2 py-1 rounded hover:bg-erro-sutil transition-colors">
+                                          Desvincular
+                                      </button>
+                                  </form>
+                              </td>
+                          </tr>
+          {% empty %}
+                          <tr>
+                              <td colspan="3" class="p-6 text-center text-texto-legenda italic">Nenhuma tara vinculada a este recurso.</td>
+                          </tr>
+                          {% endfor %}
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+
+          <!-- BOTÕES DE AÇÃO NA ABA TARAS (ABAIXO DAS VINCULAÇÕES) -->
+          <div class="mt-8 flex gap-2 border-t pt-4">
+              <button type="button" onclick="document.getElementById('form-recurso').submit()"
+                      class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                  <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i>
+                  {% if recurso_editando %}Atualizar{% else %}Salvar{% endif %}
+              </button>
+
+              <a href="{% url 'lista_recursos' %}"
+                 class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">Cancelar</a>
+          </div>
+
+          {% else %}
+          <div class="bg-atencao-sutil border-l-4 border-atencao-borda p-4">
+            <p class="text-atencao-base">Salve o recurso primeiro para poder vincular taras.</p>
+          </div>
+          {% endif %}
+      </div>
+
+      <!-- ========== ABA MOTIVOS DE PARADA (FORA DO FORM-RECURSO) ========== -->
+      <div id="tab-motivos-abrangencia" class="tab-content hidden block">
+          {% if recurso_editando %}
+          <form method="post" action="{% url 'lista_recursos' %}" class="mb-3 flex justify-end">
+              {% csrf_token %}
+              <input type="hidden" name="recurso_id" value="{{ recurso_editando.id }}">
+              <button type="submit" name="sincronizar_motivos_abrangencia" class="botao-secundario px-4 font-bold" onclick="return confirm('Remover, em todos os recursos, os vínculos de motivos que não estão mais ativos ou vinculados no ERP?')">
+                  Sincronizar motivos ERP
+              </button>
+          </form>
+          <div class="mb-6 rounded border border-atencao-borda bg-atencao-sutil p-4">
+              <form method="post" action="{% url 'lista_recursos' %}" class="flex flex-col gap-3 xl:flex-row xl:items-end">
+                  {% csrf_token %}
+                  <input type="hidden" name="recurso_id" value="{{ recurso_editando.id }}">
+                  <div class="xl:w-48">
+                      <label for="selectEmpresaOrigemMotivos" class="mb-1 block text-sm font-medium text-texto-secundario">Copiar de outro Recurso</label>
+                      <select id="selectEmpresaOrigemMotivos" class="border w-full p-2 rounded bg-superficie-elevada text-sm" required>
+                          <option value="">Empresa de origem...</option>
+                          {% for empresa in empresas_ativas %}
+                          <option value="{{ empresa.id }}">{{ empresa.codemp }} - {{ empresa.nome }}</option>
+                          {% endfor %}
+                      </select>
+                  </div>
+                  <div class="xl:flex-1">
+                      <label for="selectRecursoOrigemMotivos" class="mb-1 block text-sm font-medium text-texto-secundario">Recurso de origem</label>
+                      <select id="selectRecursoOrigemMotivos" name="recurso_origem_id" class="border w-full p-2 rounded bg-superficie-elevada text-sm disabled:bg-superficie-afundada" required disabled>
+                          <option value="">Selecione primeiro a empresa...</option>
+                      </select>
+                  </div>
+                  <button id="btnClonarMotivos" type="submit" name="clonar_motivos_abrangencia" class="px-6 py-2 bg-atencao-sutil text-texto-primario rounded shadow font-bold hover:opacity-90 transition-colors disabled:bg-interacao-desabilitado disabled:text-texto-desabilitado disabled:cursor-not-allowed" disabled>
+                      Copiar Motivos
+                  </button>
+              </form>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div class="bg-superficie-afundada p-4 border rounded shadow-sm">
+                  <h5 class="font-bold block mb-3 text-sm">Vincular Motivo de Parada</h5>
+                  <p class="mb-3 text-sm text-texto-legenda">Empresa ERP: <strong>{{ codemp_motivos }}</strong></p>
+
+                  {% if erro_motivos_erp %}
+                  <div class="rounded border border-erro-borda bg-erro-sutil px-3 py-2 text-sm text-erro-base">
+                      {{ erro_motivos_erp }}
+                  </div>
+                  {% elif grupos_erp %}
+                  <form method="post" action="{% url 'lista_recursos' %}" class="flex flex-col gap-3">
+                      {% csrf_token %}
+                      <input type="hidden" name="recurso_id" value="{{ recurso_editando.id }}">
+                      <label for="selectGrupoParada" class="text-sm font-medium text-texto-secundario">Grupo de parada</label>
+                      <select id="selectGrupoParada" name="codgpm" class="border w-full p-2 rounded bg-superficie-elevada text-sm" required>
+                          <option value="">Selecione o grupo...</option>
+                          {% for grupo_erp in grupos_erp %}
+                          <option value="{{ grupo_erp.codgpm }}">{{ grupo_erp.codgpm }} - {{ grupo_erp.desgpm }}</option>
+                          {% endfor %}
+                      </select>
+                      <label for="selectMotivoERP" class="text-sm font-medium text-texto-secundario">Motivo ERP</label>
+                      <select id="selectMotivoERP" name="codmtv" class="border w-full p-2 rounded bg-superficie-elevada text-sm disabled:bg-superficie-afundada" required disabled>
+                          <option value="">Selecione primeiro o grupo...</option>
+                      </select>
+                      <button id="btnVincularMotivo" type="submit" name="vincular_motivo_abrangencia" class="botao-primario w-full py-2" disabled>
+                          Vincular Motivo
+                      </button>
+                  </form>
+                  {% else %}
+                  <p class="text-sm text-texto-legenda">Nenhum grupo de parada ativo com motivos disponível nesta empresa.</p>
+                  {% endif %}
+              </div>
+
+              <div class="overflow-hidden">
+                  <h6 class="font-bold text-informacao-base mt-0 mb-4">Motivos Vinculados a este Recurso</h6>
+                  <table class="w-full text-left text-sm border-collapse border border-borda-sutil">
+                      <thead class="bg-superficie-afundada text-texto-primario">
+                          <tr>
+                              <th class="border border-borda-sutil p-2 border border-borda-padrao">Grupo</th>
+                              <th class="border border-borda-sutil p-2 border border-borda-padrao">Cód. ERP</th>
+                              <th class="border border-borda-sutil p-2 border border-borda-padrao">Motivo</th>
+                              <th class="border border-borda-sutil p-2 border border-borda-padrao text-center">Ação</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {% for motivo in motivos_vinculados %}
+                          <tr class="hover:bg-interacao-hover transition-colors">
+                              <td class="border border-borda-sutil p-2 border border-borda-sutil"><span class="font-mono">{{ motivo.codgpm }}</span>{% if motivo.desgpm_erp %} - {{ motivo.desgpm_erp }}{% endif %}</td>
+                              <td class="border border-borda-sutil p-2 border border-borda-sutil font-mono">{{ motivo.codmtv }}</td>
+                              <td class="border border-borda-sutil p-2 border border-borda-sutil">{{ motivo.desmtv_erp|default:"-" }}</td>
+                              <td class="border border-borda-sutil p-2 border border-borda-sutil text-center">
+                                  <form method="post" action="{% url 'lista_recursos' %}" onsubmit="return confirm('Desvincular este motivo de parada?')">
+                                      {% csrf_token %}
+                                      <input type="hidden" name="recurso_id" value="{{ recurso_editando.id }}">
+                                      <input type="hidden" name="motivo_id" value="{{ motivo.id }}">
+                                      <button type="submit" name="desvincular_motivo_abrangencia" class="text-erro-base hover:text-erro-base font-bold px-2 py-1 rounded hover:bg-erro-sutil transition-colors">
+                                          Desvincular
+                                      </button>
+                                  </form>
+                              </td>
+                          </tr>
+                          {% empty %}
+                          <tr>
+                              <td colspan="4" class="p-6 text-center text-texto-legenda italic">Nenhum motivo de parada vinculado a este recurso.</td>
+                          </tr>
+                          {% endfor %}
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+          {% else %}
+          <div class="bg-atencao-sutil border-l-4 border-atencao-borda p-4">
+              <p class="text-atencao-base">Salve o recurso primeiro para poder vincular motivos de parada.</p>
+          </div>
+          {% endif %}
+      </div>
+
+      <div class="pb-12"></div>
+    </div>
+
+{% endif %}
+
+</div>
+
+
+<!-- ======================== -->
+<!-- SCRIPTS ORIGINAIS (SEM ALTERAR) -->
+<!-- ======================== -->
+
+<script>
+/* --- SCRIPTS ORIGINAIS, NÃO ALTERADOS --- */
+document.addEventListener('DOMContentLoaded', async () => {
+  const filialSel = document.getElementById('id_filial');
+  const depSel = document.getElementById('id_departamento');
+  const setorSel = document.getElementById('id_setor');
+  const centroSel = document.getElementById('id_centro_recurso');
+
+  const depValue = depSel.dataset.selected;
+  const setorValue = setorSel.dataset.selected;
+
+  // Opção construída por nós de DOM (textContent): descricao/nome vindos do
+  // cadastro nunca são interpretados como HTML — evita XSS armazenado.
+  function opcaoSegura(valor, texto, selecionada = false) {
+    const opt = document.createElement('option');
+    opt.value = valor;
+    opt.textContent = texto;
+    if (selecionada) opt.selected = true;
+    return opt;
+  }
+
+  async function carregarDepartamentos(filial_id, pre=false) {
+    if (!filial_id) { depSel.replaceChildren(opcaoSegura('', 'Selecione...')); return; }
+    const resp = await fetch(`/ajax/departamentos/?filial_id=${filial_id}`);
+    const data = await resp.json();
+    depSel.replaceChildren(opcaoSegura('', 'Selecione...'));
+    data.forEach(d => depSel.appendChild(opcaoSegura(d.id, d.descricao, pre && d.id==depValue)));
+  }
+
+  async function carregarSetores(dep_id, pre=false) {
+    if (!dep_id) { setorSel.replaceChildren(opcaoSegura('', 'Selecione...')); return; }
+    const resp = await fetch(`/ajax/setores/?departamento_id=${dep_id}`);
+    const data = await resp.json();
+    setorSel.replaceChildren(opcaoSegura('', 'Selecione...'));
+    data.forEach(s => setorSel.appendChild(opcaoSegura(s.id, s.descricao, pre && s.id==setorValue)));
+  }
+
+  filialSel.addEventListener('change', async () => {
+    await carregarDepartamentos(filialSel.value);
+    setorSel.replaceChildren(opcaoSegura('', 'Selecione...'));
+    centroSel.replaceChildren(opcaoSegura('', 'Selecione...'));
+  });
+
+  depSel.addEventListener('change', async () => {
+    await carregarSetores(depSel.value);
+    centroSel.replaceChildren(opcaoSegura('', 'Selecione...'));
+  });
+
+  setorSel.addEventListener('change', async () => {
+    const resp = await fetch(`/ajax/centros/?setor_id=${setorSel.value}`);
+    const data = await resp.json();
+    centroSel.replaceChildren(opcaoSegura('', 'Selecione...'));
+    data.forEach(c => centroSel.appendChild(opcaoSegura(c.id, c.descricao)));
+  });
+
+  /* edição */
+  if (filialSel.dataset.selected) {
+    await carregarDepartamentos(filialSel.dataset.selected, true);
+    await carregarSetores(depValue, true);
+
+    if (setorValue) {
+      const resp = await fetch(`/ajax/centros/?setor_id=${setorValue}`);
+      const data = await resp.json();
+      const centroSelecionado = "{{ recurso_editando.centro_recurso.id|default:'' }}";
+      centroSel.replaceChildren(opcaoSegura('', 'Selecione...'));
+      data.forEach(c => {
+        const selected = c.id == centroSelecionado;
+        centroSel.appendChild(opcaoSegura(c.id, c.descricao, selected));
+      });
+    }
+  }
+
+  if (document.getElementById('form-recurso').dataset.recursoBloqueado === 'true') {
+    const bloqueados = [
+      filialSel, depSel, setorSel, centroSel
+    ];
+    bloqueados.forEach(el => {
+      el.disabled = true;
+      el.classList.add('pointer-events-none', 'bg-superficie-afundada');
+    });
+
+    // BLOQUEIA DESCRIÇÃO (faltava)
+    const desc = document.getElementById("id_descricao");
+    if (desc) {
+        desc.readOnly = true;
+        desc.classList.add('bg-superficie-afundada');
+    }
+  }
+
+
+});
+</script>
+
+<script>
+    /* Tabs Tailwind simples */
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    function openTab(tabId) {
+        // Controle de visibilidade dos botões globais do formulário
+        const globalButtons = document.getElementById('recurso-form-buttons');
+        if (globalButtons) {
+            if (tabId === 'tab-taras' || tabId === 'tab-motivos-abrangencia' || tabId === 'tab-telemetria' || tabId === 'tab-parada-automatica') {
+                globalButtons.classList.add('hidden');
+            } else {
+                globalButtons.classList.remove('hidden');
+            }
+        }
+
+        tabBtns.forEach(b => {
+            b.classList.remove('bg-superficie-elevada', 'font-semibold');
+            b.classList.add('bg-superficie-afundada');
+        });
+
+        const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
+        if (activeBtn) {
+            activeBtn.classList.remove('bg-superficie-afundada');
+            activeBtn.classList.add('bg-superficie-elevada', 'font-semibold');
+        }
+
+        tabContents.forEach(c => {
+            c.classList.add('hidden');
+            c.classList.remove('block');
+        });
+        const activeContent = document.getElementById(tabId);
+        if (activeContent) {
+            activeContent.classList.remove('hidden');
+            activeContent.classList.add('block');
+        }
+    }
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.dataset.tab;
+            openTab(tabId);
+            // window.location.hash = tabId; // Removido para evitar rolagem automática
+        });
+    });
+
+    // Abrir aba via hash na URL
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+        openTab(hash);
+    }
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const editor = document.getElementById('editor-regra-parada-automatica');
+    const form = document.getElementById('form-regra-parada-automatica');
+    const campoRegra = document.getElementById('id_regra');
+    const erro = document.getElementById('erro-regra-parada-automatica');
+    const dadosSensores = document.getElementById('sensores-regra-parada-automatica');
+    const regraInicial = document.getElementById('regra-parada-automatica-inicial');
+    const previaJson = document.getElementById('previa-json-regra-parada-automatica');
+    const campoAtiva = document.getElementById('id_ativa');
+    if (!editor || !form || !campoRegra || !dadosSensores || !regraInicial || !previaJson) return;
+
+    const sensores = JSON.parse(dadosSensores.textContent || '[]').map(item => ({
+        chave: item.sensor__chave_origem,
+        nome: item.sensor__nome,
+        tipo: item.sensor__tipo_valor,
+    }));
+    const sensoresPorChave = Object.fromEntries(sensores.map(sensor => [sensor.chave, sensor]));
+    const comparacoes = [
+        ['igual', 'Igual'], ['diferente', 'Diferente'], ['maior', 'Maior'],
+        ['maior_ou_igual', 'Maior ou igual'], ['menor', 'Menor'], ['menor_ou_igual', 'Menor ou igual'],
+    ];
+
+    function novoGrupo() { return { tipo: 'grupo', operador: 'E', itens: [] }; }
+    function novaCondicao() {
+        return { tipo: 'condicao', sensor: sensores[0]?.chave || '', comparacao: 'igual', valor: '' };
+    }
+    function normalizarNo(no) {
+        if (!no || typeof no !== 'object') return novoGrupo();
+        if (no.tipo === 'condicao') {
+            return {
+                tipo: 'condicao', sensor: String(no.sensor || ''), comparacao: String(no.comparacao || 'igual'),
+                valor: no.valor ?? '',
+            };
+        }
+        return {
+            tipo: 'grupo', operador: ['E', 'OU', 'NAO'].includes(no.operador) ? no.operador : 'E',
+            itens: Array.isArray(no.itens) ? no.itens.map(normalizarNo) : [],
+        };
+    }
+    let regra = normalizarNo(JSON.parse(regraInicial.textContent || '{}'));
+
+    function botao(texto, classe, acao, icone = null, titulo = null) {
+        const botao = document.createElement('button');
+        botao.type = 'button';
+        botao.className = `rounded px-2 py-1 text-xs font-semibold ${classe}`;
+        if (icone) {
+            botao.innerHTML = `<i data-lucide="${icone}" aria-hidden="true"></i>`;
+            botao.setAttribute('aria-label', texto);
+            botao.title = texto;
+        } else {
+            botao.textContent = texto;
+            // Título explícito só faz sentido quando difere do rótulo visível.
+            if (titulo) botao.title = titulo;
+        }
+        botao.addEventListener('click', acao);
+        return botao;
+    }
+    function rotulo(texto, campo) {
+        const label = document.createElement('label');
+        label.className = 'grid gap-1 text-xs font-semibold';
+        label.append(document.createTextNode(texto), campo);
+        return label;
+    }
+    function opcoes(select, itens, valor) {
+        select.replaceChildren();
+        itens.forEach(([chave, texto]) => {
+            const option = new Option(texto, chave, false, chave === valor);
+            select.add(option);
+        });
+    }
+    function mover(itens, indice, direcao) {
+        const destino = indice + direcao;
+        if (destino < 0 || destino >= itens.length) return;
+        [itens[indice], itens[destino]] = [itens[destino], itens[indice]];
+        renderizar();
+    }
+    function adicionarAoGrupo(grupo, item) {
+        if (grupo.operador === 'NAO' && grupo.itens.length) {
+            mostrarErro('O grupo NÃO aceita apenas um item.');
+            return;
+        }
+        grupo.itens.push(item);
+        renderizar();
+    }
+    function mostrarErro(mensagem) {
+        erro.textContent = mensagem;
+        erro.classList.remove('hidden');
+    }
+    function limparErro() {
+        erro.textContent = '';
+        erro.classList.add('hidden');
+    }
+    function renderizarConector(operador) {
+        // Chip entre itens irmãos que diz qual juntor liga aquele par — o
+        // pedido central da usabilidade: ler a regra como uma frase.
+        const conector = document.createElement('div');
+        conector.className = 'flex items-center gap-2';
+        const chip = document.createElement('span');
+        chip.className = 'rounded-full border border-informacao-borda bg-superficie-elevada px-3 py-0.5 text-xs font-bold text-informacao-base';
+        if (operador === 'NAO') {
+            // NÃO não liga dois itens — ele vira o único seguinte, então
+            // aparece sem as linhas laterais que marcam um "entre".
+            chip.textContent = 'NÃO · inverte o resultado';
+            conector.append(chip);
+            return conector;
+        }
+        chip.textContent = operador === 'OU' ? 'OU · basta uma ocorrer' : 'E · todas precisam ocorrer';
+        const linhaEsquerda = document.createElement('div');
+        linhaEsquerda.className = 'h-px flex-1 bg-informacao-borda';
+        const linhaDireita = document.createElement('div');
+        linhaDireita.className = 'h-px flex-1 bg-informacao-borda';
+        conector.append(linhaEsquerda, chip, linhaDireita);
+        return conector;
+    }
+    function formulaCondicao(condicao) {
+        const sensor = sensoresPorChave[condicao.sensor];
+        const nomeSensor = sensor ? sensor.nome || sensor.chave : '— selecione um sensor —';
+        const palavras = {
+            igual: 'igual a',
+            diferente: 'diferente de',
+            maior: 'maior que',
+            maior_ou_igual: 'maior ou igual a',
+            menor: 'menor que',
+            menor_ou_igual: 'menor ou igual a',
+        };
+        const palavra = palavras[condicao.comparacao] ?? 'igual a';
+        // Booleano troca true/false por verdadeiro/falso, como o select
+        // apresenta; para os demais o valor digitado entra cru.
+        const valor = sensor?.tipo === 'booleano'
+            ? (String(condicao.valor) === 'false' ? 'falso' : 'verdadeiro')
+            : String(condicao.valor ?? '');
+        return `${nomeSensor} ${palavra} ${valor}`.trimEnd();
+    }
+    function formulaParaNo(no, raiz = false) {
+        if (no.tipo === 'condicao') return formulaCondicao(no);
+        if (!no.itens.length) return '(vazio)';
+        if (no.operador === 'NAO') return `NÃO (${formulaParaNo(no.itens[0], true)})`;
+        const juntor = no.operador === 'OU' ? ' OU ' : ' E ';
+        const texto = no.itens.map(item => formulaParaNo(item)).join(juntor);
+        // Parênteses só nos grupos aninhados: a raiz já é a frase inteira.
+        return raiz ? texto : `(${texto})`;
+    }
+    function renderizarCondicao(condicao, itens, indice) {
+        const linha = document.createElement('div');
+        linha.className = 'grid grid-cols-1 gap-2 rounded border border-borda-sutil bg-superficie-afundada p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]';
+
+        const sensor = document.createElement('select');
+        sensor.className = 'rounded border p-1';
+        sensor.append(new Option('Selecione...', ''));
+        sensores.forEach(item => sensor.append(new Option(`${item.chave} - ${item.nome}`, item.chave, false, item.chave === condicao.sensor)));
+        sensor.addEventListener('change', () => {
+            condicao.sensor = sensor.value;
+            condicao.comparacao = 'igual';
+            condicao.valor = '';
+            renderizar();
+        });
+
+        const comparacao = document.createElement('select');
+        comparacao.className = 'rounded border p-1';
+        const tipo = sensoresPorChave[condicao.sensor]?.tipo;
+        const opcoesCompativeis = ['decimal', 'inteiro'].includes(tipo)
+            ? comparacoes : comparacoes.slice(0, 2);
+        if (!opcoesCompativeis.some(([chave]) => chave === condicao.comparacao)) condicao.comparacao = 'igual';
+        opcoes(comparacao, opcoesCompativeis, condicao.comparacao);
+        comparacao.addEventListener('change', () => {
+            condicao.comparacao = comparacao.value;
+            atualizarPrevia();
+        });
+
+        let valor;
+        if (tipo === 'booleano') {
+            valor = document.createElement('select');
+            valor.className = 'rounded border p-1';
+            opcoes(valor, [['true', 'Verdadeiro'], ['false', 'Falso']], String(condicao.valor));
+        } else {
+            valor = document.createElement('input');
+            valor.className = 'rounded border p-1';
+            valor.type = ['decimal', 'inteiro'].includes(tipo) ? 'number' : 'text';
+            valor.step = tipo === 'decimal' ? 'any' : '1';
+            valor.value = condicao.valor;
+            valor.placeholder = 'Valor esperado';
+        }
+        valor.addEventListener('input', () => {
+            condicao.valor = valor.value;
+            atualizarPrevia();
+        });
+        valor.addEventListener('change', () => {
+            condicao.valor = valor.value;
+            atualizarPrevia();
+        });
+
+        const acoes = document.createElement('div');
+        acoes.className = 'flex items-end gap-1';
+        acoes.append(
+            botao('Mover acima', 'bg-superficie-afundada text-texto-primario', () => mover(itens, indice, -1), 'arrow-up'),
+            botao('Mover abaixo', 'bg-superficie-afundada text-texto-primario', () => mover(itens, indice, 1), 'arrow-down'),
+            botao('Remover', 'bg-erro-base text-texto-sobre-marca', () => { itens.splice(indice, 1); renderizar(); }),
+        );
+        linha.append(rotulo('Sensor', sensor), rotulo('Comparação', comparacao), rotulo('Valor esperado', valor), acoes);
+        return linha;
+    }
+    function renderizarGrupo(grupo, itensPai, indicePai, raiz = false) {
+        const caixa = document.createElement('div');
+        caixa.className = 'space-y-2 rounded border border-informacao-borda bg-informacao-sutil p-3';
+        const topo = document.createElement('div');
+        topo.className = 'flex flex-wrap items-center gap-2';
+        const operador = document.createElement('select');
+        operador.className = 'rounded border border-informacao-borda bg-superficie-elevada p-1 text-sm font-semibold';
+        opcoes(operador, [['E', 'E (todas)'], ['OU', 'OU (qualquer)'], ['NAO', 'NÃO']], grupo.operador);
+        operador.addEventListener('change', () => {
+            grupo.operador = operador.value;
+            if (grupo.operador === 'NAO' && grupo.itens.length > 1) grupo.itens = [grupo.itens[0]];
+            renderizar();
+        });
+        topo.append(document.createTextNode(raiz ? 'Regra:' : 'Grupo:'), operador);
+        // Legenda que acompanha o operador escolhido: diz o que o quadro faz
+        // sem exigir que o usuário decore a semântica de E/OU/NÃO.
+        const legendaOperador = document.createElement('span');
+        legendaOperador.className = 'text-xs text-texto-legenda';
+        const legendasOperador = {
+            E: 'todos os itens deste quadro juntos',
+            OU: 'qualquer item deste quadro basta',
+            NAO: 'inverte o único item deste quadro',
+        };
+        const atualizarLegendaOperador = () => {
+            legendaOperador.textContent = legendasOperador[operador.value] ?? '';
+        };
+        atualizarLegendaOperador();
+        operador.addEventListener('change', atualizarLegendaOperador);
+        topo.append(legendaOperador);
+        topo.append(
+            // Título de cada botão deixa explícito que o item nasce DENTRO do
+            // quadro em que o botão está — era a dúvida central do usuário.
+            botao('+ Condição', 'botao-primario', () => adicionarAoGrupo(grupo, novaCondicao()), null, 'Adiciona uma condição dentro DESTE grupo'),
+            botao('+ Grupo', 'botao-primario', () => adicionarAoGrupo(grupo, novoGrupo()), null, 'Adiciona um subgrupo dentro DESTE grupo'),
+        );
+        if (!raiz) {
+            topo.append(
+                botao('Mover acima', 'bg-superficie-afundada text-texto-primario', () => mover(itensPai, indicePai, -1), 'arrow-up'),
+                botao('Mover abaixo', 'bg-superficie-afundada text-texto-primario', () => mover(itensPai, indicePai, 1), 'arrow-down'),
+                botao('Remover grupo', 'bg-erro-base text-texto-sobre-marca', () => { itensPai.splice(indicePai, 1); renderizar(); }),
+            );
+        }
+        caixa.append(topo);
+        if (!grupo.itens.length) {
+            const vazio = document.createElement('p');
+            vazio.className = 'text-sm text-texto-legenda';
+            vazio.textContent = 'Este grupo está vazio. Use os botões acima para adicionar uma condição ou um subgrupo dentro dele.';
+            caixa.append(vazio);
+        }
+        grupo.itens.forEach((item, indice) => {
+            // Conector entre irmãos: repete o operador do quadro entre os
+            // itens, que é como a regra é lida — "condição E condição OU
+            // grupo" fica visível sem precisar interpretar o select do topo.
+            // No NÃO, o chip vem colado antes do único item que ele inverte.
+            if (indice > 0 || grupo.operador === 'NAO') caixa.append(renderizarConector(grupo.operador));
+            caixa.append(item.tipo === 'grupo'
+                ? renderizarGrupo(item, grupo.itens, indice)
+                : renderizarCondicao(item, grupo.itens, indice));
+        });
+        return caixa;
+    }
+    function renderizar() {
+        limparErro();
+        editor.replaceChildren(renderizarGrupo(regra, null, null, true));
+        window.lucide?.createIcons({ root: editor });
+        atualizarPrevia();
+    }
+    function converterParaJSON(no) {
+        if (no.tipo === 'grupo') return { tipo: 'grupo', operador: no.operador, itens: no.itens.map(converterParaJSON) };
+        const tipo = sensoresPorChave[no.sensor]?.tipo;
+        let valor = no.valor;
+        if (tipo === 'booleano') valor = String(valor) === 'true';
+        if (['decimal', 'inteiro'].includes(tipo) && String(valor).trim() !== '') {
+            const numero = Number(String(valor).replace(',', '.'));
+            valor = Number.isNaN(numero) ? valor : numero;
+        }
+        return { tipo: 'condicao', sensor: no.sensor, comparacao: no.comparacao, valor };
+    }
+    function regraParaSalvar() {
+        if (!campoAtiva?.checked && !regra.itens.length) return {};
+        return converterParaJSON(regra);
+    }
+    function atualizarPrevia() {
+        const json = regraParaSalvar();
+        campoRegra.value = JSON.stringify(json);
+        previaJson.textContent = JSON.stringify(json, null, 2);
+        // Fórmula em português ao lado do JSON bruto: o JSON continua como
+        // referência técnica, a frase é o que o operador julga.
+        const alvoFormula = document.getElementById('formula-regra-parada-automatica-texto');
+        if (alvoFormula) {
+            const vazio = !regra.itens.length;
+            alvoFormula.textContent = vazio
+                ? 'Regra vazia: adicione uma condição ou grupo para começar.'
+                : formulaParaNo(regra, true);
+            // O estado "inativa" não muda a árvore, mas muda o efeito —
+            // por isso entra no texto e não no JSON.
+            if (!campoAtiva?.checked) {
+                alvoFormula.textContent = `(regra inativa) ${alvoFormula.textContent}`;
+            }
+        }
+    }
+    function validarCliente(no, caminho = 'Regra') {
+        if (no.tipo === 'grupo') {
+            if (!no.itens.length) return `${caminho} precisa possuir ao menos um item.`;
+            if (no.operador === 'NAO' && no.itens.length !== 1) return `${caminho}: NÃO aceita exatamente um item.`;
+            for (let indice = 0; indice < no.itens.length; indice += 1) {
+                const erroFilho = validarCliente(no.itens[indice], `${caminho}.${indice + 1}`);
+                if (erroFilho) return erroFilho;
+            }
+            return '';
+        }
+        if (!sensoresPorChave[no.sensor]) return `${caminho}: selecione um sensor vinculado.`;
+        if (String(no.valor).trim() === '') return `${caminho}: informe o valor esperado.`;
+        return '';
+    }
+    form.addEventListener('submit', event => {
+        const ativa = campoAtiva?.checked;
+        if (!ativa && !regra.itens.length) {
+            campoRegra.value = '{}';
+            return;
+        }
+        const erroValidacao = validarCliente(regra);
+        if (erroValidacao) {
+            event.preventDefault();
+            mostrarErro(erroValidacao);
+            return;
+        }
+        campoRegra.value = JSON.stringify(regraParaSalvar());
+    });
+    campoAtiva?.addEventListener('change', atualizarPrevia);
+    renderizar();
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const grupo = document.getElementById('selectGrupoParada');
+    const motivo = document.getElementById('selectMotivoERP');
+    const botao = document.getElementById('btnVincularMotivo');
+
+    if (!grupo || !motivo || !botao) {
+        return;
+    }
+
+    const endpoint = "{% url 'motivos_por_grupo_parada' %}";
+    const recursoId = "{{ recurso_editando.id|default:'' }}";
+    let sequenciaConsulta = 0;
+
+    function resetarMotivos(texto) {
+        motivo.replaceChildren(new Option(texto, ''));
+        motivo.disabled = true;
+        botao.disabled = true;
+    }
+
+    grupo.addEventListener('change', async () => {
+        const grupoSelecionado = grupo.value;
+        const consultaAtual = ++sequenciaConsulta;
+
+        if (!grupoSelecionado) {
+            resetarMotivos('Selecione primeiro o grupo...');
+            return;
+        }
+
+        resetarMotivos('Carregando motivos...');
+        try {
+            const parametros = new URLSearchParams({
+                recurso_id: recursoId,
+                codgpm: grupoSelecionado,
+            });
+            const resposta = await fetch(`${endpoint}?${parametros.toString()}`);
+            const dados = await resposta.json();
+
+            if (consultaAtual !== sequenciaConsulta || grupo.value !== grupoSelecionado) {
+                return;
+            }
+
+            if (!resposta.ok) {
+                throw new Error(dados.erro || 'Não foi possível carregar os motivos.');
+            }
+
+            if (!dados.length) {
+                resetarMotivos('Nenhum motivo disponível para este grupo.');
+                return;
+            }
+
+            motivo.replaceChildren(new Option('Selecione um motivo...', ''));
+            dados.forEach(item => {
+                motivo.add(new Option(
+                    `${item.codmtv} - ${item.desmtv}`,
+                    item.codmtv,
+                ));
+            });
+            motivo.disabled = false;
+            botao.disabled = false;
+        } catch (erro) {
+            if (consultaAtual !== sequenciaConsulta || grupo.value !== grupoSelecionado) {
+                return;
+            }
+            resetarMotivos(erro.message || 'Erro ao carregar os motivos.');
+        }
+    });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const empresa = document.getElementById('selectEmpresaOrigemMotivos');
+    const recurso = document.getElementById('selectRecursoOrigemMotivos');
+    const botao = document.getElementById('btnClonarMotivos');
+
+    if (!empresa || !recurso || !botao) {
+        return;
+    }
+
+    const endpoint = "{% url 'recursos_ativos_por_empresa' %}";
+    const recursoDestinoId = "{{ recurso_editando.id|default:'' }}";
+    let sequenciaConsulta = 0;
+
+    function resetarRecursos(texto) {
+        recurso.replaceChildren(new Option(texto, ''));
+        recurso.disabled = true;
+        botao.disabled = true;
+    }
+
+    empresa.addEventListener('change', async () => {
+        const empresaSelecionada = empresa.value;
+        const consultaAtual = ++sequenciaConsulta;
+
+        if (!empresaSelecionada) {
+            resetarRecursos('Selecione primeiro a empresa...');
+            return;
+        }
+
+        resetarRecursos('Carregando recursos...');
+        try {
+            const parametros = new URLSearchParams({
+                empresa_id: empresaSelecionada,
+                recurso_destino_id: recursoDestinoId,
+            });
+            const resposta = await fetch(`${endpoint}?${parametros.toString()}`);
+            const dados = await resposta.json();
+
+            if (consultaAtual !== sequenciaConsulta || empresa.value !== empresaSelecionada) {
+                return;
+            }
+
+            if (!resposta.ok) {
+                throw new Error(dados.erro || 'Não foi possível carregar os recursos ativos.');
+            }
+
+            if (!dados.length) {
+                resetarRecursos('Nenhum recurso ativo disponível nesta empresa.');
+                return;
+            }
+
+            recurso.replaceChildren(new Option('Selecione o recurso...', ''));
+            dados.forEach(item => {
+                recurso.add(new Option(`${item.codigo} - ${item.descricao}`, item.id));
+            });
+            recurso.disabled = false;
+            botao.disabled = false;
+        } catch (erro) {
+            if (consultaAtual !== sequenciaConsulta || empresa.value !== empresaSelecionada) {
+                return;
+            }
+            resetarRecursos(erro.message || 'Erro ao carregar os recursos ativos.');
+        }
+    });
+});
+</script>
+
+{% endblock %}

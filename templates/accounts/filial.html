@@ -1,0 +1,311 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Filiais{% endblock %}
+
+{% block content %}
+
+<div class="w-full px-4 mt-4 text-sm text-texto-primario grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- ============================ -->
+    <!-- LISTAGEM -->
+    <!-- ============================ -->
+    <div class="lg:col-span-3 bg-superficie-elevada border border-borda-sutil rounded shadow p-0">
+
+        <div class="bg-superficie-afundada border-b border-borda-sutil p-3">
+            <h5 class="text-lg font-bold">Filiais Cadastradas</h5>
+        </div>
+
+        <div class="p-4">
+
+            <!-- MENSAGENS REMOVIDOS - USANDO PARTIAL SHARED -->
+
+            {% if page_obj %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead class="bg-superficie-afundada text-texto-primario">
+                        <tr>
+                            <th class="border border-borda-sutil p-2">Empresa</th>
+                            <th class="border border-borda-sutil p-2">Código</th>
+                            <th class="border border-borda-sutil p-2">Nome</th>
+                            <th class="border border-borda-sutil p-2">Fantasia</th>
+                            <th class="border border-borda-sutil p-2">CNPJ</th>
+                            <th class="border border-borda-sutil p-2">Status</th>
+                            <th class="border border-borda-sutil p-2 text-center">Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for filial in page_obj %}
+                        <tr class="transition hover:bg-interacao-hover">
+                            <td class="border border-borda-sutil p-2">
+                                {% if filial.empresa %}
+                                    {{ filial.empresa.codemp }}
+                                {% else %}
+                                    <span class="text-texto-legenda">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="border border-borda-sutil p-2">{{ filial.codfil }}</td>
+                            <td class="border border-borda-sutil p-2">{{ filial.nome }}</td>
+                            <td class="border border-borda-sutil p-2">{{ filial.fantasia }}</td>
+                            <td class="border border-borda-sutil p-2">{{ filial.cnpj }}</td>
+
+                            <td class="border border-borda-sutil p-2">
+                                {% if filial.ativa %}
+                                    <span class="bg-sucesso-sutil text-sucesso-base text-xs px-2 py-1 rounded font-bold">Ativa</span>
+                                {% else %}
+                                    <span class="bg-erro-sutil text-erro-base text-xs px-2 py-1 rounded font-bold">Inativa</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="border border-borda-sutil p-2 text-center">
+                                <a href="{% url 'editar_filial' filial.pk %}"
+                                   class="botao-atencao-icone"
+                                   title="Editar">
+                                    <i data-lucide="square-pen" class="" aria-hidden="true"></i>
+                                </a>
+
+                                <form method="post" action="{% url 'excluir_filial' filial.pk %}"
+                                      class="inline-block ml-1"
+                                      onsubmit="return confirm('Tem certeza que deseja excluir esta filial?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="botao-perigo-icone" title="Excluir" aria-label="Excluir">
+                                        <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+
+
+            <!-- Paginação -->
+            <div class="flex justify-center gap-2 mt-4">
+
+                {% if page_obj.has_previous %}
+                    <a href="?page=1" class="botao-secundario text-sm">Primeira</a>
+                    <a href="?page={{ page_obj.previous_page_number }}"
+                       class="botao-secundario text-sm">Anterior</a>
+                {% endif %}
+
+                <span class="botao-primario text-sm">
+                    {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                </span>
+
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}"
+                       class="botao-secundario text-sm">Próxima</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}"
+                       class="botao-secundario text-sm">Última</a>
+                {% endif %}
+
+            </div>
+
+            {% else %}
+                <p class="text-texto-legenda text-sm">Nenhuma filial cadastrada.</p>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <form method="post" class="contents">
+        {% csrf_token %}
+
+        <!-- ============================ -->
+        <!-- FORMULÁRIO -->
+        <!-- ============================ -->
+        <div class="bg-superficie-elevada border border-borda-sutil rounded shadow p-0">
+
+            <div class="bg-superficie-afundada border-b border-borda-sutil p-3">
+                <h5 class="text-lg font-bold">{{ title }}</h5>
+            </div>
+
+            <div class="p-4">
+                {{ form.non_field_errors }}
+
+                <!-- EMPRESA -->
+                <div class="mb-4">
+                    <label class="font-semibold">{{ form.empresa.label }}</label>
+                    {{ form.empresa|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    {% for error in form.empresa.errors %}
+                        <div class="text-erro-base text-xs">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <!-- CODFIL + ATIVA -->
+                <div class="grid grid-cols-2 gap-4">
+
+                    <div>
+                        <label class="font-semibold">{{ form.codfil.label }}</label>
+                        {{ form.codfil|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                        {% for error in form.codfil.errors %}
+                            <div class="text-erro-base text-xs">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="flex items-center gap-2 mt-6">
+                        {{ form.ativa|add_class:"w-4 h-4 border-borda-sutil" }}
+                        <label for="{{ form.ativa.id_for_label }}" class="font-semibold">
+                            {{ form.ativa.label }}
+                        </label>
+                        {% for error in form.ativa.errors %}
+                            <div class="text-erro-base text-xs">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                </div>
+
+                <!-- NOME -->
+                <div class="mt-4">
+                    <label class="font-semibold">{{ form.nome.label }}</label>
+                    {{ form.nome|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    {% for error in form.nome.errors %}
+                        <div class="text-erro-base text-xs">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <!-- FANTASIA + CNPJ -->
+                <div class="grid grid-cols-3 gap-4 mt-4">
+                    <div class="col-span-2">
+                        <label class="font-semibold">{{ form.fantasia.label }}</label>
+                        {{ form.fantasia|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                    <div>
+                        <label class="font-semibold">{{ form.cnpj.label }}</label>
+                        {{ form.cnpj|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                </div>
+
+                {% if filial_editando %}
+                <div class="bg-atencao-sutil border border-atencao-borda text-atencao-base px-3 py-2 rounded mt-4">
+                    Editando filial: <strong>{{ filial_editando.nome }}</strong>
+                </div>
+                {% endif %}
+
+            </div>
+
+        </div>
+
+        <div class="lg:col-span-2 bg-superficie-elevada border border-borda-sutil rounded shadow p-0">
+
+            <div class="bg-superficie-afundada border-b border-borda-sutil p-3">
+                <h5 class="text-lg font-bold">Parâmetros da Filial</h5>
+            </div>
+
+            <div class="p-4">
+                {% if param_form.errors %}
+                <div class="bg-erro-sutil border border-erro-borda text-erro-base px-3 py-2 rounded mb-3 text-xs">
+                    {{ param_form.errors }}
+                </div>
+                {% endif %}
+
+                <div class="mt-1 mb-4 rounded border border-atencao-borda bg-atencao-sutil px-4 py-3 text-texto-primario">
+                    <span class="font-semibold">Atenção:</span>
+                    Os parâmetros informados aqui são críticos e irão afetar o comportamento em outras telas e rotinas imediatamente.
+                </div>
+
+                <h6 class="font-bold text-informacao-base mb-3">Apontamento</h6>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="font-semibold">{{ param_form.tempo_sem_comunicacao_manual.label }}</label>
+                        {{ param_form.tempo_sem_comunicacao_manual|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                    <div>
+                        <label class="font-semibold">{{ param_form.limite_apontamento_minimo.label }}</label>
+                        {{ param_form.limite_apontamento_minimo|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                      <div>
+                          <label class="font-semibold">{{ param_form.limite_apontamento_maximo.label }}</label>
+                          {{ param_form.limite_apontamento_maximo|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                      </div>
+                      <div>
+                          <label class="font-semibold">{{ param_form.codtns.label }}</label>
+                          {{ param_form.codtns|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                      </div>
+                      <div>
+                          <label class="font-semibold">{{ param_form.codtns_area_vermelha.label }}</label>
+                          {{ param_form.codtns_area_vermelha|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                      </div>
+                </div>
+
+                <h6 class="font-bold text-informacao-base mt-6 mb-3">Depósitos</h6>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <div>
+                        <label class="font-semibold">{{ param_form.deposito_apontamento_erp.label }}</label>
+                        {{ param_form.deposito_apontamento_erp|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                    <div>
+                        <label class="font-semibold">{{ param_form.deposito_armazenamento_erp.label }}</label>
+                        {{ param_form.deposito_armazenamento_erp|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                    <div>
+                        <label class="font-semibold">{{ param_form.deposito_armazenamento_wms.label }}</label>
+                        {{ param_form.deposito_armazenamento_wms|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                    <div>
+                        <label class="font-semibold">{{ param_form.deposito_area_vermelha_erp.label }}</label>
+                        {{ param_form.deposito_area_vermelha_erp|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                    <div>
+                        <label class="font-semibold">{{ param_form.deposito_area_vermelha_wms.label }}</label>
+                        {{ param_form.deposito_area_vermelha_wms|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                    <div>
+                        <label class="font-semibold">{{ param_form.produto_refugo.label }}</label>
+                        {{ param_form.produto_refugo|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                    <div>
+                        <label class="font-semibold">{{ param_form.derivacao_refugo.label }}</label>
+                        {{ param_form.derivacao_refugo|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                    <div>
+                        <label class="font-semibold">{{ param_form.origens_area_vermelha.label }}</label>
+                        {{ param_form.origens_area_vermelha|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                    <div>
+                        <label class="font-semibold">{{ param_form.transacoes_saida_consumo_producao.label }}</label>
+                        {{ param_form.transacoes_saida_consumo_producao|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                    <div>
+                        <label class="font-semibold">{{ param_form.transacoes_entrada_producao_consumo.label }}</label>
+                        {{ param_form.transacoes_entrada_producao_consumo|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                    </div>
+                </div>
+
+                <!-- BOTÕES -->
+                <div class="flex justify-between items-center mt-6">
+
+                        <a href="{% url 'home' %}"
+                           class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                            <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i>
+                            Voltar
+                        </a>
+
+                        <div class="flex gap-2">
+
+                            {% if filial_editando %}
+                            <a href="{% url 'lista_filiais' %}"
+                               class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                                Cancelar
+                            </a>
+                            {% endif %}
+
+                            <button type="submit"
+                                    class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                                <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i>
+                                {{ button_text }}
+                            </button>
+
+                        </div>
+
+                </div>
+            </div>
+
+        </div>
+    </form>
+
+</div>
+
+{% endblock %}

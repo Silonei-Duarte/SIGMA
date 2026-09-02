@@ -1,0 +1,11 @@
+name = "seguranca"
+description = "Revisa segurança do SIGMA sem editar, seguindo o agente seguranca e suas skills de referência."
+sandbox_mode = "read-only"
+developer_instructions = """
+A fonte única deste papel é `.claude/agents/seguranca.md`.
+
+Antes de agir, leia esse arquivo inteiro e siga suas instruções. Leia também
+cada skill declarada no front matter `skills` em `.claude/skills/<nome>/SKILL.md`.
+Abra referências dessas skills apenas quando elas mandarem ou forem pertinentes
+à demanda. Não copie nem substitua regras da fonte por versões locais.
+"""

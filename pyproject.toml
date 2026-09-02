@@ -1,0 +1,107 @@
+[project]
+name = "sigma"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "annotated-types>=0.7.0",
+    "anyio>=4.13.0",
+    "channels>=4.3.2",
+    "cookiecutter>=2.7.1",
+    "daphne>=4.2.1",
+    "django>=6.0.3",
+    "django-auth-ldap>=5.3.0",
+    "django-browser-reload>=1.21.0",
+    "django-select2>=8.4.8",
+    "django-tailwind>=4.4.2",
+    "django-widget-tweaks>=1.5.1",
+    "firebase-admin>=7.5.0",
+    "hid>=1.0.9",
+    "ldap3>=2.9.1",
+    "mcp>=1.27.0",
+    "opcua>=0.98.13",
+    "openpyxl>=3.1.5",
+    "oracledb>=3.4.2",
+    "pandas>=3.0.1",
+    "pandas-stubs~=3.0.3",
+    "pandoc>=2.4",
+    "paramiko>=5.0.0",
+    "pip-system-certs>=5.3",
+    "psutil>=7.2.2",
+    "psycopg2>=2.9.11",
+    "psycopg2-binary>=2.9.11",
+    "pyrefly>=0.60.0",
+    "pyserial>=3.5",
+    "python-ldap",
+    "pywin32>=311; sys_platform == 'win32'",
+    "qrcode>=8.2",
+    "reportlab>=4.4.10",
+    "requests>=2.32.5",
+]
+
+[tool.uv]
+environments = [
+    "sys_platform == 'linux'",
+    "sys_platform == 'win32' and python_full_version == '3.14.*'",
+]
+
+[tool.uv.sources]
+python-ldap = [
+    { path = "Uteis_projeto/python_ldap-3.4.5-cp314-cp314-win_amd64.whl", marker = "sys_platform == 'win32'" },
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.0",
+    "pytest>=8.4.0",
+    "pytest-django>=4.11.0",
+    "playwright>=1.62.0",
+    "pytest-playwright>=0.9.0",
+    "django-stubs>=5.2.0",
+    "mypy>=2.3.1",
+    "types-openpyxl>=3.1.5.20260807",
+    "types-qrcode>=8.2.0.20260518",
+    "types-reportlab>=4.5.1.20260807",
+    "types-psycopg2>=2.9.21.20260724",
+    "types-psutil>=7.2.2.20260518",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "DJ"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["SIGMA", "accounts", "producao", "setores", "telemetria", "theme"]
+
+[tool.django-stubs]
+django_settings_module = "SIGMA.settings"
+
+[tool.mypy]
+plugins = ["mypy_django_plugin.main"]
+python_version = "3.14"
+files = ["SIGMA", "accounts", "producao", "setores", "telemetria", "theme"]
+exclude = ["migrations/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "ldap",
+    "django_auth_ldap.*",
+    "django_select2.*",
+    "firebase_admin.*",
+    "channels.*",
+    "hid",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "SIGMA.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+addopts = "--reuse-db"
+markers = [
+    "e2e: teste de navegador executado apenas com --run-e2e",
+]

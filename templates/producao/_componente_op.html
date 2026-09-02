@@ -1,0 +1,60 @@
+{% comment %}
+Uma linha de componente (consumo + lotes baixados + bobinas WMS), reaproveitada
+tanto nas OPs atuais quanto nas próximas. Espera no contexto: c (componente),
+op (OP pai), empresa_id.
+{% endcomment %}
+<div class="mb-4" data-origem="{{ c.ORIGEM_COMPONENTE|default_if_none:'' }}">
+    <div class="flex items-start justify-between gap-2">
+        <span class="text-xs text-texto-primario">{{ c.DESC_COMPONENTE }}</span>
+        <span class="sku-componente shrink-0 rounded-md border border-sucesso-borda bg-sucesso-sutil px-2 py-0.5 font-mono text-sm font-bold tracking-wide text-sucesso-base">{{ c.SKU_COMPONENTE }}</span>
+    </div>
+
+    <div class="mt-1 flex flex-nowrap items-baseline justify-center gap-2 whitespace-nowrap text-center">
+        <div class="flex items-baseline gap-1">
+            <span class="text-xs uppercase tracking-wide text-texto-legenda">Baixada</span>
+            <span class="font-mono text-base font-bold text-texto-primario">{{ c.QTD_UTILIZADO|floatformat:2 }} <span class="text-xs font-normal text-texto-legenda">{{ c.UM_COMPONENTE }}</span></span>
+        </div>
+        <span class="text-texto-legenda">/</span>
+        <div class="flex items-baseline gap-1">
+            <span class="text-xs uppercase tracking-wide text-texto-legenda">Prevista</span>
+            {% if c.QTD_PREVISTO and c.QTD_UTILIZADO is not None and c.QTD_PREVISTO > c.QTD_UTILIZADO %}
+            <button type="button" class="qtd-prevista-clicavel font-mono text-base font-bold text-informacao-base underline decoration-dotted"
+                data-empresa="{{ empresa_id }}" data-numorp="{{ op.OP }}" data-codori="{{ op.ORIGEM }}"
+                data-codcmp="{{ c.COMPONENTE }}" data-codder="{{ c.DER_COMPONENTE|default_if_none:'' }}"
+                data-nome-produto="{{ c.DESC_COMPONENTE }}"
+                title="Ver disponibilidade no WMS">{{ c.QTD_PREVISTO|floatformat:2 }} <span class="text-xs font-normal text-texto-legenda">{{ c.UM_COMPONENTE }}</span></button>
+            {% else %}
+            <span class="font-mono text-base font-bold text-texto-primario">{{ c.QTD_PREVISTO|floatformat:2 }} <span class="text-xs font-normal text-texto-legenda">{{ c.UM_COMPONENTE }}</span></span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mt-1 flex items-center justify-end gap-1 text-xs text-texto-legenda">
+        {% if c.STATUS_CONSUMO == 'critico' %}<i data-lucide="circle-x" class=" text-erro-base" aria-hidden="true"></i>
+        {% elif c.STATUS_CONSUMO == 'atencao' %}<i data-lucide="triangle-alert" class=" text-atencao-base" aria-hidden="true"></i>
+        {% else %}<i data-lucide="circle-check" class=" text-sucesso-base" aria-hidden="true"></i>{% endif %}
+        {{ c.PCTCONSUMO|default_if_none:"0"|floatformat:1 }}% consumido
+    </div>
+    <button type="button"
+        class="trilha-consumo relative mt-1 h-5 w-full overflow-hidden rounded-full bg-superficie-afundada text-left"
+        data-empresa="{{ empresa_id }}" data-numorp="{{ op.OP }}" data-codori="{{ op.ORIGEM }}"
+        data-codcmp="{{ c.COMPONENTE }}" data-codder="{{ c.DER_COMPONENTE|default_if_none:'' }}"
+        aria-label="Ver movimentações de consumo de {{ c.DESC_COMPONENTE }}" aria-expanded="false"
+        title="Ver movimentações de consumo">
+        <span class="absolute inset-y-0 left-0 rounded-full {% if c.STATUS_CONSUMO == 'critico' %}bg-erro-destaque{% elif c.STATUS_CONSUMO == 'atencao' %}bg-atencao-destaque{% else %}bg-sucesso-destaque{% endif %}"
+              data-largura="{{ c.PCT_LARGURA }}"></span>
+        <span class="absolute inset-y-0 left-1/2 z-10 flex -translate-x-1/2 items-center whitespace-nowrap rounded-full bg-superficie-elevada/90 px-3 text-xs font-semibold text-texto-primario shadow-sm">
+            Ver movimentações
+        </span>
+        <span class="absolute inset-y-0 right-0 z-20 flex w-6 items-center justify-center bg-superficie-elevada/25 text-xs text-texto-sobre-marca">
+            <i data-lucide="list" class="h-3 w-3" aria-hidden="true"></i>
+        </span>
+    </button>
+    <div class="historico-lote hidden mt-1 rounded-lg border border-informacao-borda bg-informacao-sutil p-2 text-xs"></div>
+    <div class="bobinas-wms hidden mt-1 rounded-lg border border-informacao-borda bg-informacao-sutil p-2 text-xs"></div>
+</div>
+<script>
+document.querySelectorAll('[data-largura]').forEach(function (elemento) {
+    elemento.style.width = elemento.dataset.largura + '%';
+});
+</script>

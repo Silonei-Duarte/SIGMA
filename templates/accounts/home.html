@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ APPLICATION_NAME }} - Home{% endblock %}
+
+{% block content %}
+<div class="home-hero-dinamico relative flex min-h-0 flex-1 items-center justify-center overflow-hidden px-6 text-center md:px-12">
+  <div class="home-hero-orbe home-hero-orbe-um" aria-hidden="true"></div>
+  <div class="home-hero-orbe home-hero-orbe-dois" aria-hidden="true"></div>
+  <div class="home-hero-orbe home-hero-orbe-tres" aria-hidden="true"></div>
+  <div class="home-hero-facho" aria-hidden="true"></div>
+  <div class="home-hero-particulas" aria-hidden="true"></div>
+  <div class="home-hero-grade" aria-hidden="true"></div>
+  <div class="relative z-10 flex w-full max-w-5xl flex-col items-center">
+    <div class="home-hero-selo relative mb-12 inline-flex items-center gap-2 overflow-hidden rounded-full border border-hero-borda bg-hero-superficie px-4 py-2 text-xs font-semibold text-hero-texto backdrop-blur-xl backdrop-saturate-150">
+      <span class="home-hero-status relative h-2 w-2 rounded-full bg-marca-base"></span>
+      <span class="relative">IPEL · plataforma industrial</span>
+    </div>
+
+    <h1 class="text-7xl font-black leading-none tracking-[-.07em] text-texto-primario md:text-9xl">
+      {{ APPLICATION_NAME }}
+    </h1>
+    <p class="mt-6 max-w-2xl text-lg font-medium leading-relaxed text-texto-secundario md:text-2xl">
+      Sistema IPEL de Gestão, Movimentação e Apontamentos
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+  const fundo = document.querySelector(".home-hero-dinamico");
+  if (!fundo || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const direcoes = [28, 64, 108, 145, 198, 232, 278, 326];
+  let direcaoAtual = 145;
+  const variarGradiente = () => {
+    let proximaDirecao;
+    do {
+      proximaDirecao = direcoes[Math.floor(Math.random() * direcoes.length)];
+    } while (proximaDirecao === direcaoAtual);
+    direcaoAtual = proximaDirecao;
+    fundo.style.setProperty("--home-hero-angulo", `${direcaoAtual}deg`);
+    window.setTimeout(variarGradiente, 9000 + Math.random() * 9000);
+  };
+  window.setTimeout(variarGradiente, 7000 + Math.random() * 5000);
+
+  fundo.querySelector(".home-hero-facho")?.addEventListener("animationiteration", () => {
+    fundo.classList.toggle("home-hero-facho-invertido", Math.random() >= .5);
+  });
+})();
+</script>
+{% endblock %}

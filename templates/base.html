@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+{% load static tailwind_tags %}
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ APPLICATION_NAME }}{% endblock %}</title>
+  <link rel="icon" href="{% static 'images/favicon.ico' %}">
+{% tailwind_css %}
+{% block extra_css %}
+{% endblock %}
+
+<script>
+if (localStorage.getItem("temaSigma") === "escuro") {
+  document.documentElement.classList.add("tema-escuro");
+}
+</script>
+
+</head>
+
+<body class="relative flex min-h-screen flex-col overflow-x-hidden bg-superficie-base text-texto-primario">
+
+{% if request.GET.embutido != '1' %}
+<nav id="navegacao-principal" class="relative bg-superficie-elevada py-0 text-texto-primario shadow-sm max-lg:[&_#menu]:absolute max-lg:[&_#menu]:left-0 max-lg:[&_#menu]:top-full max-lg:[&_#menu]:z-50 max-lg:[&_#menu]:w-full max-lg:[&_#menu]:bg-superficie-elevada lg:[&_#menu]:gap-2 lg:[&_#menu]:bg-transparent [&_.menu-btn]:inline-flex [&_.menu-btn]:min-h-[38px] [&_.menu-btn]:items-center [&_.menu-btn]:bg-transparent [&_.menu-btn]:px-3 [&_.menu-btn]:py-2 [&_.menu-btn]:tracking-wide [&_.menu-btn]:text-texto-primario [&_.menu-btn]:no-underline     [&_.submenu]:z-50 [&_.submenu]:rounded-lg [&_.submenu]:border [&_.submenu]:border-borda-sutil [&_.submenu]:bg-superficie-elevada [&_.submenu]:p-1 [&_.submenu]:text-texto-primario [&_.submenu]:shadow-xl [&_.submenu-lvl2]:z-50 [&_.submenu-lvl2]:rounded-lg [&_.submenu-lvl2]:border [&_.submenu-lvl2]:border-borda-sutil [&_.submenu-lvl2]:bg-superficie-elevada [&_.submenu-lvl2]:p-1 [&_.submenu-lvl2]:text-texto-primario [&_.submenu-lvl2]:shadow-xl [&_.submenu_a]:whitespace-nowrap [&_.submenu_a]:rounded-md [&_.submenu_a]:text-texto-primario [&_.submenu_a:hover]:bg-interacao-hover [&_.submenu_a:active]:bg-interacao-pressionado [&_.submenu-btn]:whitespace-nowrap [&_.submenu-btn]:rounded-md [&_.submenu-btn]:text-texto-primario [&_.submenu-btn]:transition [&_.submenu-btn:hover]:bg-interacao-hover [&_.submenu-btn:active]:bg-interacao-pressionado   lg:[&_.submenu]:w-max lg:[&_.submenu-lvl2]:w-max max-lg:[&_.submenu]:static max-lg:[&_.submenu]:w-full max-lg:[&_.submenu]:bg-superficie-elevada max-lg:[&_.submenu-lvl2]:static max-lg:[&_.submenu-lvl2]:w-full max-lg:[&_.submenu-lvl2]:bg-superficie-elevada">
+  <div class="w-full flex items-center justify-between px-4">
+
+    <!-- ESQUERDA -->
+    <div class="flex items-center gap-6">
+
+      <!-- LOGO -->
+      <a href="/" class="flex items-center">
+        <img src="{% static 'images/logo.png' %}" class="h-10">
+      </a>
+
+      <!-- BOTÃO MOBILE -->
+      <button type="button" id="btnMenu" class="inline-flex items-center justify-center lg:hidden" aria-label="Abrir menu">
+        <i data-lucide="menu" class="h-6 w-6" aria-hidden="true"></i>
+      </button>
+
+      <!-- MENU -->
+      <ul id="menu"
+          class="
+            hidden
+            flex-col gap-2 w-full px-4 py-2
+            bg-superficie-elevada
+
+            lg:static lg:flex lg:flex-row lg:gap-6 lg:w-auto lg:p-0
+          ">
+
+        {% if user.is_authenticated %}
+
+        {% if user.is_staff or perms.accounts.manipular_cadastros %}
+        <li class="relative">
+          <button type="button" class="menu-btn w-full text-left flex items-center gap-1" aria-haspopup="true" aria-expanded="false">
+            Administração <i data-lucide="chevron-down" class="h-4 w-4" aria-hidden="true"></i>
+          </button>
+
+          <ul class="submenu absolute top-full left-0 bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+            <li><a href="{% url 'lista_usuarios' %}" class="block px-3 py-2 hover:bg-interacao-hover">Usuários</a></li>
+            <li><a href="{% url 'grupos_view' %}" class="block px-3 py-2 hover:bg-interacao-hover">Grupos</a></li>
+            <li class="relative">
+              <button type="button" class="submenu-btn w-full text-left flex justify-between px-3 py-2 hover:bg-interacao-hover" aria-haspopup="true" aria-expanded="false">
+                Empresas <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
+              </button>
+              <ul class="submenu-lvl2 absolute top-0 left-full bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+                <li><a href="{% url 'lista_empresas' %}" class="block px-3 py-2 hover:bg-interacao-hover">Empresas</a></li>
+                <li><a href="{% url 'lista_filiais' %}" class="block px-3 py-2 hover:bg-interacao-hover">Filiais</a></li>
+              </ul>
+            </li>
+            {% if perms.accounts.manipular_cadastros or user.is_staff %}
+            <li><a href="{% url 'reprocessar_planejado' %}" class="block px-3 py-2 hover:bg-interacao-hover">Reprocessar Planejado</a></li>
+            {% endif %}
+            {% if perms.accounts.configurar_aplicacao or user.is_staff %}
+            <li>
+              <a href="{% url 'lista_configuracoes' %}" class="block px-3 py-2 hover:bg-interacao-hover">
+                Configurações
+              </a>
+            </li>
+            {% endif %}
+            <li>
+              <a href="{% url 'status_services' %}" class="block px-3 py-2 hover:bg-interacao-hover">
+                Status Services
+              </a>
+            </li>
+          </ul>
+        </li>
+        {% endif %}
+
+        {% if perms.accounts.manipular_cadastros or user.is_staff %}
+        <li class="relative">
+
+          <button type="button" class="menu-btn w-full text-left flex items-center gap-1" aria-haspopup="true" aria-expanded="false">
+            Cadastros <i data-lucide="chevron-down" class="h-4 w-4" aria-hidden="true"></i>
+          </button>
+
+          <ul class="submenu absolute top-full left-0 bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+
+            <li>
+              <a href="{% url 'calendarios' %}" class="block px-3 py-2 hover:bg-interacao-hover">
+                Calendários
+              </a>
+            </li>
+
+            <!-- DEPARTAMENTOS -->
+            <li class="relative">
+              <button type="button" class="submenu-btn w-full text-left flex justify-between px-3 py-2 hover:bg-interacao-hover" aria-haspopup="true" aria-expanded="false">
+                Departamentos <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
+              </button>
+
+              <ul class="submenu-lvl2 absolute top-0 left-full bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+                <li>
+                  <a href="{% url 'lista_departamentos' %}" class="block px-3 py-2 hover:bg-interacao-hover">
+                    Departamentos
+                  </a>
+                </li>
+                <li>
+                  <a href="{% url 'setores' %}" class="block px-3 py-2 hover:bg-interacao-hover">
+                    Setores
+                  </a>
+                </li>
+              </ul>
+            </li>
+
+            <!-- Centros de Recursos -->
+            <li class="relative">
+              <button type="button" class="submenu-btn w-full text-left flex justify-between px-3 py-2 hover:bg-interacao-hover" aria-haspopup="true" aria-expanded="false">
+                Centros de Recursos <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
+              </button>
+
+              <ul class="submenu-lvl2 absolute top-0 left-full bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+                <li>
+                  <a href="{% url 'centros_recursos' %}" class="block px-3 py-2 hover:bg-interacao-hover">
+                    Centros de Recursos
+                  </a>
+                </li>
+                <li class="relative">
+                  <button type="button" class="submenu-btn w-full text-left flex justify-between px-3 py-2 hover:bg-interacao-hover" aria-haspopup="true" aria-expanded="false">
+                    Recursos <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
+                  </button>
+                  <ul class="submenu-lvl2 absolute top-0 left-full bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+                    <li>
+                      <a href="{% url 'lista_recursos' %}" class="block px-3 py-2 hover:bg-interacao-hover">
+                        Recursos
+                      </a>
+                    </li>
+                    <li>
+                      <a href="{% url 'lista_taras' %}" class="block px-3 py-2 hover:bg-interacao-hover">
+                        Taras de Balança
+                      </a>
+                    </li>
+                    <li>
+                      <a href="{% url 'telemetria_sensores' %}" class="block px-3 py-2 hover:bg-interacao-hover">
+                        Cadastro de Sensores
+                      </a>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+
+            <!-- TURNOS -->
+            <li class="relative">
+              <button type="button" class="submenu-btn w-full text-left flex justify-between px-3 py-2 hover:bg-interacao-hover" aria-haspopup="true" aria-expanded="false">
+                Turnos Base <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
+              </button>
+
+              <ul class="submenu-lvl2 absolute top-0 left-full bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+                <li>
+                  <a href="{% url 'turnos_base' %}" class="block px-3 py-2 hover:bg-interacao-hover">
+                    Turnos Base
+                  </a>
+                </li>
+                <li>
+                  <a href="{% url 'lista_turnos' %}" class="block px-3 py-2 hover:bg-interacao-hover">
+                    Turnos de Recursos
+                  </a>
+                </li>
+                <li>
+                  <a href="{% url 'lista_horas_extras' %}" class="block px-3 py-2 hover:bg-interacao-hover">
+                    Horas Extras
+                  </a>
+                </li>
+              </ul>
+            </li>
+
+          </ul>
+        </li>
+        {% endif %}
+
+        <li class="relative">
+          <button type="button" class="menu-btn w-full text-left flex items-center gap-1" aria-haspopup="true" aria-expanded="false">Produção <i data-lucide="chevron-down" class="h-4 w-4" aria-hidden="true"></i></button>
+          <ul class="submenu absolute top-full left-0 bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+
+            {% if perms.producao.pode_acessar_sequenciamento or user.is_staff %}
+            <li><a href="{% url 'sequenciamento' %}" class="block px-3 py-2 hover:bg-interacao-hover">Sequenciamento</a></li>
+            {% endif %}
+
+            <li class="relative">
+              <button type="button" class="submenu-btn w-full text-left flex justify-between px-3 py-2 hover:bg-interacao-hover" aria-haspopup="true" aria-expanded="false">
+                Apontamentos <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
+              </button>
+              <ul class="submenu-lvl2 absolute top-0 left-full bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+                <li><a href="{% url 'apontamento_base' %}" class="block px-3 py-2 hover:bg-interacao-hover">Apontar</a></li>
+                <li class="relative">
+                  <button type="button" class="submenu-btn w-full text-left flex justify-between px-3 py-2 hover:bg-interacao-hover" aria-haspopup="true" aria-expanded="false">
+                    Logs <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
+                  </button>
+                  <ul class="submenu-lvl2 absolute top-0 left-full bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+                    <li><a href="{% url 'logs_apontamentos' %}" class="block px-3 py-2 hover:bg-interacao-hover">Apontamentos</a></li>
+                    <li><a href="{% url 'logs_apontamento_componentes' %}" class="block px-3 py-2 hover:bg-interacao-hover">Apontamento Componentes</a></li>
+                    <li><a href="{% url 'logs_baixa_componentes' %}" class="block px-3 py-2 hover:bg-interacao-hover">Baixa Componentes</a></li>
+                    <li><a href="{% url 'log_tempo_producao' %}" class="block px-3 py-2 hover:bg-interacao-hover">Tempo Produção</a></li>
+                    <li><a href="{% url 'logs_tempos_erp' %}" class="block px-3 py-2 hover:bg-interacao-hover">Tempos ERP</a></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+
+            <li class="relative">
+              <button type="button" class="submenu-btn w-full text-left flex justify-between px-3 py-2 hover:bg-interacao-hover" aria-haspopup="true" aria-expanded="false">
+                Relatórios <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
+              </button>
+              <ul class="submenu-lvl2 absolute top-0 left-full bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+                {% if perms.producao.pode_acessar_relatorios_producao or user.is_staff %}
+                <li><a href="{% url 'status_recursos' %}" class="block px-3 py-2 hover:bg-interacao-hover">Status Recursos</a></li>
+                <li><a href="{% url 'qualidade:rastreamento_lote' %}" target="_blank" rel="noopener" class="block px-3 py-2 hover:bg-interacao-hover">Rastreamento de Lotes</a></li>
+                {% endif %}
+              </ul>
+            </li>
+
+
+          </ul>
+        </li>
+
+        <li class="relative">
+          <button type="button" class="menu-btn w-full text-left flex items-center gap-1" aria-haspopup="true" aria-expanded="false">Setores <i data-lucide="chevron-down" class="h-4 w-4" aria-hidden="true"></i></button>
+
+          <ul class="submenu absolute top-full left-0 bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+
+            <li class="relative">
+              <button type="button" class="submenu-btn w-full text-left flex justify-between px-3 py-2 hover:bg-interacao-hover" aria-haspopup="true" aria-expanded="false">
+                Manutenção <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
+              </button>
+              <ul class="submenu-lvl2 absolute top-0 left-full bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+                {% if perms.manutencao.pode_acessar_chamados or user.is_staff %}
+                <li><a href="{% url 'listar_chamados' %}" class="block px-3 py-2 hover:bg-interacao-hover">Chamados</a></li>
+                {% endif %}
+                {% if perms.manutencao.pode_acessar_os or user.is_staff %}
+                <li><a href="{% url 'listar_os' %}" class="block px-3 py-2 hover:bg-interacao-hover">Ordens de Serviço</a></li>
+                {% endif %}
+              </ul>
+            </li>
+
+            <li class="relative">
+              <button type="button" class="submenu-btn w-full text-left flex justify-between px-3 py-2 hover:bg-interacao-hover" aria-haspopup="true" aria-expanded="false">
+                Qualidade <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
+              </button>
+              <ul class="submenu-lvl2 absolute top-0 left-full bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+                {% if perms.qualidade.pode_acessar_liberacao_lotes or user.is_staff %}
+                <li><a href="{% url 'qualidade:liberar_lotes' %}" class="block px-3 py-2 hover:bg-interacao-hover">Liberar Lotes</a></li>
+                {% endif %}
+                {% if perms.qualidade.pode_acessar_area_vermelha or user.is_staff %}
+                <li><a href="{% url 'qualidade:area_vermelha' %}" class="block px-3 py-2 hover:bg-interacao-hover">Reunião Área Vermelha</a></li>
+                <li><a href="{% url 'qualidade:consulta_lote' %}" class="block px-3 py-2 hover:bg-interacao-hover">Consulta de Lotes</a></li>
+                {% endif %}
+                {% if perms.qualidade.pode_cadastrar_observacoes_etiqueta or user.is_staff %}
+                <li><a href="{% url 'qualidade:observacoes_etiqueta' %}" class="block px-3 py-2 hover:bg-interacao-hover">Obs. Etiqueta</a></li>
+                {% endif %}
+                <li><a href="{% url 'qualidade:integracao_wms' %}" class="block px-3 py-2 hover:bg-interacao-hover">Integração WMS</a></li>
+              </ul>
+            </li>
+
+            <li class="relative">
+              <button type="button" class="submenu-btn w-full text-left flex justify-between px-3 py-2 hover:bg-interacao-hover" aria-haspopup="true" aria-expanded="false">
+                PCP <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
+              </button>
+              <ul class="submenu-lvl2 absolute top-0 left-full bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+                {% if perms.pcp.pode_visualizar_calendario_ops or user.is_staff %}
+                <li><a href="{% url 'pcp:calendario_ops' %}" class="block px-3 py-2 hover:bg-interacao-hover">Calendário de OPs</a></li>
+                {% endif %}
+              </ul>
+            </li>
+
+            {% if perms.logistica.pode_visualizar_componentes_movimentar or user.is_staff %}
+            <li class="relative">
+              <button type="button" class="submenu-btn w-full text-left flex justify-between px-3 py-2 hover:bg-interacao-hover" aria-haspopup="true" aria-expanded="false">
+                Logística <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
+              </button>
+              <ul class="submenu-lvl2 absolute top-0 left-full bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+                <li><a href="{% url 'logistica:componentes_movimentar' %}" class="block px-3 py-2 hover:bg-interacao-hover">Movimentação de Componentes</a></li>
+              </ul>
+            </li>
+            {% endif %}
+
+            {% if perms.suprimentos.pode_visualizar_componentes_separar or user.is_staff %}
+            <li class="relative">
+              <button type="button" class="submenu-btn w-full text-left flex justify-between px-3 py-2 hover:bg-interacao-hover" aria-haspopup="true" aria-expanded="false">
+                Suprimentos <i data-lucide="chevron-right" class="h-4 w-4" aria-hidden="true"></i>
+              </button>
+              <ul class="submenu-lvl2 absolute top-0 left-full bg-superficie-elevada min-w-48 rounded py-1 hidden z-50">
+                <li><a href="{% url 'suprimentos:componentes_separar' %}" class="block px-3 py-2 hover:bg-interacao-hover">Componentes a Separar</a></li>
+              </ul>
+            </li>
+            {% endif %}
+
+          </ul>
+        </li>
+
+        {% endif %}
+      </ul>
+    </div>
+
+    <!-- MOBILE – usuário / logout -->
+    <div class="lg:hidden flex shrink-0 items-center gap-1 pl-2 pr-0 py-2 bg-superficie-elevada text-texto-primario border-t border-borda-sutil">
+      {% if user.is_authenticated %}
+        <div class="flex min-w-0 items-center gap-1">
+          <span class="max-w-20 truncate text-sm">Olá, {{ user.first_name|default:user.username }}</span>
+          <button id="alternarTemaMobile" type="button" class="botao-secundario h-9 w-9 shrink-0 p-0" title="Alternar tema" aria-label="Alternar tema"></button>
+          <a href="{% url 'utilitarios' %}" class="inline-flex shrink-0 items-center justify-center rounded px-2 py-1 hover:bg-interacao-hover" title="Utilitários" aria-label="Utilitários"><i data-lucide="wrench" class="h-5 w-5" aria-hidden="true"></i></a>
+        </div>
+
+        <form method="post" action="{% url 'logout' %}" class="shrink-0">
+          {% csrf_token %}
+          <button type="submit" class="botao-perigo px-2 py-1">
+            Sair
+          </button>
+        </form>
+      {% endif %}
+    </div>
+
+
+    <!-- DIREITA – DESKTOP -->
+    <div class="hidden lg:flex items-center gap-4 text-sm py-0">
+      {% if user.is_authenticated %}
+      <span>Olá, {{ user.first_name|default:user.username }}</span>
+      <button id="alternarTema" type="button" class="botao-secundario h-9 w-9 p-0" title="Alternar tema" aria-label="Alternar tema"></button>
+      <a href="{% url 'utilitarios' %}" class="inline-flex items-center justify-center rounded px-2 py-1 hover:bg-interacao-hover" title="Utilitários" aria-label="Utilitários"><i data-lucide="wrench" class="h-5 w-5" aria-hidden="true"></i></a>
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="botao-perigo px-3 py-1">Sair</button>
+      </form>
+      {% endif %}
+    </div>
+
+  </div>
+</nav>
+{% endif %}
+
+<main id="sigma-page-main" class="flex min-h-0 w-full flex-1 flex-col">
+  {% include 'partials/_messages.html' %}
+  {% block content %}
+  {% endblock %}
+</main>
+
+{% if request.GET.embutido != '1' %}
+<footer class="bg-superficie-elevada px-2 py-0 text-end legenda text-texto-legenda">
+  <button type="button" id="abrir-creditos-sistema" class="text-texto-link hover:underline">© {% now "Y" %} INDAIAL PAPEL EMBALAGENS LTDA. | Créditos do Sistema</button>
+</footer>
+
+<div id="modal-creditos-sistema" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-superficie-inversa/60 p-4" role="dialog" aria-modal="true" aria-labelledby="titulo-creditos-sistema">
+  <div class="w-full max-w-2xl rounded-lg bg-superficie-elevada p-6 shadow-xl">
+    <div class="flex items-start justify-between gap-4">
+      <h2 id="titulo-creditos-sistema" class="text-lg font-bold text-texto-primario">Créditos e Propriedade Intelectual</h2>
+      <button type="button" class="fechar-creditos-sistema botao-secundario h-9 w-9 p-0" aria-label="Fechar"><i data-lucide="x" class="h-5 w-5" aria-hidden="true"></i></button>
+    </div>
+    <div class="mt-6 space-y-4 text-sm text-texto-primario">
+      <section>
+        <h3 class="font-bold">Propriedade e Direitos Patrimoniais</h3>
+        <p class="mt-1">Este software e suas atualizações são de propriedade exclusiva e exploração comercial de INDAIAL PAPEL EMBALAGENS LTDA. (IPEL), sob os termos da Lei nº 9.609/1998.</p>
+      </section>
+      <section>
+        <h3 class="font-bold">Autoria e Desenvolvimento</h3>
+        <p class="mt-1">Concepção original, arquitetura de software e desenvolvimento do núcleo do sistema por <a href="https://www.linkedin.com/in/siloneiduarte/" target="_blank" rel="noopener noreferrer" class="text-informacao-base hover:underline">Silonei Duarte</a>. Autoria reconhecida nos termos do <a href="https://www.planalto.gov.br/ccivil_03/leis/l9609.htm" target="_blank" rel="noopener noreferrer" class="text-informacao-base hover:underline">Art. 2º, § 1º da Lei nº 9.609/1998</a>.</p>
+      </section>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script src="{% static 'vendor/lucide/lucide.min.js' %}"></script>
+<script>
+function closeAllMenus() {
+  document.querySelectorAll(".submenu").forEach(el => el.classList.add("hidden"));
+  document.querySelectorAll(".submenu-lvl2").forEach(el => el.classList.add("hidden"));
+  document.querySelectorAll(".menu-btn, .submenu-btn").forEach(btn => btn.setAttribute("aria-expanded", "false"));
+}
+
+document.querySelectorAll(".menu-btn").forEach(btn => {
+  btn.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const submenu = btn.nextElementSibling;
+    document.querySelectorAll(".submenu").forEach(s => {
+      if (s !== submenu) s.classList.add("hidden");
+    });
+    submenu.classList.toggle("hidden");
+    document.querySelectorAll(".menu-btn").forEach(outro => {
+      outro.setAttribute("aria-expanded", outro === btn && !submenu.classList.contains("hidden") ? "true" : "false");
+    });
+  });
+});
+
+document.querySelectorAll(".submenu-btn").forEach(btn => {
+  btn.addEventListener("click", e => {
+    e.stopPropagation();
+    const submenu = btn.nextElementSibling;
+
+    // Fecha apenas os submenus irmãos no mesmo nível (mesmo pai)
+    const parentLi = btn.parentElement;
+    const siblingUls = parentLi.parentElement.querySelectorAll(":scope > li > .submenu-lvl2");
+
+    siblingUls.forEach(s => {
+      if (s !== submenu) s.classList.add("hidden");
+    });
+    submenu.classList.toggle("hidden");
+    siblingUls.forEach(s => s.previousElementSibling?.setAttribute("aria-expanded", s === submenu && !s.classList.contains("hidden") ? "true" : "false"));
+  });
+});
+
+function ativarMenusPorHover(seletorBotao, seletorMenu) {
+  if (!window.matchMedia("(min-width: 1024px)").matches) return;
+  document.querySelectorAll(seletorBotao).forEach(btn => {
+    const item = btn.parentElement;
+    const menu = btn.nextElementSibling;
+    if (!item || !menu || !menu.matches(seletorMenu)) return;
+
+    let timerFechar = null;
+    const fechar = () => {
+      menu.classList.add("hidden");
+      btn.setAttribute("aria-expanded", "false");
+    };
+
+    item.addEventListener("mouseenter", () => {
+      clearTimeout(timerFechar);
+      if (seletorMenu === ".submenu") {
+        document.querySelectorAll(".submenu").forEach(outro => {
+          if (outro !== menu) outro.classList.add("hidden");
+        });
+      } else {
+        const irmaos = item.parentElement.querySelectorAll(":scope > li > .submenu-lvl2");
+        irmaos.forEach(outro => {
+          if (outro !== menu) outro.classList.add("hidden");
+        });
+      }
+      menu.classList.remove("hidden");
+      btn.setAttribute("aria-expanded", "true");
+    });
+    menu.addEventListener("mouseenter", () => clearTimeout(timerFechar));
+    item.addEventListener("mouseleave", () => {
+      timerFechar = setTimeout(fechar, 600);
+    });
+  });
+}
+
+ativarMenusPorHover(".menu-btn", ".submenu");
+ativarMenusPorHover(".submenu-btn", ".submenu-lvl2");
+
+document.addEventListener("click", () => closeAllMenus());
+
+const caminhoAtual = window.location.pathname.replace(/\/+$/, "") || "/";
+document.querySelectorAll("#navegacao-principal .submenu a[href]").forEach(link => {
+  const caminhoLink = new URL(link.href, window.location.origin).pathname.replace(/\/+$/, "") || "/";
+  if (caminhoLink === caminhoAtual) link.setAttribute("aria-current", "page");
+});
+
+document.getElementById("btnMenu").addEventListener("click", e => {
+  e.stopPropagation();
+  document.getElementById("menu").classList.toggle("hidden");
+});
+
+const botoesTema = document.querySelectorAll("#alternarTema, #alternarTemaMobile");
+if (botoesTema.length) {
+  const atualizarBotaoTema = () => {
+    const escuro = document.documentElement.classList.contains("tema-escuro");
+    botoesTema.forEach(botaoTema => {
+      botaoTema.innerHTML = `<i data-lucide="${escuro ? 'sun' : 'moon'}" class="h-5 w-5" aria-hidden="true"></i>`;
+      botaoTema.title = escuro ? "Usar tema claro" : "Usar tema escuro";
+      botaoTema.setAttribute("aria-label", botaoTema.title);
+    });
+    window.lucide?.createIcons();
+  };
+  atualizarBotaoTema();
+  botoesTema.forEach(botaoTema => {
+    botaoTema.addEventListener("click", () => {
+      document.documentElement.classList.toggle("tema-escuro");
+      localStorage.setItem("temaSigma", document.documentElement.classList.contains("tema-escuro") ? "escuro" : "claro");
+      atualizarBotaoTema();
+    });
+  });
+}
+window.lucide?.createIcons();
+window.inicializarIconesLucide = () => window.lucide?.createIcons();
+
+const modalCreditosSistema = document.getElementById("modal-creditos-sistema");
+const abrirCreditosSistema = document.getElementById("abrir-creditos-sistema");
+if (modalCreditosSistema && abrirCreditosSistema) {
+  const fecharCreditosSistema = () => modalCreditosSistema.classList.add("hidden");
+  abrirCreditosSistema.addEventListener("click", () => modalCreditosSistema.classList.remove("hidden"));
+  modalCreditosSistema.querySelectorAll(".fechar-creditos-sistema").forEach(botao => {
+    botao.addEventListener("click", fecharCreditosSistema);
+  });
+  modalCreditosSistema.addEventListener("click", evento => {
+    if (evento.target === modalCreditosSistema) fecharCreditosSistema();
+  });
+}
+
+
+// ===============================
+// OCULTAR MENUS SEM ITENS VISÍVEIS
+// ===============================
+document.addEventListener("DOMContentLoaded", () => {
+
+  // Nível 2
+  document.querySelectorAll("ul.submenu-lvl2").forEach(ul => {
+    const visible = Array.from(ul.children)
+      .filter(li => !li.classList.contains("hidden"));
+    if (visible.length === 0) {
+      ul.closest("li").classList.add("hidden");
+    }
+  });
+
+  // Nível 1
+  document.querySelectorAll("ul.submenu").forEach(ul => {
+    const visible = Array.from(ul.children)
+      .filter(li => !li.classList.contains("hidden"));
+    if (visible.length === 0) {
+      ul.closest("li").classList.add("hidden");
+    }
+  });
+
+});
+</script>
+
+
+{% block extra_js %}
+{% endblock %}
+
+</body>
+</html>

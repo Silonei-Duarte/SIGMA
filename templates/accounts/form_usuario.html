@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="w-full mt-4 px-2 text-texto-primario">
+
+    <h1 class="titulo-pagina mb-4 text-texto-primario">{{ title }}</h1>
+
+    <form method="post" class="cartao">
+        {% csrf_token %}
+
+        <!-- Linha 1 -->
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="rotulo">{{ form.username.label }}</label>
+                {{ form.username|add_class:"w-full" }}
+                {% for error in form.username.errors %}
+                    <p class="legenda text-erro-base">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div>
+                <label class="rotulo">{{ form.first_name.label }}</label>
+                {{ form.first_name|add_class:"w-full" }}
+                {% for error in form.first_name.errors %}
+                    <p class="legenda text-erro-base">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Linha 2 -->
+        <div class="grid grid-cols-1 gap-4 mt-4 md:grid-cols-2">
+            <div>
+                <label class="rotulo">{{ form.last_name.label }}</label>
+                {{ form.last_name|add_class:"w-full" }}
+                {% for error in form.last_name.errors %}
+                    <p class="legenda text-erro-base">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div>
+                <label class="rotulo">{{ form.email.label }}</label>
+                {{ form.email|add_class:"w-full" }}
+                {% for error in form.email.errors %}
+                    <p class="legenda text-erro-base">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Senha no cadastro -->
+        {% if not form.instance.pk %}
+        <div class="grid grid-cols-2 gap-4 mt-4">
+            <div>
+                <label class="rotulo">{{ form.password1.label }}</label>
+                {{ form.password1|add_class:"w-full" }}
+                {% for error in form.password1.errors %}
+                    <p class="legenda text-erro-base">{{ error }}</p>
+                {% endfor %}
+                
+                <div id="password-requirements-new" class="mt-2 legenda space-y-1 hidden">
+                    <p id="req-length-new" class="flex items-center gap-1 whitespace-nowrap text-erro-base"><i data-lucide="circle-x" class="h-4 w-4 shrink-0" aria-hidden="true"></i>Mínimo 8 caracteres</p>
+                    <p id="req-upper-new" class="flex items-center gap-1 whitespace-nowrap text-erro-base"><i data-lucide="circle-x" class="h-4 w-4 shrink-0" aria-hidden="true"></i>Pelo menos uma letra maiúscula</p>
+                    <p id="req-lower-new" class="flex items-center gap-1 whitespace-nowrap text-erro-base"><i data-lucide="circle-x" class="h-4 w-4 shrink-0" aria-hidden="true"></i>Pelo menos uma letra minúscula</p>
+                    <p id="req-symbol-new" class="flex items-center gap-1 whitespace-nowrap text-erro-base"><i data-lucide="circle-x" class="h-4 w-4 shrink-0" aria-hidden="true"></i>Pelo menos um caractere especial</p>
+                    <p id="req-digit-new" class="flex items-center gap-1 whitespace-nowrap text-erro-base"><i data-lucide="circle-x" class="h-4 w-4 shrink-0" aria-hidden="true"></i>Pelo menos um número</p>
+                </div>
+            </div>
+
+            <div>
+                <label class="rotulo">{{ form.password2.label }}</label>
+                {{ form.password2|add_class:"w-full" }}
+                {% for error in form.password2.errors %}
+                    <p class="legenda text-erro-base">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+    {% if form.instance.pk %}
+    <div class="grid grid-cols-1 gap-4 mt-4 md:grid-cols-2">
+        <div>
+            <label class="rotulo">{{ form.password1.label }}</label>
+            {{ form.password1|add_class:"w-full" }}
+            <p class="legenda text-texto-legenda mt-1">
+                Deixe em branco para manter a senha atual.
+            </p>
+            
+            <div id="password-requirements-edit" class="mt-2 legenda space-y-1 hidden">
+                <p id="req-length-edit" class="flex items-center gap-1 whitespace-nowrap text-erro-base"><i data-lucide="circle-x" class="h-4 w-4 shrink-0" aria-hidden="true"></i>Mínimo 8 caracteres</p>
+                <p id="req-upper-edit" class="flex items-center gap-1 whitespace-nowrap text-erro-base"><i data-lucide="circle-x" class="h-4 w-4 shrink-0" aria-hidden="true"></i>Pelo menos uma letra maiúscula</p>
+                <p id="req-lower-edit" class="flex items-center gap-1 whitespace-nowrap text-erro-base"><i data-lucide="circle-x" class="h-4 w-4 shrink-0" aria-hidden="true"></i>Pelo menos uma letra minúscula</p>
+                <p id="req-symbol-edit" class="flex items-center gap-1 whitespace-nowrap text-erro-base"><i data-lucide="circle-x" class="h-4 w-4 shrink-0" aria-hidden="true"></i>Pelo menos um caractere especial</p>
+                <p id="req-digit-edit" class="flex items-center gap-1 whitespace-nowrap text-erro-base"><i data-lucide="circle-x" class="h-4 w-4 shrink-0" aria-hidden="true"></i>Pelo menos um número</p>
+            </div>
+        </div>
+
+        <div>
+            <label class="rotulo">{{ form.password2.label }}</label>
+            {{ form.password2|add_class:"w-full" }}
+        </div>
+    </div>
+    {% endif %}
+
+
+
+        <!-- Linha 3 -->
+        <div class="grid grid-cols-2 gap-4 mt-4">
+            <div>
+                <label class="block font-medium">{{ form.filial.label }}</label>
+                {{ form.filial|add_class:"w-full px-2 py-1 border bg-superficie-elevada text-texto-primario rounded  focus:border-marca-base" }}
+                {% for error in form.filial.errors %}
+                    <p class="text-erro-base text-xs">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div>
+                <label class="block font-medium">{{ form.idintegracao.label }}</label>
+                {{ form.idintegracao|add_class:"w-full px-2 py-1 border bg-superficie-elevada text-texto-primario rounded  focus:border-marca-base" }}
+                {% for error in form.idintegracao.errors %}
+                    <p class="text-erro-base text-xs">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mt-4">
+            <div>
+                <label class="block font-medium">{{ form.idoperador.label }}</label>
+                {{ form.idoperador|add_class:"w-full px-2 py-1 border bg-superficie-elevada text-texto-primario rounded  focus:border-marca-base" }}
+                {% for error in form.idoperador.errors %}
+                    <p class="text-erro-base text-xs">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div>
+                <label class="block font-medium">{{ form.paginicial.label }}</label>
+                {{ form.paginicial|add_class:"w-full px-2 py-1 border bg-superficie-elevada text-texto-primario rounded  focus:border-marca-base" }}
+                <p class="text-texto-legenda text-xs mt-1">
+                    Página padrão ao entrar e ao clicar no ícone de página inicial. Deixe vazio para a página geral. Ex: /producao/apontamentos/?empresa=1&amp;centro=26&amp;recurso=21
+                </p>
+                {% for error in form.paginicial.errors %}
+                    <p class="text-erro-base text-xs">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Ativo / Staff -->
+        <div class="grid grid-cols-2 gap-4 mt-4">
+            <label class="flex items-center gap-2">
+                {{ form.is_staff }}
+                <span>{{ form.is_staff.label }}</span>
+            </label>
+
+            <label class="flex items-center gap-2">
+                {{ form.is_active }}
+                <span>{{ form.is_active.label }}</span>
+            </label>
+        </div>
+
+        <!-- Permissões -->
+        <div id="permissions-section" class="{% if form.is_staff.value %}hidden{% endif %}">
+            {% if not form.instance.is_superuser %}
+                <hr class="my-4">
+                <h3 class="font-semibold text-lg mb-4">Permissões específicas</h3>
+
+                <div class="permissoes-usuario border border-borda-sutil p-3 rounded bg-superficie-afundada">
+                    {% for app_name, permissions in form.perms_by_app %}
+                        <div class="mb-4 last:mb-0">
+                            <h4 class="font-bold text-sm text-texto-secundario border-b mb-2">{{ app_name }}</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                {% for perm in permissions %}
+                                    <label class="flex items-center gap-2">
+                                        <input type="checkbox" name="user_permissions" value="{{ perm.id }}"
+                                               class="form-check-input"
+                                               {% if perm in form.user_permissions.value or perm.id in form.user_permissions.value %}checked{% endif %}>
+                                        {% if perm.codename == "pode_excluir_pendencias_integracao" %}
+                                            <span class="text-sm font-bold text-erro-base">{{ perm.name }}</span>
+                                            <span title="Permissão sensível: permite apagar registros das filas de integração (apontamentos, componentes, baixas, tempos ERP, WMS) e períodos/paradas do log de tempo produção, incluindo o disparo de regeneração de pacotes ERP. Conceder apenas com ciência dos impactos."
+                                                  class="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full bg-erro-sutil text-[10px] font-bold leading-none text-erro-base"
+                                                  aria-label="Ajuda sobre permissão sensível">?</span>
+                                        {% else %}
+                                            <span class="text-sm">{{ perm.name }}</span>
+                                        {% endif %}
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {% if form.herdadas_display %}
+                <hr class="my-4">
+                <h3 class="font-semibold text-sm">Permissões herdadas do grupo</h3>
+                <ul class="list-disc ml-4 text-sm">
+                    {% for perm in form.herdadas_display %}
+                        <li>{{ perm }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Botões -->
+        <div class="flex justify-between mt-6">
+            <a href="{% url 'lista_usuarios' %}" class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i>
+                Cancelar
+            </a>
+
+            <button type="submit" class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i>
+                {{ button_text }}
+            </button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const passwordInput = document.querySelector('input[name="password1"]');
+        const requirementsNew = document.getElementById('password-requirements-new');
+        const requirementsEdit = document.getElementById('password-requirements-edit');
+        
+        const reqs = {
+            length: [document.getElementById('req-length-new'), document.getElementById('req-length-edit')],
+            upper: [document.getElementById('req-upper-new'), document.getElementById('req-upper-edit')],
+            lower: [document.getElementById('req-lower-new'), document.getElementById('req-lower-edit')],
+            symbol: [document.getElementById('req-symbol-new'), document.getElementById('req-symbol-edit')],
+            digit: [document.getElementById('req-digit-new'), document.getElementById('req-digit-edit')]
+        };
+
+        function updateRequirement(reqKey, isValid) {
+            reqs[reqKey].forEach(el => {
+                if (!el) return;
+                if (isValid) {
+                    el.classList.remove('text-erro-base');
+                    el.classList.add('text-sucesso-base');
+                    el.querySelector('i').classList.remove('bi-x-circle-fill');
+                    el.querySelector('i').classList.add('bi-check-circle-fill');
+                } else {
+                    el.classList.remove('text-sucesso-base');
+                    el.classList.add('text-erro-base');
+                    el.querySelector('i').classList.remove('bi-check-circle-fill');
+                    el.querySelector('i').classList.add('bi-x-circle-fill');
+                }
+            });
+        }
+
+        passwordInput.addEventListener('input', function() {
+            const val = this.value;
+            
+            if (val.length > 0) {
+                if (requirementsNew) requirementsNew.classList.remove('hidden');
+                if (requirementsEdit) requirementsEdit.classList.remove('hidden');
+            } else {
+                if (requirementsNew) requirementsNew.classList.add('hidden');
+                if (requirementsEdit) requirementsEdit.classList.add('hidden');
+            }
+
+            updateRequirement('length', val.length >= 8);
+            updateRequirement('upper', /[A-Z]/.test(val));
+            updateRequirement('lower', /[a-z]/.test(val));
+            updateRequirement('symbol', /[!@#$%^&*(),.?":{}|<>]/.test(val));
+            updateRequirement('digit', /[0-9]/.test(val));
+        });
+
+        // Controle de exibição das permissões para Administradores
+        const isStaffCheckbox = document.getElementById('id_is_staff');
+        const permissionsSection = document.getElementById('permissions-section');
+
+        if (isStaffCheckbox && permissionsSection) {
+            isStaffCheckbox.addEventListener('change', function() {
+                permissionsSection.classList.toggle('hidden', this.checked);
+            });
+        }
+    });
+</script>
+{% endblock %}

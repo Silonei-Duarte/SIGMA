@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}{{ APPLICATION_NAME }} | Log Tempos ERP{% endblock %}
+{% block content %}
+<div class="w-full px-4 mt-4 pb-4 text-sm text-texto-primario">
+    <div class="mb-6 border-b border-borda-sutil pb-4">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <h2 class="titulo-pagina text-texto-primario">Log Tempos ERP</h2>
+            </div>
+            <div class="flex w-full flex-col gap-2 md:flex-row md:items-center lg:w-auto lg:justify-end">
+                <form method="GET" class="flex w-full gap-2 md:w-96">
+                    <input type="text" name="search" value="{{ search_query }}" placeholder="Buscar por pacote, OP, operador ou recurso..."
+                           class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm">
+                    <button type="submit" class="botao-primario h-10 shrink-0 whitespace-nowrap px-4 text-sm"><i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i> Filtrar</button>
+                {% if search_query %}<a href="{% url 'logs_tempos_erp' %}" class="botao-secundario h-10 w-10 p-0" aria-label="Limpar busca"><i data-lucide="x" class="" aria-hidden="true"></i></a>{% endif %}
+                </form>
+                <form method="POST" action="{% url 'enviar_tempos_erp' %}">{% csrf_token %}<button class="botao-primario text-sm">Enviar pendentes</button></form>
+                {% if pode_excluir_pendencias %}<form method="POST" action="{% url 'excluir_tempos_erp_nao_integrados' %}" onsubmit="return confirm('Excluir todos os pacotes de tempo ERP ainda não integrados?')">{% csrf_token %}<button class="botao-perigo h-10 px-4"><i data-lucide="trash-2" aria-hidden="true"></i> Excluir não integrados</button></form>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-center text-xs [&>thead>tr>th]:border-borda-sutil [&>tbody>tr>td]:border-borda-sutil">
+                <thead class="bg-superficie-afundada text-texto-primario">
+                    <tr>
+                        <th class="border border-borda-sutil p-2">Empresa</th><th class="border border-borda-sutil p-2">Origem</th><th class="border border-borda-sutil p-2">OP</th><th class="border border-borda-sutil p-2">Estágio</th><th class="border border-borda-sutil p-2">Seq.</th><th class="border border-borda-sutil p-2">Máquina</th><th class="border border-borda-sutil p-2">Corte início</th><th class="border border-borda-sutil p-2">Corte fim</th><th class="border border-borda-sutil p-2">Log</th><th class="border border-borda-sutil p-2">Data/Hora log</th><th class="border border-borda-sutil p-2">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pacote in pacotes %}
+                    <tr class="h-9 {% if pacote.itens.all %}cursor-pointer hover:bg-interacao-hover{% endif %}" {% if pacote.itens.all %}onclick="alternarItensPacote({{ pacote.id }})" title="Clique para exibir os itens do pacote"{% endif %}>
+                        <td class="border border-borda-sutil p-2">{% if pacote.itens.all %}<span class="inline-flex items-center gap-2"><i id="icone-pacote-{{ pacote.id }}" data-lucide="chevron-right" class="h-4 w-4 shrink-0 transition-transform" aria-hidden="true"></i>{{ pacote.troca_op_ativa.recurso.centro_recurso.setor.departamento.filial.empresa.codemp }}</span>{% else %}{{ pacote.troca_op_ativa.recurso.centro_recurso.setor.departamento.filial.empresa.codemp }}{% endif %}</td><td class="border border-borda-sutil p-2">{{ pacote.troca_op_ativa.origem|default:'-' }}</td><td class="border border-borda-sutil p-2">{{ pacote.troca_op_ativa.op|default:'-' }}</td><td class="border border-borda-sutil p-2">{{ pacote.troca_op_ativa.estagio|default:'-' }}</td><td class="border border-borda-sutil p-2">{{ pacote.troca_op_ativa.seqrot|default:'-' }}</td><td class="border border-borda-sutil p-2">{{ pacote.troca_op_ativa.recurso.codigo }}</td><td class="border border-borda-sutil p-2">{{ pacote.corte_inicio_real|date:'d/m/Y H:i' }}</td><td class="border border-borda-sutil p-2">{{ pacote.corte_fim_real|date:'d/m/Y H:i' }}</td>
+                        <td class="max-w-xs truncate border border-borda-sutil p-2 text-left" title="{{ pacote.log }}">{{ pacote.log|default:'-' }}</td><td class="border border-borda-sutil p-2">{{ pacote.data_hora_log|date:'d/m/Y H:i:s' }}</td><td class="border border-borda-sutil p-2" onclick="event.stopPropagation()"><div class="flex items-center justify-start gap-2">{% if pacote.status == 2 %}<span class="w-24 shrink-0 text-informacao-base flex items-center justify-center">Processando</span>{% elif pacote.status == 1 %}<span class="w-24 shrink-0 status-integrado text-sucesso-base flex items-center justify-center">Integrado</span>{% elif pacote.id in bloqueados_ids %}<span class="w-24 shrink-0 text-informacao-base flex items-center justify-center" title="Aguardando integração de pacote anterior">Bloqueado</span>{% else %}<span class="w-24 shrink-0 text-atencao-base flex items-center justify-center">Pendente</span><form method="POST" action="{% url 'enviar_pacote_tempo_erp' pacote.id %}">{% csrf_token %}<button class="botao-sucesso-icone" title="Enviar" aria-label="Enviar pacote"><i data-lucide="send" class="" aria-hidden="true"></i></button></form>{% endif %}{% if pode_excluir_pendencias and pacote.status != 1 and pacote.status != 2 %}<form method="POST" action="{% url 'excluir_pacote_tempo_erp' pacote.id %}" onsubmit="return confirm('Excluir este pacote de tempo ERP?')">{% csrf_token %}<button class="botao-perigo-icone" title="Excluir pacote" aria-label="Excluir pacote"><i data-lucide="trash-2" class="" aria-hidden="true"></i></button></form>{% endif %}</div></td>
+                    </tr>
+                    {% if pacote.itens.all %}<tr id="itens-pacote-{{ pacote.id }}" class="hidden bg-superficie-afundada">
+                        <td colspan="11" class="border border-borda-sutil p-2 text-left">
+                            <table class="w-full border-collapse bg-superficie-elevada text-center text-xs">
+                                <thead class="bg-superficie-afundada text-texto-secundario"><tr><th class="border border-borda-sutil p-2">Tipo</th><th class="border border-borda-sutil p-2">Operador</th><th class="border border-borda-sutil p-2">Motivo</th><th class="border border-borda-sutil p-2">Data início</th><th class="border border-borda-sutil p-2">Hora início</th><th class="border border-borda-sutil p-2">Data fim</th><th class="border border-borda-sutil p-2">Hora fim</th>{% if pode_excluir_pendencias %}<th class="border border-borda-sutil p-2">Ações</th>{% endif %}</tr></thead>
+                                <tbody>
+                                    {% for item in pacote.itens.all %}
+                                    <tr><td class="border border-borda-sutil p-2">{{ item.get_tipo_registro_display }}</td><td class="border border-borda-sutil p-2">{{ item.operador }}</td><td class="border border-borda-sutil p-2">{{ item.motivo|default:'-' }}</td><td class="border border-borda-sutil p-2">{{ item.data_inicio|date:'Y-m-d' }}</td><td class="border border-borda-sutil p-2">{{ item.hora_inicio|time:'H:i' }}</td><td class="border border-borda-sutil p-2">{{ item.data_fim|date:'Y-m-d' }}</td><td class="border border-borda-sutil p-2">{{ item.hora_fim|time:'H:i' }}</td>{% if pode_excluir_pendencias %}<td class="border border-borda-sutil p-2">{% if item.tipo_registro == 'PARADA' and pacote.status != 1 and pacote.status != 2 %}<form method="POST" action="{% url 'excluir_parada_pacote_tempo_erp' item.id %}" onsubmit="return confirm('Excluir esta parada do pacote de tempo ERP?')">{% csrf_token %}<button class="botao-perigo-icone" title="Excluir parada" aria-label="Excluir parada"><i data-lucide="trash-2" class="" aria-hidden="true"></i></button></form>{% else %}-{% endif %}</td>{% endif %}</tr>
+                                    {% empty %}<tr><td colspan="{% if pode_excluir_pendencias %}8{% else %}7{% endif %}" class="border border-borda-sutil p-2 text-texto-legenda">Sem itens.</td></tr>{% endfor %}
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>{% endif %}
+                    {% empty %}
+                    <tr><td colspan="11" class="border border-borda-sutil p-6 text-center italic text-texto-legenda">Nenhum pacote de tempo consolidado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if pacotes.has_other_pages %}
+    <div class="mt-6 mb-8 flex justify-center"><nav class="inline-flex rounded-xl shadow-sm">
+        {% if pacotes.has_previous %}<a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Primeira</a><a href="?page={{ pacotes.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Anterior</a>{% endif %}
+        <span class="botao-primario text-sm">Página {{ pacotes.number }} de {{ pacotes.paginator.num_pages }}</span>
+        {% if pacotes.has_next %}<a href="?page={{ pacotes.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Próxima</a><a href="?page={{ pacotes.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Última</a>{% endif %}
+    </nav></div>
+    {% endif %}
+</div>
+<script>
+function alternarItensPacote(id) {
+    const itens = document.getElementById(`itens-pacote-${id}`);
+    const icone = document.getElementById(`icone-pacote-${id}`);
+    itens.classList.toggle('hidden');
+    icone.classList.toggle('rotate-90');
+}
+</script>
+{% endblock %}

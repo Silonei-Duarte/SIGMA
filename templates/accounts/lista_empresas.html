@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Empresas{% endblock %}
+
+{% block content %}
+
+<div class="w-full px-4 mt-4 text-sm text-texto-primario">
+
+  <div class="flex justify-between items-center mb-4">
+      <h1 class="titulo-pagina text-texto-primario">Empresas</h1>
+
+      <a href="{% url 'criar_empresa' %}"
+         class="botao-primario text-sm">
+          <i data-lucide="plus" class="" aria-hidden="true"></i> Nova Empresa
+      </a>
+  </div>
+
+  <div class="bg-superficie-elevada border border-borda-sutil rounded overflow-hidden">
+
+      <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+              <thead class="bg-superficie-afundada text-texto-primario">
+                  <tr>
+                      <th class="border border-borda-sutil p-2">Código</th>
+                      <th class="border border-borda-sutil p-2">Nome</th>
+                      <th class="border border-borda-sutil p-2">Fantasia</th>
+                      <th class="border border-borda-sutil p-2">Ativa</th>
+                      <th class="border border-borda-sutil p-2 text-center">Ações</th>
+                  </tr>
+              </thead>
+
+              <tbody>
+                  {% for empresa in page_obj %}
+                  <tr class="transition hover:bg-interacao-hover">
+                      <td class="border border-borda-sutil p-2">{{ empresa.codemp }}</td>
+                      <td class="border border-borda-sutil p-2">{{ empresa.nome }}</td>
+                      <td class="border border-borda-sutil p-2">{{ empresa.fantasia }}</td>
+
+                      <td class="border border-borda-sutil p-2">
+                          {% if empresa.ativa %}
+                              <span class="bg-sucesso-sutil text-sucesso-base text-xs px-2 py-1 rounded font-bold">Sim</span>
+                          {% else %}
+                              <span class="bg-erro-sutil text-erro-base text-xs px-2 py-1 rounded font-bold">Não</span>
+                          {% endif %}
+                      </td>
+
+                      <td class="border border-borda-sutil p-2 text-center">
+                          <a href="{% url 'editar_empresa' empresa.pk %}"
+                             class="botao-atencao-icone"
+                             title="Editar">
+                              <i data-lucide="square-pen" class="" aria-hidden="true"></i>
+                          </a>
+                      </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                      <td colspan="5" class="p-4 text-center text-texto-legenda">
+                          Nenhuma empresa cadastrada.
+                      </td>
+                  </tr>
+                  {% endfor %}
+              </tbody>
+          </table>
+      </div>
+
+      <!-- PAGINAÇÃO -->
+      {% if page_obj %}
+      <div class="flex justify-center items-center gap-2 p-3">
+
+          {% if page_obj.has_previous %}
+          <a href="?page=1" class="botao-secundario text-sm">Primeira</a>
+          <a href="?page={{ page_obj.previous_page_number }}"
+             class="botao-secundario text-sm">Anterior</a>
+          {% endif %}
+
+          <span class="botao-primario text-sm">
+              {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+          </span>
+
+          {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}"
+             class="botao-secundario text-sm">Próxima</a>
+          <a href="?page={{ page_obj.paginator.num_pages }}"
+             class="botao-secundario text-sm">Última</a>
+          {% endif %}
+
+      </div>
+      {% endif %}
+
+  </div>
+
+  <div class="mt-4">
+      <a href="{% url 'home' %}"
+         class="botao-secundario text-sm">
+          Voltar
+      </a>
+  </div>
+
+</div>
+
+{% endblock %}

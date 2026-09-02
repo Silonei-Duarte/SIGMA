@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Taras de Balança{% endblock %}
+
+{% block content %}
+
+<div class="w-full px-4 mt-4 text-sm text-texto-primario grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- ========================= -->
+    <!-- FORMULÁRIO -->
+    <!-- ========================= -->
+    <div class="bg-superficie-elevada border border-borda-sutil rounded shadow h-fit">
+
+        <div class="bg-superficie-afundada border-b border-borda-sutil p-3 font-bold">
+            {% if tara_editando %}Editar Tara{% else %}Nova Tara{% endif %}
+        </div>
+
+        <div class="p-4">
+            <form method="post">
+                {% csrf_token %}
+                {% if tara_editando %}
+                    <input type="hidden" name="tara_id" value="{{ tara_editando.id }}">
+                {% endif %}
+
+                {% if form.errors %}
+                <div class="bg-erro-sutil border border-erro-borda text-erro-base px-3 py-2 rounded relative mb-4 text-xs" role="alert">
+                    <strong class="font-bold">Erro ao salvar!</strong>
+                    <button type="button" onclick="this.parentElement.remove()" class="absolute top-0 right-0 px-2 py-2 font-bold text-lg leading-none" aria-label="Fechar"><i data-lucide="x" aria-hidden="true"></i></button>
+                    <ul class="list-disc ml-4 mt-1">
+                        {% for field in form %}
+                            {% if field.errors %}
+                                <li>{{ field.label }}: {{ field.errors|striptags }}</li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if form.non_field_errors %}
+                            <li>{{ form.non_field_errors|striptags }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="font-semibold mb-1 block">Nome da Tara</label>
+                        {{ form.tara|add_class:"border w-full p-1 rounded !bg-superficie-elevada !text-texto-primario" }}
+                    </div>
+
+                    <div>
+                        <label class="font-semibold mb-1 block">Peso (kg)</label>
+                        {{ form.peso|add_class:"border w-full p-1 rounded !bg-superficie-elevada !text-texto-primario" }}
+                        <p class="text-informacao-base text-xs mt-1 font-semibold" id="peso_exibicao"></p>
+                    </div>
+                </div>
+
+                {% if tara_editando %}
+                <div class="bg-atencao-sutil border border-atencao-borda px-3 py-2 rounded mt-4 text-texto-primario text-xs">
+                    Editando tara: <strong>{{ tara_editando.tara }}</strong>
+                </div>
+                {% endif %}
+
+                <!-- Botões -->
+                <div class="flex justify-between mt-6">
+                    <a href="{% url 'home' %}"
+                       class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                        <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i> Voltar
+                    </a>
+
+                    <div class="flex gap-2">
+                        {% if tara_editando %}
+                        <a href="{% url 'lista_taras' %}"
+                           class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                            Cancelar
+                        </a>
+                        {% endif %}
+
+                        <button type="submit" name="{% if tara_editando %}atualizar{% else %}salvar{% endif %}"
+                                class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                            <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i>
+                            {% if tara_editando %}Atualizar{% else %}Salvar{% endif %}
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+
+    <!-- ========================= -->
+    <!-- LISTAGEM -->
+    <!-- ========================= -->
+    <div class="lg:col-span-2 bg-superficie-elevada border border-borda-sutil rounded shadow">
+
+        <div class="bg-superficie-afundada border-b border-borda-sutil p-3 font-bold flex justify-between items-center">
+            <span>Taras de Balança Cadastradas</span>
+        </div>
+
+        <div class="p-4">
+
+            <!-- MENSAGENS REMOVIDOS - USANDO PARTIAL SHARED -->
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead class="bg-superficie-afundada text-texto-primario">
+                        <tr>
+                            <th class="border border-borda-sutil p-2">Nome/Tara</th>
+                            <th class="border border-borda-sutil p-2">Peso (kg)</th>
+                            <th class="border border-borda-sutil p-2 text-end">Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for t in taras %}
+                        <tr class="transition hover:bg-interacao-hover">
+                            <td class="border border-borda-sutil p-2">{{ t.tara }}</td>
+                            <td class="border border-borda-sutil p-2">{{ t.peso }}</td>
+                            <td class="border border-borda-sutil p-2">
+                                <div class="flex justify-end gap-2">
+                                    <a href="?editar={{ t.id }}"
+                                       class="botao-atencao-icone"
+                                       title="Editar">
+                                        <i data-lucide="square-pen" class="" aria-hidden="true"></i>
+                                    </a>
+                                    <form method="post" action="{% url 'deletar_tara' t.id %}"
+                                          onsubmit="return confirm('Deseja realmente excluir esta tara?')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="botao-perigo-icone" title="Excluir" aria-label="Excluir">
+                                            <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="p-3 text-center text-texto-legenda">
+                                Nenhuma tara cadastrada.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputPeso = document.getElementById('id_peso');
+        const displayPeso = document.getElementById('peso_exibicao');
+
+        function formatarPeso() {
+            if (!inputPeso) return;
+            const valor = parseFloat(inputPeso.value.replace(',', '.'));
+            if (!isNaN(valor)) {
+                const kg = Math.floor(valor);
+                const g = Math.round((valor - kg) * 1000);
+                
+                // Formata com 3 casas decimais usando vírgula
+                const formatado = valor.toLocaleString('pt-BR', {
+                    minimumFractionDigits: 3,
+                    maximumFractionDigits: 3
+                });
+                
+                const texto = `${formatado} (${kg}KG e ${g}G)`;
+                displayPeso.innerText = texto;
+            } else {
+                displayPeso.innerText = "";
+            }
+        }
+
+        if (inputPeso) {
+            inputPeso.addEventListener('input', formatarPeso);
+            formatarPeso(); // Chama uma vez para preencher se já tiver valor (edição)
+        }
+    });
+</script>
+
+{% endblock %}

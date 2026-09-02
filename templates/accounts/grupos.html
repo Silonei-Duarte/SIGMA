@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block title %}Grupos e Permissões{% endblock %}
+{% block content %}
+
+<div class="w-full px-4 mt-4 text-sm text-texto-primario">
+
+  <h1 class="titulo-pagina mb-4 text-texto-primario">Gerenciar Grupos e Permissões</h1>
+
+
+  <!-- GRUPOS EXISTENTES -->
+  <div class="bg-superficie-elevada border border-borda-sutil rounded mb-4">
+    <div class="bg-superficie-afundada p-2 font-semibold border-b border-borda-sutil">
+      Grupos Existentes
+    </div>
+
+    <div class="p-2 overflow-x-auto">
+      <table class="w-full text-left border-collapse text-sm">
+        <thead class="bg-superficie-afundada text-texto-primario">
+          <tr>
+            <th class="border border-borda-sutil p-2">Nome</th>
+            <th class="border border-borda-sutil p-2">Usuários</th>
+            <th class="border border-borda-sutil p-2 text-center">Ações</th>
+          </tr>
+        </thead>
+
+        <tbody>
+        {% for g in grupos %}
+          <tr class="transition">
+            <td class="border border-borda-sutil p-2">{{ g.name }}</td>
+            <td class="border border-borda-sutil p-2">{{ g.user_set.count }}</td>
+
+            <td class="border border-borda-sutil p-2">
+              <div class="flex justify-center gap-2">
+
+                <a href="?editar={{ g.id }}"
+                   class="botao-atencao-icone"
+                   title="Editar">
+                  <i data-lucide="square-pen" class="" aria-hidden="true"></i>
+                </a>
+
+                {% if g.user_set.count == 0 %}
+                <form method="post" action="" onsubmit="return confirm('Excluir o grupo {{ g.name }}?');">
+                  {% csrf_token %}
+                  <button type="submit" name="deletar" value="{{ g.id }}"
+                          class="botao-perigo-icone" title="Excluir" aria-label="Excluir">
+                    <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                  </button>
+                </form>
+                {% else %}
+                  <button disabled
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-interacao-desabilitado text-texto-desabilitado shadow-sm"
+                    title="Excluir">
+                    <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                  </button>
+                {% endif %}
+
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- FORMULARIO CRIA/EDITA -->
+  <form method="post" class="bg-superficie-elevada border border-borda-sutil rounded p-4 mb-4">
+    {% csrf_token %}
+    <input type="hidden" name="grupo_id" value="{{ grupo_editando.id|default:'' }}">
+    <input type="hidden" name="salvar" value="1">
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+      <div>
+        <label class="font-semibold">Nome do Grupo</label>
+        <input type="text" name="nome"
+               value="{{ grupo_editando.name|default:'' }}"
+               class="border w-full p-1 rounded"
+               required>
+      </div>
+
+      <div>
+        <label class="font-semibold">Buscar Usuário</label>
+        <input type="text" id="buscaUsuario"
+               class="border w-full p-1 rounded"
+               placeholder="Filtrar usuários...">
+      </div>
+
+    </div>
+
+    <!-- USUÁRIOS -->
+    <div class="mt-4">
+      <h6 class="font-semibold mb-2">Usuários disponíveis</h6>
+
+      <div id="listaUsuarios" class="grid grid-cols-2 md:grid-cols-4 gap-1">
+        {% for u in usuarios %}
+        <div class="usuario-item flex items-center gap-2 text-sm">
+          <input type="checkbox" name="usuarios" value="{{ u.id }}"
+                 class="h-4 w-4 shrink-0 border-borda-padrao accent-marca-base"
+                 {% if grupo_editando and u in grupo_editando.user_set.all %}checked{% endif %}>
+          {{ u.username }}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <hr class="my-4 border-borda-sutil">
+
+    <!-- PERMISSÕES -->
+    <div class="mt-2 border border-borda-sutil p-3 rounded bg-superficie-afundada">
+      {% for app, perms in permissoes_por_app %}
+      <div class="mb-4 last:mb-0">
+        <h6 class="font-bold text-sm text-texto-secundario border-b mb-2">{{ app }}</h6>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {% for p in perms %}
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="permissoes" value="{{ p.id }}"
+                   class="h-4 w-4 shrink-0 border-borda-padrao accent-marca-base"
+                   id="perm{{ p.id }}"
+                   {% if grupo_editando and p in grupo_editando.permissions.all %}checked{% endif %}>
+            {% if p.codename == "pode_excluir_pendencias_integracao" %}
+              <span class="font-bold text-erro-base">{{ p.name }}</span>
+              <span title="Permissão sensível: permite apagar registros das filas de integração (apontamentos, componentes, baixas, tempos ERP, WMS) e períodos/paradas do log de tempo produção, incluindo o disparo de regeneração de pacotes ERP. Conceder apenas com ciência dos impactos."
+                    class="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full bg-erro-sutil text-[10px] font-bold leading-none text-erro-base"
+                    aria-label="Ajuda sobre permissão sensível">?</span>
+            {% else %}
+              {{ p.name }}
+            {% endif %}
+          </label>
+          {% endfor %}
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="text-end mt-4">
+      <button type="submit"
+              class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+        <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i>
+        Salvar
+      </button>
+    </div>
+
+  </form>
+
+</div>
+
+<script>
+document.getElementById("buscaUsuario").addEventListener("keyup", function() {
+  const termo = this.value.toLowerCase();
+  document.querySelectorAll(".usuario-item").forEach(div => {
+    const nome = div.textContent.toLowerCase();
+    div.classList.toggle("hidden", !nome.includes(termo));
+  });
+});
+</script>
+
+{% endblock %}

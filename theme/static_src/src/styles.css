@@ -1,0 +1,1212 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+/*
+ * Tipografia — Style Guide IPEL: Poppins no corpo (400/500/600),
+ * Montserrat 700 em título/logotipo. Fontes self-hosted em static/fonts/.
+ */
+@font-face {
+  font-family: "Poppins";
+  src: url("../../fonts/Poppins-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("../../fonts/Poppins-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("../../fonts/Poppins-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Montserrat";
+  src: url("../../fonts/Montserrat-Variable.ttf") format("truetype-variations");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Primitivas: somente esta camada conhece valores de cor concretos. */
+:root {
+  --transicao-curva: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --transicao-rapida: 180ms;
+  --transicao-media: 300ms;
+  --transicao-lenta: 500ms;
+  --primitiva-verde-50: #e6f4ec;
+  --primitiva-verde-200: #8fd2ac;
+  --primitiva-verde-300: #54b884;
+  --primitiva-verde-400: #1fa25e;
+  --primitiva-verde-500: #008d36;
+  --primitiva-verde-600: #007a2f;
+  --primitiva-verde-700: #046428;
+  --primitiva-verde-800: #0a5022;
+  --primitiva-verde-900: #0b3d1b;
+  --primitiva-neutro-0: #ffffff;
+  --primitiva-neutro-50: #f7f9fa;
+  --primitiva-neutro-100: #eef1f4;
+  --primitiva-neutro-200: #e1e6ea;
+  --primitiva-neutro-300: #ccd2d8;
+  --primitiva-neutro-400: #a7b0b9;
+  --primitiva-neutro-500: #8e99a3;
+  --primitiva-neutro-600: #7d868f;
+  --primitiva-neutro-700: #5f6871;
+  --primitiva-neutro-800: #454d55;
+  --primitiva-neutro-850: #363f47;
+  --primitiva-neutro-900: #252c33;
+  --primitiva-neutro-950: #171c21;
+  --primitiva-erro-100: #fee3df;
+  --primitiva-erro-300: #ff8271;
+  --primitiva-erro-600: #b01f17;
+  --primitiva-erro-900: #4a1310;
+  --primitiva-atencao-100: #ffecb4;
+  --primitiva-atencao-300: #e0b048;
+  --primitiva-atencao-600: #7d5e08;
+  --primitiva-atencao-900: #402a05;
+  --primitiva-info-100: #dbebfe;
+  --primitiva-info-300: #6aaeff;
+  --primitiva-info-600: #164e8a;
+  --primitiva-info-900: #132f4d;
+  --primitiva-urgencia-100: #d4c3fd;
+  --primitiva-urgencia-300: #b3a1dc;
+  --primitiva-urgencia-600: #7c3aed;
+  --primitiva-urgencia-700: #7321cc;
+  --primitiva-urgencia-900: #4b2b7d;
+
+  /* Sombras — valor concreto por tema, nunca color-mix sobre um token de
+     texto. No claro a sombra é o neutro-950 em baixa opacidade; no escuro
+     (bloco html.tema-escuro) é preto puro com opacidade maior, porque
+     sombra derivada do texto vira BRILHO BRANCO quando o texto é claro.
+     Valores do Style Guide IPEL, seção 7. */
+  --sombra-sutil: 0 1px 2px rgb(23 28 33 / 0.06), 0 1px 3px rgb(23 28 33 / 0.1);
+  --sombra-media: 0 4px 6px -1px rgb(23 28 33 / 0.1), 0 2px 4px -2px rgb(23 28 33 / 0.1);
+  --sombra-alta: 0 10px 15px -3px rgb(23 28 33 / 0.12), 0 4px 6px -4px rgb(23 28 33 / 0.1);
+}
+
+@theme {
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-titulo: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+
+  /* Espaçamento — grade de 4px, 8 degraus (Style Guide IPEL) */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+
+  /* Raio de canto */
+  --radius-nenhum: 0px;
+  --radius-sm: 4px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+}
+
+/*
+ * Tokens semânticos de tema (claro/escuro).
+ *
+ * Por que existem: no tema claro/escuro antigo, cada tela precisava listar
+ * manualmente "no tema escuro, bg-white vira #1f2937" para cada classe crua
+ * do Tailwind usada (bg-white, text-gray-900, border-gray-300, ...). Isso
+ * cresce sem limite (uma lista por página) e quebra silenciosamente sempre
+ * que uma tela nova usa uma cor que ainda não foi mapeada.
+ *
+ * Com tokens semânticos, a tela declara o PAPEL da cor (fundo de card, texto
+ * principal, borda sutil), não o tom exato — o valor certo para cada tema
+ * vem de uma única fonte (aqui). Uma classe --color-* redefinida no Tailwind
+ * 4 gera automaticamente as utilities correspondentes (bg-superficie-elevada,
+ * text-texto-primario, border-borda-sutil, ...) sem plugin nem CSS adicional
+ * por tela.
+ */
+@theme {
+  /* Superfícies — Style Guide IPEL: superficie/base, elevada, afundada, inversa */
+  --color-superficie-base: var(--primitiva-neutro-50);
+  --color-superficie-elevada: var(--primitiva-neutro-0);
+  --color-superficie-afundada: var(--primitiva-neutro-100);
+  --color-superficie-inversa: var(--primitiva-neutro-900);
+
+  /* Texto — texto/primario, secundario, legenda, desabilitado, sobre-marca, link, sobre-inversa.
+     Primario/secundario/legenda em preto puro no tema claro (21:1): direção de
+     marca IPEL, não cálculo de contraste — a
+     hierarquia entre os três passa a vir de peso/tamanho, não de cor.
+     Desabilitado fica de fora de propósito (não é conteúdo escrito). */
+  --color-texto-primario: #000000;
+  --color-texto-secundario: #000000;
+  --color-texto-legenda: #000000;
+  --color-texto-desabilitado: var(--primitiva-neutro-600);
+  --color-texto-sobre-marca: var(--primitiva-neutro-0);
+  --color-texto-link: var(--primitiva-verde-700);
+  --color-texto-sobre-inversa: var(--primitiva-neutro-100);
+
+  /* Bordas — borda/sutil, padrao, foco */
+  --color-borda-sutil: var(--primitiva-neutro-200);
+  --color-borda-padrao: var(--primitiva-neutro-600);
+  --color-borda-foco: var(--primitiva-verde-600);
+
+  /* Marca */
+  --color-marca-identidade: var(--primitiva-verde-500);
+  --color-marca-base: var(--primitiva-verde-600);
+  --color-marca-hover: var(--primitiva-verde-700);
+  --color-marca-ativo: var(--primitiva-verde-800);
+  --color-marca-sutil: var(--primitiva-verde-50);
+  --color-marca-sobre-inversa: var(--primitiva-verde-300);
+
+  /* Logo SIGT: monocromático, acompanha contraste do tema. */
+  --color-logo-sigt: var(--primitiva-neutro-900);
+
+  /* Interação */
+  --color-interacao-hover: var(--primitiva-neutro-100);
+  --color-interacao-pressionado: var(--primitiva-neutro-200);
+  --color-interacao-selecionado: var(--primitiva-verde-50);
+  --color-interacao-desabilitado: var(--primitiva-neutro-100);
+
+  /* Estados — base/sutil/borda seguem o guide; "-destaque" é a variação
+     sólida para controles, etiquetas e preenchimentos que exigem cor forte. */
+  --color-sucesso-base: var(--primitiva-verde-700);
+  --color-sucesso-sutil: var(--primitiva-verde-50);
+  /* verde-600, não verde-400: verde-400 dava 3,29:1 contra texto branco
+     (uso real: etiqueta/botão sólido com texto-sobre-marca). verde-600 dá
+     5,49:1. */
+  --color-sucesso-destaque: var(--primitiva-verde-600);
+  --color-sucesso-borda: var(--primitiva-verde-200);
+
+  --color-atencao-base: var(--primitiva-atencao-600);
+  --color-atencao-sutil: var(--primitiva-atencao-100);
+  --color-atencao-destaque: var(--primitiva-atencao-300);
+  /* atencao-600, não atencao-300: atencao-300 dava 2,01:1 contra
+     superficie-elevada, abaixo do 3:1 do WCAG 1.4.11 — a borda é usada
+     solta (fora de -sutil) em vários lugares, não só como contorno do
+     alerta. */
+  --color-atencao-borda: var(--primitiva-atencao-600);
+
+  --color-erro-base: var(--primitiva-erro-600);
+  --color-erro-sutil: var(--primitiva-erro-100);
+  /* erro-900, não erro-300: erro-300 dava 2,42:1 contra texto branco (uso
+     real: hover de botão-perigo e de bg-erro-base/-sutil, sempre com
+     texto-sobre-marca ou sobre-perigo brancos). erro-900 dá 15,09:1. */
+  --color-erro-destaque: var(--primitiva-erro-900);
+  /* erro-600, não erro-300: erro-300 fica abaixo do 3:1 que WCAG 1.4.11
+     exige de um contorno com significado (identifica campo inválido).
+     erro-600 cobre com folga; degrau 500 foi descontinuado (ver primitivas). */
+  --color-erro-borda: var(--primitiva-erro-600);
+
+  --color-informacao-base: var(--primitiva-info-600);
+  --color-informacao-sutil: var(--primitiva-info-100);
+  /* info-600, não info-300: info-300 dava 2,30:1 contra superficie-elevada,
+     abaixo do 3:1 do WCAG 1.4.11 — mesma razão do atencao-borda acima. */
+  --color-informacao-borda: var(--primitiva-info-600);
+
+  /* Urgencia e estado operacional persistente, nunca enfeite ou identificador. */
+  --color-urgencia-base: var(--primitiva-urgencia-700);
+  --color-urgencia-sutil: var(--primitiva-urgencia-100);
+  --color-urgencia-destaque: var(--primitiva-urgencia-600);
+  --color-urgencia-borda: var(--primitiva-urgencia-600);
+  --color-sobre-urgencia: var(--primitiva-neutro-0);
+
+  --color-botao-perigo-fundo: var(--color-erro-base);
+  --color-sobre-perigo: var(--primitiva-neutro-0);
+  --color-botao-perigo-hover: var(--color-erro-destaque);
+  --color-botao-perigo-ativo: var(--color-erro-base);
+
+  /* Efeitos decorativos exclusivos da tela inicial. */
+  --color-hero-borda: color-mix(in srgb, var(--color-superficie-elevada) 95%, transparent);
+  --color-hero-superficie: color-mix(in srgb, var(--color-superficie-elevada) 70%, transparent);
+  --color-hero-texto: var(--color-texto-link);
+  --color-login-feixe: var(--primitiva-neutro-0);
+  --background-image-hero: linear-gradient(145deg, var(--color-superficie-elevada) 0%, var(--color-marca-sutil) 100%);
+
+  /* Mapeia a escala de sombra para as utilities shadow-*. O valor é
+     indireto de propósito: quem troca no tema escuro é --sombra-*, e a
+     utility acompanha sem precisar de variante dark: na tela. */
+  --shadow-sutil: var(--sombra-sutil);
+  --shadow-media: var(--sombra-media);
+  --shadow-alta: var(--sombra-alta);
+
+  /* Estado do cartão de painel — pigmento cheio, NÃO muda entre os temas.
+     O eixo é de quem é a ação, não a gravidade solta:
+
+       pendencia  vermelho  a casa precisa agir (aprovar, conduzir)
+       prestador  azul      o outro lado precisa agir (enviar)
+       risco      amarelo   ainda válido, vence em breve
+       travado    roxo      vencido ou bloqueado — parou
+       aprovado   verde     em dia, nada a fazer
+
+     AINDA NÃO USADO por nenhuma tela do SIGMA (decisão do sênior,
+     01/09/2026): os tokens entram agora para que o dia em que um painel
+     colorir cartão — `/producao/status-recursos/` é o candidato natural —
+     ele fale a mesma língua do SIGT, em vez de inventar a própria paleta.
+     Ver o Style Guide, seção 3, "Estado do cartão de painel".
+
+     Pigmento igual nos dois temas porque em área grande a cor lavada é o
+     pior lugar para pedir distinção: no escuro os matizes não teriam croma
+     para se separar. Quem muda é a tinta por cima, e só no amarelo. */
+  --color-estado-pendencia: var(--primitiva-erro-600); /* 6,88:1 com branco */
+  --color-estado-prestador: var(--primitiva-info-600); /* 8,43:1 com branco */
+  --color-estado-risco: var(--primitiva-atencao-300); /* 2,01:1 — pede tinta preta */
+  --color-estado-travado: var(--primitiva-urgencia-600); /* 5,70:1 com branco */
+  --color-estado-aprovado: var(--primitiva-verde-600); /* 5,49:1 — o verde da marca */
+
+  /* A tinta dentro do pigmento: branca em quatro, PRETA no amarelo. A
+     exceção é do matiz, não do sistema — amarelo que aguenta texto branco
+     a 4,5:1 deixa de ser amarelo. Sobre o #e0b048 o preto dá 10,47:1. */
+  --color-estado-sobre: var(--primitiva-neutro-0);
+  --color-estado-sobre-risco: #000000;
+}
+
+html.tema-escuro {
+  /* Preto puro e opacidade maior: no escuro a sombra do claro some, e a
+     elevação real vem do degrau de luminância entre base e elevada. */
+  --sombra-sutil: 0 1px 2px rgb(0 0 0 / 0.3);
+  --sombra-media: 0 4px 6px -1px rgb(0 0 0 / 0.4);
+  --sombra-alta: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+
+  --color-superficie-base: var(--primitiva-neutro-950);
+  --color-superficie-elevada: var(--primitiva-neutro-900);
+  --color-superficie-afundada: var(--primitiva-neutro-850);
+  --color-superficie-inversa: var(--primitiva-neutro-100);
+
+  --color-texto-primario: var(--primitiva-neutro-100);
+  --color-texto-secundario: var(--primitiva-neutro-300);
+  --color-texto-legenda: var(--primitiva-neutro-400);
+  --color-texto-desabilitado: var(--primitiva-neutro-600);
+  /* neutro-950, não neutro-0: branco sobre marca-base (verde-400) no escuro
+     dava 3,29:1, abaixo do 4,5:1 de texto. neutro-950 dá 5,22:1. */
+  --color-texto-sobre-marca: var(--primitiva-neutro-950);
+  --color-texto-link: var(--primitiva-verde-300);
+  --color-texto-sobre-inversa: var(--primitiva-neutro-900);
+
+  --color-borda-sutil: var(--primitiva-neutro-850);
+  --color-borda-padrao: var(--primitiva-neutro-500);
+  --color-borda-foco: var(--primitiva-verde-300);
+
+  --color-marca-identidade: var(--primitiva-verde-500);
+  --color-marca-base: var(--primitiva-verde-400);
+  --color-marca-hover: var(--primitiva-verde-300);
+  --color-marca-ativo: var(--primitiva-verde-200);
+  --color-marca-sutil: var(--primitiva-verde-900);
+  --color-marca-sobre-inversa: var(--primitiva-verde-700);
+  --color-logo-sigt: var(--primitiva-neutro-50);
+
+  --color-interacao-hover: var(--primitiva-neutro-850);
+  --color-interacao-pressionado: var(--primitiva-neutro-800);
+  --color-interacao-selecionado: var(--primitiva-verde-900);
+  --color-interacao-desabilitado: var(--primitiva-neutro-850);
+
+  /* verde-300, não verde-600: texto-sobre-marca no escuro é neutro-950
+     (quase preto — ver comentário em texto-sobre-marca), e verde-600 só
+     dava 3,12:1 contra ele. verde-300 dá 7,00:1. */
+  --color-sucesso-base: var(--primitiva-verde-50);
+  --color-sucesso-sutil: var(--primitiva-verde-700);
+  --color-sucesso-destaque: var(--primitiva-verde-300);
+  --color-sucesso-borda: var(--primitiva-verde-700);
+
+  --color-atencao-base: var(--primitiva-atencao-100);
+  --color-atencao-sutil: var(--primitiva-atencao-600);
+  /* atencao-900, não atencao-300: atencao-300 dava 1,77:1 contra
+     texto-primario (neutro-100, quase branco no escuro) — uso real:
+     botões redondos sólidos com texto por cima. atencao-900 dá 11,94:1. */
+  --color-atencao-destaque: var(--primitiva-atencao-900);
+  --color-atencao-borda: var(--primitiva-atencao-300);
+
+  --color-erro-base: var(--primitiva-erro-100);
+  --color-erro-sutil: var(--primitiva-erro-600);
+  --color-erro-destaque: var(--primitiva-erro-300);
+  --color-erro-borda: var(--primitiva-erro-300);
+
+  /* Ação destrutiva mantém vermelho sólido e conteúdo branco, independente do
+     par semântico base/sutil usado em etiquetas, alertas e células.
+     botao-perigo-hover é fixado aqui (não herda erro-destaque): sobre-perigo
+     é sempre branco nos dois temas, e erro-destaque no escuro (erro-300)
+     só dá 2,42:1 contra branco — insuficiente para o "Sair"/excluir. */
+  --color-botao-perigo-fundo: var(--primitiva-erro-600);
+  --color-botao-perigo-hover: var(--primitiva-erro-900);
+  --color-botao-perigo-ativo: var(--primitiva-erro-600);
+
+  --color-informacao-base: var(--primitiva-info-100);
+  --color-informacao-sutil: var(--primitiva-info-600);
+  --color-informacao-borda: var(--primitiva-info-300);
+
+  --color-urgencia-base: var(--primitiva-urgencia-300);
+  --color-urgencia-sutil: var(--primitiva-urgencia-900);
+  --color-urgencia-destaque: var(--primitiva-urgencia-600);
+  --color-urgencia-borda: var(--primitiva-urgencia-300);
+  --color-sobre-urgencia: var(--primitiva-neutro-0);
+
+  --color-hero-borda: color-mix(in srgb, var(--color-superficie-elevada) 20%, transparent);
+  --color-hero-superficie: color-mix(in srgb, var(--color-superficie-elevada) 50%, transparent);
+  --color-hero-texto: var(--color-texto-link);
+  --color-login-feixe: var(--primitiva-neutro-100);
+  --background-image-hero: linear-gradient(145deg, var(--color-superficie-elevada) 0%, var(--color-superficie-afundada) 100%);
+}
+
+/*
+ * Os 10 estilos de texto do Style Guide IPEL. O tamanho é consequência
+ * do papel do texto, nunca uma decisão isolada — por isso são classes
+ * combinadas (fonte + peso + tamanho + altura de linha), não utilities
+ * soltas de font-size.
+ */
+@utility titulo-tela {
+  font-family: var(--font-titulo);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 120%;
+}
+@utility titulo-pagina {
+  font-family: var(--font-titulo);
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 130%;
+}
+@utility titulo-secao {
+  font-family: var(--font-titulo);
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 140%;
+}
+@utility titulo-bloco {
+  font-family: var(--font-titulo);
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 150%;
+}
+@utility corpo-base {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 160%;
+}
+@utility corpo-tabela {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 150%;
+}
+@utility rotulo {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 150%;
+}
+@utility legenda {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 150%;
+}
+@utility indicador-grande {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 120%;
+}
+@utility indicador-base {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 140%;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  /*
+   * Troca de tema é instantânea fora da tela de login (ver regra de
+   * `.login-fundo-*`/`.login-efeito-*` abaixo, única transição de tema
+   * aceita). Não declarar transition de cor global aqui: isso animaria a
+   * troca de tema em todo o sistema, o que não é desejado.
+   */
+
+  body {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 160%;
+  }
+
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    background-color: var(--color-superficie-elevada);
+    border: 1px solid var(--color-borda-padrao);
+    color: var(--color-texto-primario);
+    border-radius: var(--radius-md);
+    min-height: 36px;
+    padding: 5px 12px;
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-marca-base);
+  }
+
+  input[type='file'] {
+    height: 36px;
+    min-height: 36px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+  input[type='file']::file-selector-button {
+    margin-right: 8px;
+    padding: 4px 10px;
+    border: none;
+    border-radius: var(--radius-full);
+    background-color: var(--color-marca-sutil);
+    color: var(--color-marca-base);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 150%;
+    cursor: pointer;
+    transition: opacity .15s ease;
+  }
+  input[type='file']::file-selector-button:hover { opacity: .9; }
+
+  button:not(:disabled) {
+    min-height: 36px;
+    border-radius: var(--radius-full);
+  }
+
+  button:disabled {
+    background-color: var(--color-interacao-desabilitado);
+    color: var(--color-texto-desabilitado);
+    cursor: not-allowed;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-borda-foco) !important;
+    outline-offset: 2px !important;
+  }
+}
+
+/*
+ * Biblioteca de componentes · Style Guide IPEL.
+ * Nenhum componente inventa estado próprio: padrão, hover, foco, pressionado,
+ * desabilitado saem sempre dos tokens de cor definidos acima.
+ */
+
+/* Botão — formato pílula, altura mínima 36px no tamanho padrão (md). */
+@utility botao-primario {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  min-height: 36px;
+  padding-inline: var(--spacing-4);
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 150%;
+  background-color: var(--color-marca-base);
+  color: var(--color-texto-sobre-marca);
+  transition: background-color var(--transicao-rapida) var(--transicao-curva), color var(--transicao-rapida) var(--transicao-curva), border-color var(--transicao-rapida) var(--transicao-curva);
+  &:hover { background-color: var(--color-marca-hover); }
+  &:active { background-color: var(--color-marca-ativo); }
+  &:disabled { background-color: var(--color-interacao-desabilitado); color: var(--color-texto-desabilitado); }
+}
+
+@utility botao-secundario {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  min-height: 36px;
+  padding-inline: var(--spacing-4);
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 150%;
+  background-color: var(--color-superficie-elevada);
+  color: var(--color-texto-primario);
+  border: 1px solid var(--color-borda-padrao);
+  transition: background-color var(--transicao-rapida) var(--transicao-curva), color var(--transicao-rapida) var(--transicao-curva), border-color var(--transicao-rapida) var(--transicao-curva);
+  &:hover { background-color: var(--color-interacao-hover); }
+  &:active { background-color: var(--color-interacao-pressionado); }
+  &:disabled { background-color: var(--color-interacao-desabilitado); color: var(--color-texto-desabilitado); border-color: var(--color-borda-sutil); }
+}
+
+@utility botao-perigo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  min-height: 36px;
+  padding-inline: var(--spacing-4);
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 150%;
+  background-color: var(--color-botao-perigo-fundo);
+  color: var(--color-sobre-perigo);
+  transition: background-color var(--transicao-rapida) var(--transicao-curva), color var(--transicao-rapida) var(--transicao-curva), border-color var(--transicao-rapida) var(--transicao-curva);
+  &:hover { background-color: var(--color-botao-perigo-hover); }
+  &:active { background-color: var(--color-botao-perigo-ativo); }
+  &:disabled { background-color: var(--color-interacao-desabilitado); color: var(--color-texto-desabilitado); }
+}
+
+@utility botao-perigo-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  background-color: var(--color-erro-sutil);
+  color: var(--color-erro-base);
+  transition: background-color .15s ease, color .15s ease, opacity .15s ease;
+  &:hover { opacity: .9; }
+  &:active { opacity: .8; }
+  &:disabled { background-color: var(--color-interacao-desabilitado); color: var(--color-texto-desabilitado); }
+}
+
+@utility texto-sobre-perigo {
+  color: var(--color-sobre-perigo);
+}
+
+@utility texto-sobre-urgencia {
+  color: var(--color-sobre-urgencia);
+}
+
+/* Etiqueta — 5 famílias × 2 ênfases (sutil = fundo tinto, alta = fundo sólido). */
+@utility etiqueta-sutil {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding-inline: var(--spacing-2);
+  padding-block: 2px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 150%;
+}
+/* combinar com etiqueta-sutil no markup: class="etiqueta-sutil etiqueta-cor-sucesso" */
+@utility etiqueta-cor-sucesso { background-color: var(--color-sucesso-sutil); color: var(--color-sucesso-base); }
+@utility etiqueta-cor-atencao { background-color: var(--color-atencao-sutil); color: var(--color-atencao-base); }
+@utility etiqueta-cor-erro { background-color: var(--color-erro-sutil); color: var(--color-erro-base); }
+@utility etiqueta-cor-info { background-color: var(--color-informacao-sutil); color: var(--color-informacao-base); }
+@utility etiqueta-cor-urgencia { background-color: var(--color-urgencia-sutil); color: var(--color-urgencia-base); }
+
+/* Alerta — ícone, texto e fundo tinto semântico; nunca só cor. */
+@utility alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-superficie-elevada);
+  box-shadow: var(--sombra-sutil);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 160%;
+}
+@utility alerta-sucesso { background-color: var(--color-sucesso-sutil); border-left: 3px solid var(--color-sucesso-base); color: var(--color-sucesso-base); }
+@utility alerta-atencao { background-color: var(--color-atencao-sutil); border-left: 3px solid var(--color-atencao-base); color: var(--color-atencao-base); }
+@utility alerta-erro { background-color: var(--color-erro-sutil); border-left: 3px solid var(--color-erro-base); color: var(--color-erro-base); }
+@utility alerta-info { background-color: var(--color-informacao-sutil); border-left: 3px solid var(--color-informacao-base); color: var(--color-informacao-base); }
+@utility alerta-urgencia { background-color: var(--color-urgencia-sutil); border-left: 3px solid var(--color-urgencia-base); color: var(--color-urgencia-base); }
+@utility alerta-icone-sucesso { color: var(--color-sucesso-base); }
+@utility alerta-icone-atencao { color: var(--color-atencao-base); }
+@utility alerta-icone-erro { color: var(--color-erro-base); }
+@utility alerta-icone-info { color: var(--color-informacao-base); }
+@utility alerta-icone-urgencia { color: var(--color-urgencia-base); }
+
+/* Ação de fechar do alerta — combinar com alerta: class="alerta alerta-sucesso",
+   texto em class="flex-1" e o botão em class="alerta-fechar". Usa texto/primario
+   nos dois temas, como definido no Style Guide para a ação de fechar do alerta. */
+@utility alerta-fechar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-texto-primario);
+  transition: opacity .15s ease;
+  &:hover { opacity: .7; }
+}
+
+/* Cartão — raio-xl por fora, raio-lg no bloco interno. */
+@utility cartao {
+  background-color: var(--color-superficie-elevada);
+  border: 1px solid var(--color-borda-sutil);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-6);
+}
+@utility cartao-bloco {
+  background-color: var(--color-superficie-afundada);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+}
+
+@utility botao-informacao-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  background-color: var(--color-informacao-sutil);
+  color: var(--color-informacao-base);
+  transition: background-color .15s ease, color .15s ease, opacity .15s ease;
+  &:hover { opacity: .9; }
+  &:active { opacity: .8; }
+  &:disabled { background-color: var(--color-interacao-desabilitado); color: var(--color-texto-desabilitado); }
+}
+
+@utility botao-sucesso-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  background-color: var(--color-sucesso-sutil);
+  color: var(--color-sucesso-base);
+  transition: background-color .15s ease, color .15s ease, opacity .15s ease;
+  &:hover { opacity: .9; }
+  &:active { opacity: .8; }
+  &:disabled { background-color: var(--color-interacao-desabilitado); color: var(--color-texto-desabilitado); }
+}
+
+@utility botao-atencao-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  background-color: var(--color-atencao-sutil);
+  color: var(--color-atencao-base);
+  transition: background-color .15s ease, color .15s ease, opacity .15s ease;
+  &:hover { opacity: .9; }
+  &:active { opacity: .8; }
+  &:disabled { background-color: var(--color-interacao-desabilitado); color: var(--color-texto-desabilitado); }
+}
+
+@utility botao-urgencia-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--radius-full);
+  background-color: var(--color-urgencia-sutil);
+  color: var(--color-urgencia-base);
+  transition: background-color .15s ease, color .15s ease, opacity .15s ease;
+  &:hover { opacity: .9; }
+  &:active { opacity: .8; }
+  &:disabled { background-color: var(--color-interacao-desabilitado); color: var(--color-texto-desabilitado); }
+}
+
+@utility cartao-indicador {
+  background-color: var(--color-superficie-elevada);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--sombra-sutil);
+  padding: var(--spacing-4);
+}
+
+@utility tabela-padrao {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 150%;
+}
+@utility tabela-cabecalho { background-color: var(--color-superficie-afundada); }
+@utility tabela-linha { border-bottom: 1px solid var(--color-borda-sutil); transition: background-color var(--transicao-rapida) var(--transicao-curva); }
+.tabela-linha:hover { background-color: var(--color-interacao-hover); }
+
+/* Compatibilidade para telas legadas: converte utilities genéricas para a
+   escala IPEL enquanto os templates são gradualmente reduzidos aos componentes. */
+.rounded { border-radius: var(--radius-sm); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl,
+.rounded-2xl,
+.rounded-3xl { border-radius: var(--radius-xl); }
+
+input:not([type='checkbox']):not([type='radio']).rounded-xl,
+select.rounded-xl,
+textarea.rounded-xl { border-radius: var(--radius-md); }
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-titulo);
+  font-weight: 700 !important;
+}
+h1 { font-size: 30px; line-height: 120%; }
+h2 { font-size: 24px; line-height: 130%; }
+h3 { font-size: 20px; line-height: 140%; }
+h4, h5, h6 { font-size: 17px; line-height: 150%; }
+
+.text-xs { font-size: 12px; line-height: 150%; }
+.text-sm { font-size: 13px; line-height: 150%; }
+.text-base { font-size: 15px; line-height: 160%; }
+.text-lg { font-size: 17px; line-height: 150%; }
+.text-xl { font-size: 20px; line-height: 140%; }
+.text-2xl { font-size: 24px; line-height: 130%; }
+.text-3xl { font-size: 30px; line-height: 120%; }
+
+/* Poppins só disponibiliza 400, 500 e 600 no sistema. */
+.font-bold,
+.font-semibold,
+.font-black { font-weight: 600; }
+
+/* Navegação: superfície elevada por padrão; a rota aberta recebe marca sutil. */
+#navegacao-principal .submenu a[aria-current="page"] {
+  background-color: var(--color-marca-sutil);
+  color: var(--color-marca-base);
+}
+
+footer #abrir-creditos-sistema {
+  min-height: 24px;
+}
+
+/* Entrada: composição translúcida própria do SIGMA, usando somente tokens IPEL. */
+.login-entrada {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-4);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-marca-sutil) 56%, transparent),
+    transparent 58%
+  );
+}
+
+.login-vidro {
+  width: min(100%, 420px);
+  padding: var(--spacing-6);
+  border: 1px solid color-mix(in srgb, var(--color-superficie-elevada) 78%, var(--color-borda-padrao));
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--color-superficie-elevada) 84%, transparent);
+  box-shadow: 0 24px 56px -24px color-mix(in srgb, var(--color-texto-primario) 48%, transparent);
+  backdrop-filter: blur(24px) saturate(1.2);
+}
+
+.login-cabecalho {
+  margin-bottom: var(--spacing-5);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--color-borda-sutil);
+}
+
+.login-campo {
+  display: block;
+  width: 100%;
+  height: 40px;
+  padding-inline: var(--spacing-3);
+  border: 1px solid var(--color-borda-padrao);
+  border-radius: var(--radius-md);
+  background-color: color-mix(in srgb, var(--color-superficie-elevada) 72%, transparent);
+  color: var(--color-texto-primario);
+  font-size: 15px;
+  line-height: 160%;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease, color .15s ease;
+}
+
+.login-campo:hover { border-color: var(--color-borda-foco); }
+.login-campo:focus {
+  border-color: var(--color-borda-foco);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-borda-foco) 24%, transparent);
+}
+
+.login-entrar {
+  min-height: 44px;
+  box-shadow: 0 10px 22px -12px color-mix(in srgb, var(--color-marca-base) 72%, transparent);
+}
+
+.login-acoes-inferiores {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  margin-top: var(--spacing-4);
+}
+
+button.alternar-tema-login {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 1px solid var(--color-borda-padrao);
+  border-radius: var(--radius-full);
+  background-color: color-mix(in srgb, var(--color-superficie-elevada) 70%, transparent);
+  color: var(--color-texto-primario);
+  transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+button.alternar-tema-login:hover {
+  border-color: var(--color-borda-foco);
+  background-color: var(--color-interacao-hover);
+}
+
+/* Estrutura de entrada do SIGMA. */
+.login-entrada {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  padding: var(--spacing-4);
+  background: var(--color-superficie-base);
+}
+
+.login-fundo {
+  position: absolute;
+  inset: -2.5%;
+  pointer-events: none;
+}
+
+.login-efeito {
+  transition: opacity 600ms ease;
+}
+
+.login-efeito-escuro { opacity: 0; }
+html.tema-escuro .login-efeito-escuro { opacity: 1; }
+html.tema-escuro .login-efeito-claro { opacity: 0; }
+
+.login-efeito {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    var(--color-superficie-base),
+    color-mix(in srgb, var(--color-marca-sutil) 72%, var(--color-superficie-base))
+  );
+}
+.login-efeito-claro {
+  --cor-efeito: var(--color-marca-base);
+  --cor-particula: var(--color-marca-hover);
+  --opacidade-feixe: .3;
+}
+.login-efeito-escuro {
+  --cor-efeito: var(--color-marca-sobre-inversa);
+  --cor-particula: var(--color-marca-sobre-inversa);
+  --opacidade-feixe: .38;
+  background: linear-gradient(
+    135deg,
+    var(--color-superficie-base),
+    color-mix(in srgb, var(--color-marca-sutil) 58%, var(--color-superficie-base))
+  );
+}
+
+.login-efeito::before,
+.login-efeito::after {
+  position: absolute;
+  width: clamp(300px, 34vw, 620px);
+  height: clamp(300px, 34vw, 620px);
+  content: "";
+  border-radius: var(--radius-full);
+  background: radial-gradient(
+    circle at 34% 30%,
+    color-mix(in srgb, var(--cor-efeito) 82%, transparent),
+    color-mix(in srgb, var(--cor-efeito) 42%, transparent) 48%,
+    transparent 73%
+  );
+  filter: blur(6px);
+}
+.login-efeito::before {
+  top: -20%;
+  right: -14%;
+  animation: login-esfera-superior 16s ease-in-out infinite;
+}
+.login-efeito::after {
+  bottom: -28%;
+  left: -8%;
+  opacity: .72;
+  animation: login-esfera-inferior 19s ease-in-out -9s infinite;
+}
+
+.login-feixe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 880vmax;
+  height: clamp(140px, 20vw, 280px);
+  opacity: var(--opacidade-feixe);
+  background: linear-gradient(
+    90deg,
+    transparent 24%,
+    color-mix(in srgb, var(--color-login-feixe) 3%, transparent) 40%,
+    color-mix(in srgb, var(--color-login-feixe) 18%, transparent) 50%,
+    color-mix(in srgb, var(--color-login-feixe) 3%, transparent) 60%,
+    transparent 76%
+  );
+  filter: blur(26px);
+  animation: login-feixe-varrer 14s cubic-bezier(.45, 0, .55, 1) infinite alternate;
+}
+
+.login-esfera {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(240px, 28vw, 520px);
+  height: clamp(240px, 28vw, 520px);
+  border-radius: var(--radius-full);
+  background: radial-gradient(
+    circle at 34% 30%,
+    color-mix(in srgb, var(--cor-efeito) 86%, transparent),
+    color-mix(in srgb, var(--cor-efeito) 46%, transparent) 52%,
+    transparent 74%
+  );
+  filter: blur(5px);
+  animation: login-esfera-central 14s ease-in-out infinite;
+}
+
+.login-particula {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: var(--cor-particula);
+  box-shadow: 0 0 14px 4px color-mix(in srgb, var(--cor-particula) 58%, transparent);
+  animation: login-particula-orbitar 14s ease-in-out infinite, login-particula-brilhar 3.6s ease-in-out infinite;
+}
+.login-particula:nth-child(3) { top: 16%; left: 12%; animation-delay: -1s, -.8s; }
+.login-particula:nth-child(4) { top: 31%; left: 28%; animation-delay: -5s, -1.9s; }
+.login-particula:nth-child(5) { top: 18%; left: 46%; animation-delay: -2.8s, -.4s; }
+.login-particula:nth-child(6) { top: 43%; left: 62%; animation-delay: -6.2s, -2.2s; }
+.login-particula:nth-child(7) { top: 27%; left: 78%; animation-delay: -3.8s, -1.1s; }
+.login-particula:nth-child(8) { top: 72%; left: 18%; animation-delay: -5.2s, -2.6s; }
+.login-particula:nth-child(9) { top: 77%; left: 52%; animation-delay: -1.8s, -1.5s; }
+.login-particula:nth-child(10) { top: 68%; left: 87%; animation-delay: -7s, -2.9s; }
+
+@keyframes login-esfera-superior {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(.92); }
+  50% { transform: translate3d(-52vw, 34vh, 0) scale(1.18); }
+}
+@keyframes login-esfera-inferior {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(.9); }
+  50% { transform: translate3d(48vw, -38vh, 0) scale(1.16); }
+}
+@keyframes login-esfera-central {
+  0%, 100% { transform: translate3d(-50%, -50%, 0) scale(.88); }
+  50% { transform: translate3d(calc(-50% + 20vw), calc(-50% - 18vh), 0) scale(1.14); }
+}
+@keyframes login-feixe-varrer {
+  from { transform: translate3d(-90%, -82%, 0) rotate(-15deg); }
+  to { transform: translate3d(-22.5%, -26%, 0) rotate(-15deg); }
+}
+@keyframes login-particula-orbitar {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(18px, -24px, 0); }
+}
+@keyframes login-particula-brilhar {
+  0%, 100% { opacity: .2; }
+  50% { opacity: .95; }
+}
+
+.login-logo-empresa {
+  position: absolute;
+  top: var(--spacing-4);
+  right: var(--spacing-4);
+  z-index: 1;
+  width: auto;
+  height: 36px;
+}
+
+.login-vidro {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 460px;
+  padding: 36px 28px 32px;
+  border: 0;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-superficie-elevada) 48%, transparent),
+    color-mix(in srgb, var(--color-superficie-elevada) 74%, transparent) 82%
+  );
+  box-shadow:
+    inset 0 0 24px color-mix(in srgb, var(--color-texto-sobre-marca) 5%, transparent),
+    0 24px 60px -18px color-mix(in srgb, var(--color-texto-primario) 55%, transparent),
+    0 6px 18px -10px color-mix(in srgb, var(--color-texto-primario) 40%, transparent);
+  backdrop-filter: blur(44px) saturate(1.75);
+}
+
+.login-vidro::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  border: 1px solid color-mix(in srgb, var(--color-texto-sobre-marca) 50%, transparent);
+  border-radius: inherit;
+}
+
+.login-marca {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--spacing-3);
+  color: var(--color-marca-base);
+  font-family: var(--font-titulo);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 130%;
+}
+.login-marca svg { width: 70px; height: 70px; }
+
+.login-cabecalho {
+  margin-bottom: var(--spacing-4);
+  padding-bottom: var(--spacing-2);
+  border-bottom: 1px solid var(--color-borda-sutil);
+  text-align: center;
+}
+.login-subtitulo-login { display: none; }
+.login-subtitulo-reset {
+  margin-top: calc(var(--spacing-3) + 9px);
+}
+.login-titulo {
+  display: inline-block;
+  margin-bottom: -9px;
+  padding-bottom: var(--spacing-2);
+  border-bottom: 2px solid var(--color-marca-base);
+  color: var(--color-marca-hover);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 500 !important;
+  line-height: 160%;
+}
+.login-titulo > span { display: block; }
+.login-titulo-tipo {
+  margin-top: -3px;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.login-rotulo-senha {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+}
+.login-esqueci-senha {
+  color: var(--color-texto-link);
+  font-size: 12px;
+  line-height: 150%;
+}
+.login-esqueci-senha:hover { text-decoration: underline; }
+
+.login-campo {
+  background: color-mix(in srgb, var(--color-superficie-elevada) 55%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-texto-sobre-marca) 50%, transparent);
+}
+
+.login-entrar {
+  background: linear-gradient(to bottom, var(--color-marca-base), var(--color-marca-hover));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-texto-sobre-marca) 28%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--color-texto-primario) 20%, transparent),
+    0 10px 24px -10px color-mix(in srgb, var(--color-marca-base) 55%, transparent);
+}
+.login-entrar:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.login-frase {
+  margin-top: var(--spacing-5);
+  text-align: center;
+  color: var(--color-texto-secundario);
+  font-size: 13px;
+  line-height: 160%;
+}
+
+.login-acoes-inferiores { margin-top: var(--spacing-4); }
+button.alternar-tema-login {
+  width: auto;
+  min-height: 36px;
+  gap: 6px;
+  padding-inline: var(--spacing-3);
+  color: var(--color-texto-secundario);
+  font-size: 12px;
+  line-height: 150%;
+}
+.login-acesso-restrito {
+  color: var(--color-texto-secundario);
+  font-size: 12px;
+  line-height: 150%;
+  text-align: right;
+}
+
+.login-status-colaborador {
+  min-width: 0;
+  padding-inline: var(--spacing-3);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .login-vidro { padding-inline: 40px; }
+  .login-logo-empresa { height: 48px; }
+}
+
+@media (max-width: 639px) {
+  .login-vidro { min-height: 430px; padding-top: 32px; padding-bottom: 28px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-entrar:hover { transform: none; }
+
+  .login-efeito::before { animation: login-esfera-superior 16s ease-in-out infinite !important; }
+  .login-efeito::after { animation: login-esfera-inferior 19s ease-in-out -9s infinite !important; }
+  .login-feixe { animation: login-feixe-varrer 14s cubic-bezier(.45, 0, .55, 1) infinite alternate !important; }
+  .login-esfera { animation: login-esfera-central 14s ease-in-out infinite !important; }
+  .login-particula { animation: login-particula-orbitar 14s ease-in-out infinite, login-particula-brilhar 3.6s ease-in-out infinite !important; }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
+}
+
+/**
+  * A catch-all path to Django template files, JavaScript, and Python files
+  * that contain Tailwind CSS classes and will be scanned by Tailwind to generate the final CSS file.
+  *
+  * If your final CSS file is not being updated after code changes, you may want to broaden or narrow
+  * the scope of this path.
+  */
+@source "../../../**/*.{html,py,js}";
+@source not "../../../staticfiles/**";
+
+@page {
+  size: 15cm 10cm;
+  margin: 0;
+}

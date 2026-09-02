@@ -1,0 +1,345 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Calendários{% endblock %}
+
+{% block content %}
+
+{% if modo_eventos %}
+
+<!-- ======================== -->
+<!--       TELA DE EVENTOS    -->
+<!-- ======================== -->
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-4 text-sm text-texto-primario">
+
+    <!-- COLUNA LATERAL -->
+    <div class="lg:col-span-1">
+
+        <!-- MOTIVOS -->
+        <div class="mb-4 overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+            <div class="bg-superficie-afundada border-b border-borda-sutil p-2 font-bold">
+                Motivos disponíveis
+            </div>
+
+            <div class="p-3" id="external-events">
+                <p class="text-xs text-texto-legenda mb-2">
+                    Arraste um motivo para o dia desejado:
+                </p>
+
+                <div class="fc-event p-2 mb-2 rounded-md cursor-pointer bg-erro-sutil text-erro-base"
+                     data-motivo="1">
+                    Dia Não Produtivo
+                </div>
+
+                <div class="fc-event p-2 mb-2 rounded-md cursor-pointer bg-atencao-sutil text-atencao-base"
+                     data-motivo="2">
+                    Feriado
+                </div>
+
+                <div class="fc-event p-2 mb-2 rounded-md cursor-pointer bg-informacao-sutil text-informacao-base"
+                     data-motivo="3">
+                    Manutenção
+                </div>
+            </div>
+        </div>
+
+        <!-- EVENTOS CADASTRADOS -->
+        <div class="bg-superficie-elevada border border-borda-sutil rounded shadow mb-4">
+            <div class="bg-superficie-afundada border-b border-borda-sutil p-2 font-bold">
+                Eventos neste Ano:
+            </div>
+
+            <div class="max-h-[450px] overflow-x-auto overflow-y-auto p-1">
+                <table class="w-full text-left text-xs border-separate border-spacing-y-[2px]">
+                    <thead class="bg-superficie-afundada text-texto-primario">
+                        <tr>
+                            <th class="border border-borda-sutil p-2">Data</th>
+                            <th class="border border-borda-sutil p-2">Motivo</th>
+                            <th class="border border-borda-sutil p-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="eventos-tabela-body">
+                        {% for ev in eventos_ano %}
+                        <tr class="transition">
+                            <td class="px-2 py-3 text-center md:text-left">{{ ev.data|date:"d/m/Y" }}</td>
+                            <td class="px-2 py-3 text-center md:text-left">{{ ev.get_motivo_display }}</td>
+                            <td class="px-2 py-3 text-center md:text-left">
+                                <button type="button" onclick="excluirEvento({{ ev.id }})"
+                                        class="botao-perigo-icone shadow-sm"
+                                        title="Excluir evento" aria-label="Excluir evento">
+                                    <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="p-2 text-center text-texto-legenda">Nenhum evento</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+
+
+                </table>
+            </div>
+        </div>
+
+        <a href="{% url 'calendarios' %}"
+           class="botao-secundario w-full text-sm">
+            Voltar aos Calendários
+        </a>
+
+    </div>
+
+
+    <!-- CALENDÁRIO PRINCIPAL -->
+    <div class="lg:col-span-3">
+        <h4 class="text-lg font-bold mb-3">Calendário: {{ calendario.descricao }}</h4>
+
+        <div id="calendar" class="max-h-[750px] overflow-y-auto rounded border border-borda-sutil bg-superficie-elevada p-2 text-[.85rem]">
+        </div>
+    </div>
+
+</div>
+
+<!-- FULLCALENDAR -->
+<script src="{% static 'vendor/fullcalendar/index.global.min.js' %}"></script>
+
+<script>
+var calendar;
+
+function atualizarTabelaEventos() {
+    let ano = calendar.view.currentStart.getFullYear();
+
+    fetch("{% url 'api_eventos' calendario.id %}?start=" + ano + "-01-01&end=" + ano + "-12-31")
+
+
+      .then(resp => resp.json())
+      .then(eventos => {
+        let tbody = document.getElementById("eventos-tabela-body");
+        tbody.innerHTML = "";
+        if (eventos.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhum evento</td></tr>';
+        } else {
+          eventos.forEach(ev => {
+            let row = `<tr>
+                         <td>${ev.start.split("T")[0].split("-").reverse().join("/")}</td>
+                         <td>${ev.title}</td>
+                         <td>
+                           <button type="button" onclick="excluirEvento(${ev.id})"
+                                   class="botao-perigo-icone shadow-sm"
+                                   title="Excluir evento" aria-label="Excluir evento"><i data-lucide="trash-2" class="" aria-hidden="true"></i></button>
+                         </td>
+                       </tr>`;
+            tbody.innerHTML += row;
+          });
+        }
+        lucide.createIcons();
+      });
+}
+
+function excluirEvento(id) {
+    if (!confirm("Excluir este evento?")) return;
+
+    fetch(`/eventos/deletar/${id}/`, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": "{{ csrf_token }}",
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    })
+    .then(resp => resp.json())
+    .then(data => {
+      if (data.status === "ok") {
+        calendar.refetchEvents();
+        atualizarTabelaEventos();
+      }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    new FullCalendar.Draggable(document.getElementById('external-events'), {
+      itemSelector: '.fc-event',
+      eventData: function(eventEl) {
+        return {
+          title: eventEl.innerText,
+          motivo: eventEl.getAttribute('data-motivo')
+        };
+      }
+    });
+
+    calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+      initialView: 'dayGridMonth',
+      locale: 'pt-br',
+      buttonText: { today: 'Hoje' },
+      editable: true,
+      nowIndicator: true,
+      droppable: true,
+      headerToolbar: { left: 'prev next today', center: 'title', right: '' },
+      height: "750px",
+
+    events: function(fetchInfo, successCallback, failureCallback) {
+        let start = fetchInfo.startStr;
+        let end = fetchInfo.endStr;
+
+        fetch("{% url 'api_eventos' calendario.id %}?start=" + start + "&end=" + end)
+            .then(resp => resp.json())
+            .then(data => successCallback(data));
+    },
+
+      datesSet: function(info) {
+        atualizarTabelaEventos();
+      },
+
+      dayCellDidMount: function(info) {
+        info.el.querySelector('.fc-daygrid-day-number')?.classList.add('text-texto-primario');
+      },
+
+      drop: function(info) {
+        var motivo = info.draggedEl.getAttribute("data-motivo");
+        fetch("{% url 'api_evento_create' %}", {
+          method: "POST",
+          headers: {"X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json"},
+          body: JSON.stringify({
+            calendario_id: {{ calendario.id }},
+            motivo: motivo,
+            data: info.dateStr
+          })
+        }).then(() => {
+          calendar.refetchEvents();
+          atualizarTabelaEventos();
+        });
+        info.revert();
+      },
+
+      eventDrop: function(info) {
+        fetch("{% url 'api_evento_update' %}", {
+          method: "POST",
+          headers: {"X-CSRFToken": "{{ csrf_token }}", "Content-Type": "application/json"},
+          body: JSON.stringify({id: info.event.id, data: info.event.startStr})
+        }).then(() => atualizarTabelaEventos());
+      }
+
+    });
+
+    calendar.render();
+    atualizarTabelaEventos();
+
+});
+</script>
+
+{% else %}
+
+<!-- ======================== -->
+<!-- LISTA + FORMULÁRIO -->
+<!-- ======================== -->
+
+<div class="w-full mt-4 text-sm text-texto-primario">
+
+    <!-- FORM -->
+    <div class="bg-superficie-elevada border border-borda-sutil rounded shadow mb-6">
+        <div class="bg-superficie-afundada border-b border-borda-sutil p-3 font-bold">
+            {% if editing %}Editar Calendário{% else %}Novo Calendário{% endif %}
+        </div>
+
+        <div class="p-4">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="space-y-4">
+                    {% for field in form %}
+                    <div>
+                        <label class="font-semibold">{{ field.label }}</label>
+                        {{ field|add_class:"border w-full p-1 rounded bg-superficie-elevada" }}
+                        {% for error in field.errors %}
+                            <div class="text-erro-base text-xs">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if editing %}
+                <div class="bg-atencao-sutil border border-atencao-borda text-texto-primario px-3 py-2 rounded mt-4">
+                    Editando calendário: <strong>{{ calendario_editando.descricao }}</strong>
+                </div>
+                {% endif %}
+
+                <div class="flex justify-between mt-6">
+                    <a href="{% url 'home' %}"
+                       class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                        <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i>
+                        Voltar
+                    </a>
+
+                    <div class="flex gap-2">
+                        {% if editing %}
+                        <a href="{% url 'calendarios' %}"
+                           class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                            Cancelar
+                        </a>
+                        {% endif %}
+
+                        <button class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                            <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i>
+                            {% if editing %} Atualizar {% else %} Salvar {% endif %}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- LISTA -->
+    <div class="overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+
+        <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+            <thead class="bg-superficie-afundada text-texto-primario">
+                <tr>
+                    <th class="border border-borda-sutil p-2">Filial</th>
+                    <th class="border border-borda-sutil p-2">Descrição</th>
+                    <th class="border border-borda-sutil p-2 text-end">Ações</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for cal in page_obj %}
+                <tr class="transition hover:bg-interacao-hover">
+                    <td class="border border-borda-sutil p-2">{{ cal.filial.empresa.codemp }}.{{ cal.filial.codfil }} - {{ cal.filial.nome }}</td>
+                    <td class="border border-borda-sutil p-2">{{ cal.descricao }}</td>
+                    <td class="border border-borda-sutil p-2">
+                        <div class="flex justify-end gap-2">
+                            <a href="{% url 'eventos_calendario' cal.id %}" class="botao-primario px-3 py-1 text-xs">Abrir Eventos</a>
+                            <a href="{% url 'editar_calendario' cal.id %}"
+                               class="botao-atencao-icone"
+                               title="Editar">
+                                <i data-lucide="square-pen" class="" aria-hidden="true"></i>
+                            </a>
+                            <form method="post" action="{% url 'deletar_calendario' cal.id %}"
+                                  onsubmit="return confirm('Excluir este calendário?');">
+                                {% csrf_token %}
+                                <button type="submit" class="botao-perigo-icone shadow-sm"
+                                        title="Excluir calendário" aria-label="Excluir calendário">
+                                    <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+<tr><td colspan="3" class="p-4 text-center text-texto-legenda">Nenhum calendário cadastrado.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+
+    </div>
+
+</div>
+
+{% endif %}
+
+{% endblock %}

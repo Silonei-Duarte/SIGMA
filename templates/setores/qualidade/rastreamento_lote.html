@@ -1,0 +1,342 @@
+{% load static tailwind_tags %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ APPLICATION_NAME }} | {{ titulo }}</title>
+    <link rel="icon" href="{% static 'images/favicon.ico' %}">
+    {% tailwind_css %}
+    <script>
+    if (localStorage.getItem("temaSigma") === "escuro") {
+        document.documentElement.classList.add("tema-escuro");
+    }
+    </script>
+</head>
+<body class="min-h-screen bg-superficie-base text-texto-primario">
+<main class="w-full px-4 mt-4 pb-6 text-sm">
+    <div class="mb-6 border-b border-borda-sutil pb-4">
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+                <h2 class="titulo-pagina text-texto-primario">Rastreamento de Lote</h2>
+                <p class="mt-1 text-xs text-texto-legenda">
+                    Empresa {{ codemp|default:"-" }} · Lote {{ codlot|default:"-" }}
+                </p>
+                <form method="GET" action="{% url 'qualidade:rastreamento_lote' %}" class="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <input type="number" name="codemp" value="{{ codemp|default:'1' }}" min="1" required
+                           placeholder="Empresa"
+                           class="h-10 w-full rounded-xl border bg-superficie-elevada px-3 text-sm shadow-sm  transition focus:border-borda-foco sm:w-28">
+                    <input type="text" name="codlot" value="{{ codlot }}" required autofocus
+                           placeholder="Digite o lote"
+                           class="h-10 w-full rounded-xl border bg-superficie-elevada px-3 text-sm shadow-sm  transition focus:border-borda-foco sm:w-64">
+                    <button type="submit" class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                        Consultar lote
+                    </button>
+                </form>
+            </div>
+            <button id="alternarTema" type="button" class="shrink-0 rounded px-2 py-1 text-lg hover:bg-interacao-hover" title="Alternar tema" aria-label="Alternar tema"></button>
+        </div>
+    </div>
+
+    <div class="overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+        {% if rastreando %}
+        <div class="flex min-h-52 flex-col items-center justify-center gap-3 p-6 text-center">
+            <div class="flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-marca-base text-2xl font-bold text-texto-sobre-marca">...</div>
+            <div>
+                <h3 class="text-lg font-bold text-texto-primario">Rastreando lote...</h3>
+                <p class="mt-1 text-sm text-texto-legenda">Consultando movimentos, saldos e dados de qualidade no ERP.</p>
+            </div>
+        </div>
+        {% else %}
+        {% if avisos %}
+        <div class="m-4 rounded-xl border border-atencao-borda bg-atencao-sutil p-3 text-atencao-base">
+            {% for aviso in avisos %}
+            <div>{{ aviso }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="grid gap-4 p-4 lg:grid-cols-[1fr_360px]">
+            <section class="order-2 min-w-0 lg:order-1">
+                <h3 class="mb-3 text-base font-bold text-texto-primario">Fluxo do lote</h3>
+                {% if eventos %}
+                <div class="relative space-y-0 pl-7">
+                    <div class="absolute left-[13px] top-3 bottom-3 w-0.5 bg-borda-padrao"></div>
+                    {% for evento in eventos %}
+                    <div class="relative pb-4">
+                        <div class="absolute -left-7 top-4 flex h-7 w-7 items-center justify-center rounded-full border-2 bg-superficie-elevada text-xs font-black
+                            {% if evento.tag_qualidade == 'reclassificacao' %}border-atencao-borda text-atencao-base
+                            {% elif evento.tag_qualidade == 'refugo' %}border-erro-borda text-erro-base
+                            {% elif evento.tag_qualidade == 'liberacao' %}border-sucesso-borda text-sucesso-base
+                            {% elif evento.tipo == 'Movimento ERP' %}border-informacao-borda text-informacao-base
+                            {% else %}border-borda-padrao text-texto-secundario{% endif %}">
+                            {% if evento.tag_qualidade == 'reclassificacao' %}R
+                            {% elif evento.tag_qualidade == 'refugo' %}F
+                            {% elif evento.tag_qualidade == 'liberacao' %}L
+                            {% elif evento.tipo == 'Movimento ERP' %}M
+                            {% else %}P{% endif %}
+                        </div>
+                        <div class="rounded-xl border p-3 shadow-sm
+                            {% if evento.tag_qualidade == 'reclassificacao' %}border-atencao-borda bg-atencao-sutil
+                            {% elif evento.tag_qualidade == 'refugo' %}border-erro-borda bg-erro-sutil
+                            {% elif evento.tag_qualidade == 'liberacao' %}border-sucesso-borda bg-sucesso-sutil
+                            {% elif evento.tipo == 'Produção ERP' or evento.tipo == 'Movimento ERP' or evento.tipo == 'Apontamento local' or evento.tipo == 'WMS local' %}border-informacao-borda bg-informacao-sutil
+                            {% else %}border-borda-sutil bg-superficie-elevada{% endif %}">
+                            <div class="flex flex-col gap-1 border-b border-borda-sutil pb-2 md:flex-row md:items-start md:justify-between">
+                                <div>
+                                    <div class="text-sm font-bold text-texto-primario">{{ evento.titulo }}</div>
+                                    <div class="text-xs font-semibold text-informacao-base">{{ evento.tipo }}{% if evento.origem %} · {{ evento.origem }}{% endif %}</div>
+                                </div>
+                                <div class="whitespace-nowrap text-xs font-bold text-texto-secundario">
+                                    {{ evento.data_hora|date:"d/m/Y H:i:s"|default:"Sem data" }}
+                                    {% if evento.seqmov %}
+                                    <span class="ml-1 text-texto-legenda">Seq. {{ evento.seqmov }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if evento.descricao %}
+                            <p class="mt-2 text-sm text-texto-secundario">{{ evento.descricao }}</p>
+                            {% endif %}
+                            {% if evento.dados %}
+                            <dl class="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                                {% for label, valor in evento.dados %}
+                                {% if valor is not None and valor != "" %}
+                                <div class="rounded-lg border px-2 py-1 text-texto-primario
+                                    {% if label == 'Origem' or label == 'OP' or label == 'OP/Documento' or label == 'Máquina' %}border-atencao-borda bg-atencao-sutil
+                                    {% else %}border-borda-sutil bg-superficie-afundada{% endif %}">
+                                    <dt class="text-xs font-bold uppercase {% if label == 'Origem' or label == 'OP' or label == 'OP/Documento' or label == 'Máquina' %}text-atencao-base{% else %}text-texto-legenda{% endif %}">{{ label }}</dt>
+                                    <dd class="break-words text-xs font-semibold
+                                        {% if label == 'Entrada/Saída' and valor == 'Entrada' %}text-sucesso-base
+                                        {% elif label == 'Entrada/Saída' and valor == 'Saída' %}text-erro-base
+                                        {% elif label == 'Origem' or label == 'OP' or label == 'OP/Documento' or label == 'Máquina' %}text-atencao-base
+                                        {% endif %}">{{ valor }}</dd>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </dl>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="rounded-xl border border-borda-sutil bg-superficie-afundada p-4 text-texto-legenda">
+                    Nenhum evento encontrado para este lote.
+                </div>
+                {% endif %}
+            </section>
+
+            <aside class="order-1 min-w-0 lg:order-2">
+                {% if referencia_anterior %}
+                <div class="mb-4 rounded-xl border border-borda-sutil bg-superficie-elevada p-3 shadow-sm">
+                    <h3 class="mb-3 text-base font-bold text-texto-primario">Referência anterior</h3>
+                    <dl class="grid gap-2 text-xs">
+                        <div class="rounded-lg border border-borda-sutil bg-superficie-afundada px-2 py-1">
+                            <dt class="text-xs font-bold uppercase text-texto-legenda">Depósito anterior</dt>
+                            <dd class="break-words font-bold text-texto-primario">{{ referencia_anterior.deposito|default:"-" }}</dd>
+                        </div>
+                        <div class="rounded-lg border border-borda-sutil bg-superficie-afundada px-2 py-1">
+                            <dt class="text-xs font-bold uppercase text-texto-legenda">Último recurso utilizado</dt>
+                            <dd class="break-words font-bold text-texto-primario">
+                                {% if referencia_anterior.codcre or referencia_anterior.recurso %}
+                                    {% if referencia_anterior.codcre %}{{ referencia_anterior.codcre }}{% endif %}
+                                    {% if referencia_anterior.recurso %}{% if referencia_anterior.codcre %} - {% endif %}{{ referencia_anterior.recurso }}{% endif %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </dd>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="rounded-lg border border-borda-sutil bg-superficie-afundada px-2 py-1">
+                                <dt class="text-xs font-bold uppercase text-texto-legenda">Origem</dt>
+                                <dd class="break-words font-semibold text-texto-primario">{{ referencia_anterior.codori|default:"-" }}</dd>
+                            </div>
+                            <div class="rounded-lg border border-borda-sutil bg-superficie-afundada px-2 py-1">
+                                <dt class="text-xs font-bold uppercase text-texto-legenda">OP/Documento</dt>
+                                <dd class="break-words font-semibold text-texto-primario">{{ referencia_anterior.numorp|default:"-" }}</dd>
+                            </div>
+                        </div>
+                    </dl>
+                </div>
+                {% endif %}
+                <h3 class="mb-3 text-base font-bold text-texto-primario">Saldo atual ERP</h3>
+                {% if saldos %}
+                <div class="overflow-x-auto rounded-xl border border-borda-sutil">
+                    <table class="w-full border-collapse text-xs">
+                        <thead class="bg-superficie-afundada text-texto-primario">
+                            <tr>
+                                <th class="border border-borda-padrao p-2 text-left">Lote</th>
+                                <th class="border border-borda-padrao p-2 text-left">Dep.</th>
+                                <th class="border border-borda-padrao p-2 text-left">Produto</th>
+                                <th class="border border-borda-padrao p-2 text-right">Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for saldo in saldos %}
+                            <tr class="bg-superficie-elevada">
+                                <td class="border border-borda-sutil p-2 font-bold">{{ saldo.lote }}</td>
+                                <td class="border border-borda-sutil p-2 font-bold">{{ saldo.deposito }}</td>
+                                <td class="border border-borda-sutil p-2">{{ saldo.produto }} / {{ saldo.derivacao }}</td>
+                                <td class="border border-borda-sutil p-2 text-right font-bold">{{ saldo.saldo|floatformat:4 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="rounded-xl border border-borda-sutil bg-superficie-afundada p-4 text-texto-legenda">
+                    Nenhum saldo encontrado no ERP.
+                </div>
+                {% endif %}
+
+                {% if dados_qualidade %}
+                <h3 class="mb-3 mt-6 text-base font-bold text-texto-primario">Dados de Qualidade (Alchemy)</h3>
+                <div class="space-y-4">
+                    {% for q in dados_qualidade %}
+                    <div class="rounded-xl border border-informacao-borda bg-superficie-elevada p-3 shadow-sm">
+                        <div class="mb-2 flex items-center justify-between border-b border-borda-sutil pb-2">
+                            <span class="text-xs font-bold text-informacao-base">Bobina: {{ q.CODBOBINA }}</span>
+                            <div class="text-right flex flex-col items-end">
+                                <span class="text-xs font-bold text-texto-primario">Teste em: {{ q.DATA_TESTE|date:"d/m/Y H:i" }}</span>
+                                <span class="text-xs text-texto-primario font-medium">Produzida {{ q.DATA_PRO|date:"d/m/Y" }} · Turno {{ q.TURNO }}</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Gramatura (Média)</span>
+                                <span class="font-bold text-texto-primario">{{ q.MEDIA_GRAMATURA|floatformat:2 }}</span>
+                            </div>
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Gramatura (Desvio)</span>
+                                <span class="font-bold text-texto-primario">{{ q.DESVIO_GRAMATURA|floatformat:2 }}</span>
+                            </div>
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Umidade</span>
+                                <span class="font-bold text-texto-primario">{{ q.UMIDADE|floatformat:2 }}</span>
+                            </div>
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Alvura</span>
+                                <span class="font-bold text-texto-primario">{{ q.ALVURA|floatformat:2 }}</span>
+                            </div>
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Cor (B)</span>
+                                <span class="font-bold text-texto-primario">{{ q.B|floatformat:2 }}</span>
+                            </div>
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Crepe</span>
+                                <span class="font-bold text-texto-primario">{{ q.CREPE|floatformat:2 }}%</span>
+                            </div>
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Espessura</span>
+                                <span class="font-bold text-texto-primario">{{ q.ESPESSURA|floatformat:2 }}</span>
+                            </div>
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Porosidade</span>
+                                <span class="font-bold text-texto-primario">{{ q.POROSIDADE|floatformat:2 }}</span>
+                            </div>
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Handfeel</span>
+                                <span class="font-bold text-texto-primario">{{ q.HANDFEEL|floatformat:2 }}</span>
+                            </div>
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Maciez</span>
+                                <span class="font-bold text-texto-primario">{{ q.INDICEMACIEZ|floatformat:2 }}</span>
+                            </div>
+                             <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Largura</span>
+                                <span class="font-bold text-texto-primario">{{ q.LARGURA_CM|floatformat:1 }} cm</span>
+                            </div>
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Diâmetro</span>
+                                <span class="font-bold text-texto-primario">{{ q.DIAMETRO_CM|floatformat:1 }} cm</span>
+                            </div>
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Alongamento</span>
+                                <span class="font-bold text-texto-primario">{{ q.ALONGAMENTO|floatformat:2 }}%</span>
+                            </div>
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Emendas</span>
+                                <span class="font-bold text-texto-primario">{{ q.NUMERO_EMENDAS|default:"-" }}</span>
+                            </div>
+                            <div class="flex justify-between border-b border-borda-sutil py-1">
+                                <span class="text-texto-primario">Picks</span>
+                                <span class="font-bold text-texto-primario">{{ q.NUMERO_PICKS|default:"-" }}</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-2 border-t border-borda-sutil pt-2">
+                            <span class="text-xs font-bold uppercase text-texto-primario">Resistência</span>
+                            <div class="mt-1 flex flex-col gap-1 text-xs">
+                                <div class="flex justify-between border-b border-borda-sutil py-1">
+                                    <span class="text-texto-primario">RU Cura</span>
+                                    <span class="font-bold text-texto-primario">{{ q.RU_CURA|floatformat:2 }}</span>
+                                </div>
+                                <div class="flex justify-between border-b border-borda-sutil py-1">
+                                    <span class="text-texto-primario">RU Seco</span>
+                                    <span class="font-bold text-texto-primario">{{ q.RU_SECO|floatformat:2 }}</span>
+                                </div>
+                                <div class="flex justify-between border-b border-borda-sutil py-1">
+                                    <span class="text-texto-primario">Resist. Longitudinal</span>
+                                    <span class="font-bold text-texto-primario">{{ q.RESIST_LONGITUDINAL|floatformat:2 }}</span>
+                                </div>
+                                <div class="flex justify-between border-b border-borda-sutil py-1">
+                                    <span class="text-texto-primario">Resist. Transversal</span>
+                                    <span class="font-bold text-texto-primario">{{ q.RESIST_TRANSVERSAL|floatformat:2 }}</span>
+                                </div>
+                                <div class="flex justify-between border-b border-borda-sutil py-1">
+                                    <span class="text-texto-primario">Resist. Úmido</span>
+                                    <span class="font-bold text-texto-primario">{{ q.PERC_RESISTENCIA_UMIDO|floatformat:2 }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if q.OBSERVACAO %}
+                        <div class="mt-2 rounded bg-superficie-afundada p-2 text-xs text-texto-primario">
+                            <strong class="font-bold">Obs:</strong> {{ q.OBSERVACAO }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </aside>
+        </div>
+        {% endif %}
+    </div>
+    {% if user.is_authenticated %}
+    <div class="mt-4">
+        <button type="button" onclick="window.history.back()" class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+            <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i>
+            Voltar
+        </button>
+    </div>
+    {% endif %}
+</main>
+<script src="{% static 'vendor/lucide/lucide.min.js' %}"></script>
+<script>
+const botaoTema = document.getElementById("alternarTema");
+const atualizarBotaoTema = () => {
+    const escuro = document.documentElement.classList.contains("tema-escuro");
+    botaoTema.innerHTML = `<i data-lucide="${escuro ? 'sun' : 'moon'}" class="h-5 w-5" aria-hidden="true"></i>`;
+    botaoTema.title = escuro ? "Usar tema claro" : "Usar tema escuro";
+    botaoTema.setAttribute("aria-label", botaoTema.title);
+    window.lucide?.createIcons();
+};
+atualizarBotaoTema();
+botaoTema.addEventListener("click", () => {
+    document.documentElement.classList.toggle("tema-escuro");
+    localStorage.setItem("temaSigma", document.documentElement.classList.contains("tema-escuro") ? "escuro" : "claro");
+    atualizarBotaoTema();
+});
+{% if rastreando %}
+requestAnimationFrame(() => {
+    window.setTimeout(() => {
+        const url = new URL(window.location.href);
+        url.searchParams.set("processar", "1");
+        window.location.replace(url.toString());
+    }, 100);
+});
+{% endif %}
+</script>
+</body>
+</html>

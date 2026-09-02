@@ -1,0 +1,69 @@
+<!doctype html>
+{% load tailwind_tags %}
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <title>{{ APPLICATION_NAME }} | {{ titulo }}</title>
+    {% tailwind_css %}
+</head>
+<body class="m-0 flex min-h-screen min-w-full items-center justify-center bg-superficie-base p-6 font-[Arial,Helvetica,sans-serif] text-texto-primario print:block print:h-[10cm] print:min-h-[10cm] print:w-[15cm] print:min-w-[15cm] print:!bg-[#f4d329] print:p-0">
+    <div class="fixed right-2 top-2 z-2 flex gap-1.5 print:hidden">
+        <button type="button" onclick="window.print()" class="h-[30px] cursor-pointer rounded-md border border-borda-padrao bg-superficie-inversa px-2 text-xs font-bold text-texto-sobre-inversa">Imprimir</button>
+    </div>
+
+    {% for etiqueta in etiquetas %}
+    <main class="relative block h-[10cm] w-[15cm] shrink-0 overflow-hidden !bg-[#f4d329] px-[.25cm] pb-[.12cm] pt-[.35cm] !text-texto-primario shadow-[0_12px_32px_rgba(0,0,0,.22)] [break-after:page] print:shadow-none">
+        <div class="grid h-full min-h-0 min-w-0 grid-rows-[.62cm_2.46cm_minmax(0,1fr)] gap-x-[.08cm] gap-y-[.12cm] overflow-hidden px-[.08cm] py-[.02cm]">
+            <section class="col-span-full grid items-center gap-[.08cm] {% if etiqueta.tem_bobina %}grid-cols-[.72fr_.82fr_1.35fr_.72fr_.92fr_1.18fr]{% else %}grid-cols-[.72fr_.82fr_1.35fr_1.72fr_1.18fr]{% endif %}">
+                <div class="flex h-full min-w-0 flex-col justify-center overflow-hidden rounded-[2px] border border-[#111] bg-superficie-elevada/15 px-[.08cm] py-[.03cm]"><span class="block text-[6px] font-black leading-none">ORIGEM</span><span class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-black leading-[1.08]">{{ etiqueta.origem }}</span>
+                </div>
+                <div class="flex h-full min-w-0 flex-col justify-center overflow-hidden rounded-[2px] border border-[#111] bg-superficie-elevada/15 px-[.08cm] py-[.03cm]"><span class="block text-[6px] font-black leading-none">OP</span><span class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-black leading-[1.08]">{{ etiqueta.op }}</span>
+                </div>
+                <div class="flex h-full min-w-0 flex-col justify-center overflow-hidden rounded-[2px] border border-[#111] bg-superficie-elevada/15 px-[.08cm] py-[.03cm]"><span class="block text-[6px] font-black leading-none">DATA AVALIAÇÃO</span><span class="block min-w-0 whitespace-nowrap text-[13px] font-black leading-[1.08] tracking-[-.2px]">{{ etiqueta.data_fechamento }}</span>
+                </div>
+                <div class="flex h-full min-w-0 flex-col justify-center overflow-hidden rounded-[2px] border border-[#111] bg-superficie-elevada/15 px-[.08cm] py-[.03cm]"><span class="block text-[6px] font-black leading-none">REC.</span><span class="block min-w-0 whitespace-nowrap text-[13px] font-black leading-[1.08]">{{ etiqueta.recurso }}</span>
+                </div>
+                {% if etiqueta.tem_bobina %}
+                <div class="flex h-full min-w-0 flex-col justify-center overflow-hidden rounded-[2px] border border-[#111] bg-superficie-elevada/15 px-[.08cm] py-[.03cm]"><span class="block text-[6px] font-black leading-none">BOBINA</span><span class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-black leading-[1.08]">{{ etiqueta.registro.numbob }}</span>
+                </div>
+                {% endif %}
+                <div class="flex h-full min-w-0 flex-col justify-center overflow-hidden rounded-[2px] border border-[#111] bg-superficie-elevada/15 px-[.08cm] py-[.03cm]"><span class="block text-[6px] font-black leading-none">QUANTIDADE KG</span><span class="block min-w-0 whitespace-nowrap text-[13px] font-black leading-[1.08] tracking-[-.2px]">{{ etiqueta.quantidade }}</span>
+                </div>
+            </section>
+
+            <section class="col-span-full grid grid-cols-[1fr_2.18cm] gap-[.08cm]">
+                <div class="flex h-full min-w-0 flex-col justify-start overflow-hidden rounded-[2px] border border-[#111] bg-superficie-elevada/15 px-[.08cm] py-[.03cm] gap-[.07cm]">
+                    <span class="block text-[6px] font-black leading-none">PRODUTO / DERIVAÇÃO</span><span class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-bold leading-[1.05]">{{ etiqueta.produto }} / {{ etiqueta.derivacao }}</span><span class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-normal leading-[1.05]">{{ etiqueta.descricao }}</span><span class="block text-[6px] font-black leading-none">OBS. ETIQUETA</span><span class="block min-w-0 max-h-[.58cm] overflow-hidden break-words text-[10px] font-normal leading-[1.12]">{{ etiqueta.observacao_etiqueta }}</span>
+                </div>
+                <div class="flex h-full min-w-0 items-center justify-center overflow-hidden rounded-[2px] border border-[#111] !bg-superficie-elevada [&_svg]:block [&_svg]:h-[2cm] [&_svg]:w-[2cm]" title="Rastreamento do lote">
+                    {{ etiqueta.rastreamento_qr_svg|safe }}
+                </div>
+            </section>
+
+            <section class="col-span-full flex min-h-0 w-full flex-col items-center justify-center gap-[.04cm]">
+                <div class="flex min-w-0 max-w-full items-center justify-center gap-[.18cm]"><div class="whitespace-nowrap border-2 border-[#111] px-[.18cm] py-[.04cm] text-[13px] font-black leading-none">{{ etiqueta.destino }}</div><div class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[30px] font-black leading-none">{{ etiqueta.lote }}</div>
+                </div>
+                <div class="flex h-[5.5cm] w-full items-center justify-center overflow-hidden text-center [&_svg]:mx-auto [&_svg]:block [&_svg]:h-[5.45cm] [&_svg]:w-full">{{ etiqueta.barcode_svg|safe }}</div>
+            </section>
+        </div>
+        <div class="impresso-em absolute left-[.34cm] top-[.08cm] text-[7px] font-bold leading-none"></div><div class="absolute right-[.58cm] top-[.08cm] max-w-[4cm] overflow-hidden text-ellipsis whitespace-nowrap text-right text-[7px] font-bold leading-none">Usuário: {{ request.user.username }}</div>
+    </main>
+    {% endfor %}
+
+    <script>
+        document.querySelectorAll(".impresso-em").forEach(function (el) {
+            var agora = new Date();
+            el.textContent = "Impressa: " + agora.toLocaleDateString("pt-BR") + " " + agora.toLocaleTimeString("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+        });
+
+        window.addEventListener("load", function () {
+            setTimeout(function () {
+                window.print();
+            }, 250);
+        });
+    </script>
+</body>
+</html>

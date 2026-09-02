@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ APPLICATION_NAME }} | {{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="w-full px-4 {% if request.GET.embutido == '1' %}py-4{% else %}mt-4 pb-4{% endif %} text-sm text-texto-primario">
+    <div class="mb-6 border-b border-borda-sutil pb-4">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <h2 class="titulo-pagina text-texto-primario">{{ titulo }}</h2>
+            </div>
+
+            <form method="GET" action="{% url 'status_recursos' %}" class="grid w-full grid-cols-1 gap-2 md:grid-cols-4 lg:w-auto">
+                {% if request.GET.embutido == '1' %}
+                <input type="hidden" name="embutido" value="1">
+                {% endif %}
+                <select
+                    name="empresa"
+                    aria-label="Filtrar por empresa"
+                    class="rounded-xl border bg-superficie-elevada px-3 py-2 text-texto-primario shadow-sm"
+                    onchange="this.form.setor.value=''; this.form.centro.value=''; this.form.recurso.value=''; this.form.submit()">
+                    <option value="" {% if not empresa_id %}selected{% endif %}>Selecione...</option>
+                    {% for empresa in empresas %}
+                    <option value="{{ empresa.id }}" {% if empresa_id == empresa.id|stringformat:"s" %}selected{% endif %}>
+                        {{ empresa.nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <select
+                    name="setor"
+                    aria-label="Filtrar por setor"
+                    class="rounded-xl border bg-superficie-elevada px-3 py-2 text-texto-primario shadow-sm"
+                    onchange="this.form.centro.value=''; this.form.recurso.value=''; this.form.submit()">
+                    <option value="" {% if not setor_id %}selected{% endif %}>Selecione...</option>
+                    {% for setor in setores %}
+                    <option value="{{ setor }}" {% if setor_id == setor %}selected{% endif %}>
+                        {{ setor }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <select
+                    name="centro"
+                    aria-label="Filtrar por centro de recurso"
+                    class="rounded-xl border bg-superficie-elevada px-3 py-2 text-texto-primario shadow-sm"
+                    onchange="this.form.recurso.value=''; this.form.submit()">
+                    <option value="" {% if not centro_id %}selected{% endif %}>Selecione...</option>
+                    {% for centro in centros %}
+                    <option value="{{ centro.id }}" {% if centro_id == centro.id|stringformat:"s" %}selected{% endif %}>
+                        {{ centro.descricao }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <select name="recurso" aria-label="Filtrar por recurso" class="rounded-xl border bg-superficie-elevada px-3 py-2 text-texto-primario shadow-sm" onchange="this.form.submit()">
+                    <option value="" {% if not recurso_id %}selected{% endif %}>Selecione...</option>
+                    {% for recurso in recursos %}
+                    <option value="{{ recurso.id }}" {% if recurso_id == recurso.id|stringformat:"s" %}selected{% endif %}>
+                        {{ recurso.descricao }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {% for card in cards %}
+        <article class="overflow-hidden rounded-3xl border border-borda-sutil bg-superficie-elevada shadow-sutil">
+            <div class="border-b border-borda-sutil bg-superficie-afundada px-6 py-4 text-texto-primario">
+                <div class="titulo-bloco">{{ card.recurso_codigo }} | {{ card.recurso_descricao }}</div>
+                <div class="legenda text-texto-legenda">{{ card.empresa_nome }} ({{ card.codemp }})</div>
+            </div>
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-2 p-6 sm:grid-cols-2">
+                <div class="flex min-w-0 items-baseline justify-between gap-2">
+                    <dt class="legenda text-texto-legenda">OP Ativa</dt>
+                    <dd class="corpo-base min-w-0 break-all text-right {% if card.possui_atividade %}text-informacao-base{% else %}text-erro-base{% endif %}">{{ card.op_ativa }}</dd>
+                </div>
+                <div class="flex min-w-0 items-baseline justify-between gap-2">
+                    <dt class="legenda text-texto-legenda">Horário de Início</dt>
+                    <dd class="corpo-tabela min-w-0 text-right text-texto-primario">
+                        {% if card.possui_atividade and card.horario_inicio %}
+                            {{ card.horario_inicio|date:"d/m/Y H:i:s" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </dd>
+                </div>
+                <div class="flex min-w-0 items-baseline justify-between gap-2 sm:col-span-2">
+                    <dt class="legenda text-texto-legenda">Operador</dt>
+                    <dd class="corpo-tabela min-w-0 text-right text-texto-primario">
+                        {% if card.possui_atividade and card.id_operador %}
+                            {{ card.operador_nome }} ({{ card.id_operador }})
+                        {% else %}
+                            -
+                        {% endif %}
+                    </dd>
+                </div>
+                <div class="flex min-w-0 items-baseline justify-between gap-2">
+                    <dt class="legenda text-texto-legenda">Produção Total no Dia</dt>
+                    <dd class="corpo-base text-right text-texto-primario">{{ card.producao_total_dia|floatformat:4 }}</dd>
+                </div>
+                <div class="flex min-w-0 items-baseline justify-between gap-2">
+                    <dt class="legenda text-texto-legenda">Produção Desde a Troca</dt>
+                    <dd class="corpo-base text-right text-texto-primario">
+                        {% if card.possui_atividade %}
+                            {{ card.producao_desde_troca|floatformat:4 }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </dd>
+                </div>
+            </dl>
+        </article>
+        {% empty %}
+        <div class="col-span-full flex flex-col items-center gap-2 rounded-2xl border border-borda-sutil bg-superficie-elevada p-12 text-center shadow-sutil">
+            <i data-lucide="search-x" class="h-10 w-10 text-borda-padrao" aria-hidden="true"></i>
+            <div class="titulo-bloco text-texto-primario">Nenhum recurso encontrado</div>
+            <p class="corpo-base text-texto-legenda">Ajuste os filtros para encontrar os recursos que você procura.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if page_obj and page_obj.paginator.num_pages > 1 %}
+    <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if empresa_id %}&empresa={{ empresa_id }}{% endif %}{% if setor_id %}&setor={{ setor_id }}{% endif %}{% if centro_id %}&centro={{ centro_id }}{% endif %}{% if recurso_id %}&recurso={{ recurso_id }}{% endif %}{% if request.GET.embutido == '1' %}&embutido=1{% endif %}"
+           class="botao-secundario text-sm">
+            Anterior
+        </a>
+        {% endif %}
+
+        <span class="botao-primario text-sm">
+            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+        </span>
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if empresa_id %}&empresa={{ empresa_id }}{% endif %}{% if setor_id %}&setor={{ setor_id }}{% endif %}{% if centro_id %}&centro={{ centro_id }}{% endif %}{% if recurso_id %}&recurso={{ recurso_id }}{% endif %}{% if request.GET.embutido == '1' %}&embutido=1{% endif %}"
+           class="botao-secundario text-sm">
+            Próxima
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

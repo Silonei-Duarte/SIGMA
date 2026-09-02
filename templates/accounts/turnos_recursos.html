@@ -1,0 +1,487 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Turnos por Recurso{% endblock %}
+
+{% block content %}
+
+<div class="w-full mt-3 text-[0.85rem] text-texto-primario">
+
+  <form method="get" id="filtroForm" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+
+    <div>
+      <label class="font-semibold">Empresa</label>
+      <select name="empresa" id="id_empresa" class="border p-1 rounded w-full">
+        <option value="">Todas</option>
+        {% for e in empresas %}
+          <option value="{{ e.id }}" {% if e.id|stringformat:"s" == empresa_sel %}selected{% endif %}>
+            {{ e.nome }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="font-semibold">Filial</label>
+      <select name="filial" id="id_filial" class="border p-1 rounded w-full">
+        <option value="">Todas</option>
+        {% for f in filiais %}
+          <option value="{{ f.id }}" {% if f.id|stringformat:"s" == filial_sel %}selected{% endif %}>
+            {{ f.nome }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="font-semibold">Departamento</label>
+      <select name="departamento" id="id_departamento" class="border p-1 rounded w-full">
+        <option value="">Todos</option>
+        {% for d in departamentos %}
+          <option value="{{ d.id }}" {% if d.id|stringformat:"s" == departamento_sel %}selected{% endif %}>
+            {{ d.descricao }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="flex items-end">
+      <button class="botao-primario h-10 w-full text-sm"><i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i> Filtrar</button>
+    </div>
+
+  </form>
+
+  {% for setor in setores %}
+  <div class="border border-borda-sutil rounded shadow mb-4">
+
+    <div class="bg-superficie-afundada text-texto-primario px-3 py-2 font-bold">
+      Setor: {{ setor.descricao }}
+    </div>
+
+
+    <div class="p-3" data-setor="{{ setor.id }}">
+
+      {% if setor.centrorecurso_set.all %}
+
+        <div class="flex flex-wrap gap-2 border-b pb-2">
+          {% for centro in setor.centros_filtrados %}
+            {% for recurso in centro.recursos_filtrados %}
+            <button class="rounded bg-superficie-afundada px-3 py-1 text-sm font-semibold text-texto-primario opacity-60 transition tab-btn"
+                    data-target="conteudo-{{ recurso.id }}">
+                {{ recurso.descricao }}
+            </button>
+            {% endfor %}
+          {% endfor %}
+        </div>
+
+        {% for centro in setor.centros_filtrados %}
+          {% for recurso in centro.recursos_filtrados %}
+
+          <div id="conteudo-{{ recurso.id }}" class="hidden tab-pane mt-3">
+
+            <form method="post"
+                  class="grid grid-cols-1 md:grid-cols-4 gap-3 turno-form mb-3"
+                  data-recurso="{{ recurso.id }}">
+
+              {% csrf_token %}
+              <input type="hidden" name="recurso" value="{{ recurso.id }}">
+
+              <div>
+                <label class="font-semibold">Turno Base</label>
+                {{ form.turnobase|add_class:"border border-borda-sutil rounded p-1 w-full" }}
+              </div>
+
+              <div class="flex gap-3">
+
+                <div class="border p-2 rounded w-full text-center">
+                  <label class="font-bold">Início</label>
+                  <div class="flex justify-center gap-1 mt-1">
+                    {{ form.hora_inicio_h|add_class:"border p-1 rounded" }}
+                    {{ form.hora_inicio_m|add_class:"border p-1 rounded" }}
+                    {{ form.hora_inicio_s|add_class:"border p-1 rounded" }}
+                  </div>
+                </div>
+
+                <div class="border p-2 rounded w-full text-center">
+                  <label class="font-bold">Fim</label>
+                  <div class="flex justify-center gap-1 mt-1">
+                    {{ form.hora_fim_h|add_class:"border p-1 rounded" }}
+                    {{ form.hora_fim_m|add_class:"border p-1 rounded" }}
+                    {{ form.hora_fim_s|add_class:"border p-1 rounded" }}
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="border p-2 rounded">
+                <label class="font-bold text-center block">Dias da Semana</label>
+
+                <div class="flex flex-wrap justify-center gap-2 dias-container">
+
+                  <label class="flex items-center gap-1">
+                    <input class="dia-check w-4 h-4" type="checkbox" value="1">
+                    <span class="text-sm">Seg</span>
+                  </label>
+
+                  <label class="flex items-center gap-1">
+                    <input class="dia-check w-4 h-4" type="checkbox" value="2">
+                    <span class="text-sm">Ter</span>
+                  </label>
+
+                  <label class="flex items-center gap-1">
+                    <input class="dia-check w-4 h-4" type="checkbox" value="3">
+                    <span class="text-sm">Qua</span>
+                  </label>
+
+                  <label class="flex items-center gap-1">
+                    <input class="dia-check w-4 h-4" type="checkbox" value="4">
+                    <span class="text-sm">Qui</span>
+                  </label>
+
+                  <label class="flex items-center gap-1">
+                    <input class="dia-check w-4 h-4" type="checkbox" value="5">
+                    <span class="text-sm">Sex</span>
+                  </label>
+
+                  <label class="flex items-center gap-1">
+                    <input class="dia-check w-4 h-4" type="checkbox" value="6">
+                    <span class="text-sm">Sab</span>
+                  </label>
+
+                  <label class="flex items-center gap-1">
+                    <input class="dia-check w-4 h-4" type="checkbox" value="7">
+                    <span class="text-sm">Dom</span>
+                  </label>
+
+                </div>
+
+                <input type="hidden" name="dias" class="dias-hidden">
+
+              </div>
+
+              <div class="md:col-span-4 text-end">
+                <button type="submit" class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                  <i data-lucide="plus" class="h-5 w-5" aria-hidden="true"></i>
+                  Adicionar
+                </button>
+              </div>
+
+            </form>
+
+            <div class="text-end mb-2">
+              <a href="{% url 'replicar_turnos' recurso.id %}"
+                 class="botao-secundario text-sm"
+                 onclick="return confirm('Replicar estes turnos?')">
+                Replicar
+              </a>
+            </div>
+
+            <div class="mt-3 overflow-x-auto">
+            <table class="w-full min-w-max border border-borda-sutil text-center">
+              <thead class="bg-superficie-afundada">
+                <tr>
+                  <th class="border p-1">Turno Base</th>
+                  <th class="border p-1">Início</th>
+                  <th class="border p-1">Fim</th>
+
+                    <th class="border p-1">Seg</th>
+                    <th class="border p-1">Ter</th>
+                    <th class="border p-1">Qua</th>
+                    <th class="border p-1">Qui</th>
+                    <th class="border p-1">Sex</th>
+                    <th class="border p-1">Sab</th>
+                    <th class="border p-1">Dom</th>
+
+                  <th class="border p-1"></th>
+                </tr>
+              </thead>
+
+              <tbody>
+
+                {% for turno in recurso.turnos_ordenados %}
+                <tr>
+                  <td class="border p-1">{{ turno.turnobase.descricao }}</td>
+                  <td class="border p-1">{{ turno.hora_inicio|time:"H:i:s" }}</td>
+                  <td class="border p-1">{{ turno.hora_fim|time:"H:i:s" }}</td>
+
+                {% for i in "1234567"|make_list %}
+                <td class="border p-1
+                    {% if i|add:'0' in turno.dias %} bg-sucesso-sutil text-sucesso-base {% else %} bg-erro-sutil text-erro-base {% endif %}
+                ">
+                  {% if i == "1" %}Seg
+                  {% elif i == "2" %}Ter
+                  {% elif i == "3" %}Qua
+                  {% elif i == "4" %}Qui
+                  {% elif i == "5" %}Sex
+                  {% elif i == "6" %}Sab
+                  {% else %}Dom
+                  {% endif %}
+                </td>
+                {% endfor %}
+
+                <td class="border p-1 text-center">
+                    <div class="inline-flex gap-1">
+
+                        <button
+                          class="botao-atencao-icone editar-turno"
+                          data-id="{{ turno.id }}"
+                          data-turnobase="{{ turno.turnobase.id }}"
+                          data-hora-inicio="{{ turno.hora_inicio|time:'H:i:s' }}"
+                          data-hora-fim="{{ turno.hora_fim|time:'H:i:s' }}"
+                          data-dias="{{ turno.dias|join:',' }}"
+                          title="Editar">
+                          <i data-lucide="square-pen" class="" aria-hidden="true"></i>
+                        </button>
+
+                        <form method="post" action="{% url 'deletar_turno' turno.id %}"
+                              onsubmit="return confirm('Excluir turno?')">
+                            {% csrf_token %}
+                            <button type="submit" class="botao-perigo-icone" title="Excluir" aria-label="Excluir">
+                                <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                            </button>
+                        </form>
+
+                    </div>
+                </td>
+
+                </tr>
+
+                {% empty %}
+                <tr>
+                  <td colspan="12" class="p-2 text-texto-legenda">Nenhum turno encontrado.</td>
+                </tr>
+                {% endfor %}
+
+              </tbody>
+            </table>
+            </div>
+
+          </div>
+
+          {% endfor %}
+        {% endfor %}
+
+      {% else %}
+      <p class="text-texto-legenda">Nenhum recurso encontrado.</p>
+      {% endif %}
+
+    </div>
+  </div>
+  {% endfor %}
+  
+  {% if not setores %}
+    <div class="border border-borda-sutil rounded shadow p-6 text-center bg-superficie-afundada mt-4">
+      <p class="text-texto-secundario font-semibold">Nenhum setor ou recurso encontrado para os filtros selecionados.</p>
+      <p class="text-texto-legenda text-sm">Verifique se existem recursos cadastrados vinculados aos centros de recursos dos setores selecionados.</p>
+    </div>
+  {% endif %}
+  
+</div>
+
+<script>
+// =========================
+// FILTROS
+// =========================
+document.addEventListener('DOMContentLoaded', () => {
+
+  const empresaSel = document.getElementById('id_empresa');
+  const filialSel = document.getElementById('id_filial');
+  const depSel = document.getElementById('id_departamento');
+
+  // Opção construída por nós de DOM (textContent): nome/descricao vindos do
+  // cadastro nunca são interpretados como HTML — evita XSS armazenado.
+  function opcaoSegura(valor, texto) {
+    const opt = document.createElement('option');
+    opt.value = valor;
+    opt.textContent = texto;
+    return opt;
+  }
+
+  empresaSel.addEventListener('change', async () => {
+    const empresaId = empresaSel.value;
+
+    if (!empresaId) {
+      filialSel.replaceChildren(opcaoSegura('', 'Todas'));
+      depSel.replaceChildren(opcaoSegura('', 'Todos'));
+      return;
+    }
+
+    const resp = await fetch(`/ajax/filiais/?empresa_id=${empresaId}`);
+    const data = await resp.json();
+
+    filialSel.replaceChildren(opcaoSegura('', 'Todas'));
+    data.forEach(f => filialSel.appendChild(opcaoSegura(f.id, f.nome)));
+
+    depSel.replaceChildren(opcaoSegura('', 'Todos'));
+  });
+
+  filialSel.addEventListener('change', async () => {
+    const filialId = filialSel.value;
+
+    if (!filialId) return;
+
+    const resp = await fetch(`/ajax/departamentos/?filial_id=${filialId}`);
+    const data = await resp.json();
+
+    depSel.replaceChildren(opcaoSegura('', 'Selecione...'));
+    data.forEach(d => depSel.appendChild(opcaoSegura(d.id, d.descricao)));
+  });
+
+});
+
+
+// =========================
+// RECOLHER DIAS NO SUBMIT
+// =========================
+document.querySelectorAll('.turno-form').forEach(form => {
+
+  form.addEventListener('submit', (e) => {
+
+    const dias = [...form.querySelectorAll('.dia-check:checked')]
+      .map(c => c.value)
+      .join(',');
+
+    form.querySelector('.dias-hidden').value = dias;
+
+    if (!dias) {
+      e.preventDefault();
+      alert("Selecione ao menos um dia da semana.");
+    }
+  });
+
+});
+
+
+// =========================
+// LIMITAR TIME
+// =========================
+document.querySelectorAll('input[type="time"]').forEach(input => {
+  input.addEventListener('input', () => {
+    const [h, m] = input.value.split(':').map(Number);
+    if (h > 23 || (h === 23 && m > 59)) input.value = '23:59';
+    if (h < 0 || m < 0 || isNaN(h)) input.value = '00:00';
+  });
+});
+
+
+// =========================
+// ABAS POR SETOR (independentes)
+// =========================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+
+  btn.addEventListener('click', () => {
+
+    // setor atual
+    const container = btn.closest('.p-3');
+    const setorId = container.dataset.setor;
+
+    // esconde apenas as abas do setor atual
+    container.querySelectorAll('.tab-pane')
+      .forEach(p => p.classList.add('hidden'));
+
+    // remove active apenas do setor atual
+    container.querySelectorAll('.tab-btn')
+      .forEach(b => b.classList.remove('active', 'bg-marca-base', 'text-texto-sobre-marca', 'opacity-100'));
+    container.querySelectorAll('.tab-btn')
+      .forEach(b => b.classList.add('bg-superficie-afundada', 'text-texto-primario', 'opacity-60'));
+
+    // ativa
+    btn.classList.remove('bg-superficie-afundada', 'text-texto-primario', 'opacity-60');
+    btn.classList.add('active', 'bg-marca-base', 'text-texto-sobre-marca', 'opacity-100');
+
+    const alvo = document.getElementById(btn.dataset.target);
+    if (alvo) alvo.classList.remove('hidden');
+
+    // salva aba ativa POR SETOR
+    localStorage.setItem(`aba_ativa_setor_${setorId}`, btn.dataset.target);
+  });
+
+});
+
+
+// RESTAURAR ABAS POR SETOR
+document.addEventListener('DOMContentLoaded', () => {
+
+  // para cada setor
+  document.querySelectorAll('.p-3[data-setor]').forEach(container => {
+    const setorId = container.dataset.setor;
+    const abaSalva = localStorage.getItem(`aba_ativa_setor_${setorId}`);
+
+    const panes = container.querySelectorAll('.tab-pane');
+    const btns = container.querySelectorAll('.tab-btn');
+
+    // limpa tudo do setor atual
+    panes.forEach(p => p.classList.add('hidden'));
+    btns.forEach(b => {
+      b.classList.remove('active', 'bg-marca-base', 'text-texto-sobre-marca', 'opacity-100');
+      b.classList.add('bg-superficie-afundada', 'text-texto-primario', 'opacity-60');
+    });
+
+    if (abaSalva) {
+      const pane = document.getElementById(abaSalva);
+      const btn = container.querySelector(`.tab-btn[data-target="${abaSalva}"]`);
+
+      if (pane && btn) {
+        pane.classList.remove('hidden');
+        btn.classList.remove('bg-superficie-afundada', 'text-texto-primario', 'opacity-60');
+        btn.classList.add('active', 'bg-marca-base', 'text-texto-sobre-marca', 'opacity-100');
+        return; // setor restaurado
+      }
+    }
+
+    // nenhuma aba salva → ativa a primeira daquele setor
+    if (panes.length > 0) panes[0].classList.remove('hidden');
+    if (btns.length > 0) {
+      btns[0].classList.remove('bg-superficie-afundada', 'text-texto-primario', 'opacity-60');
+      btns[0].classList.add('active', 'bg-marca-base', 'text-texto-sobre-marca', 'opacity-100');
+    }
+  });
+
+});
+
+
+// =========================
+// EDITAR TURNO
+// =========================
+document.querySelectorAll('.editar-turno').forEach(btn => {
+
+  btn.addEventListener('click', () => {
+
+    const form = btn.closest('.tab-pane').querySelector('.turno-form');
+
+    form.querySelector('select[name="turnobase"]').value = btn.dataset.turnobase;
+
+    const hiRaw = btn.dataset.horaInicio || btn.getAttribute('data-hora-inicio') || '00:00:00';
+    const hfRaw = btn.dataset.horaFim || btn.getAttribute('data-hora-fim') || '00:00:00';
+
+    const [h1, m1, s1] = hiRaw.split(':');
+    const [h2, m2, s2] = hfRaw.split(':');
+
+    form.querySelector('[name="hora_inicio_h"]').value = h1;
+    form.querySelector('[name="hora_inicio_m"]').value = m1;
+    form.querySelector('[name="hora_inicio_s"]').value = s1;
+
+    form.querySelector('[name="hora_fim_h"]').value = h2;
+    form.querySelector('[name="hora_fim_m"]').value = m2;
+    form.querySelector('[name="hora_fim_s"]').value = s2;
+
+    form.querySelectorAll('.dia-check').forEach(c => c.checked = false);
+
+    btn.dataset.dias.split(',').forEach(d => {
+      const chk = form.querySelector(`.dia-check[value="${d}"]`);
+      if (chk) chk.checked = true;
+    });
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.textContent = 'Atualizar';
+
+    form.action = `/turnos/editar/${btn.dataset.id}/`;
+  });
+
+});
+</script>
+
+
+
+{% endblock %}

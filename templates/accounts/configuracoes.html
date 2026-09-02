@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Configurações da Aplicação{% endblock %}
+
+{% block content %}
+
+<div class="w-full px-4 mt-4 text-sm text-texto-primario">
+
+  <div class="flex justify-between items-center mb-4">
+      <h1 class="titulo-pagina text-texto-primario">Configurações da Aplicação</h1>
+  </div>
+
+  {% for grupo in topicos %}
+  <div class="bg-superficie-elevada border border-borda-sutil rounded overflow-hidden {% if not forloop.first %}mt-6{% endif %}">
+
+      <div class="bg-superficie-afundada border-b border-borda-sutil p-3">
+          <h2 class="titulo-secao text-texto-primario">{{ grupo.topico }}</h2>
+      </div>
+
+      <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+              <thead class="bg-superficie-afundada text-texto-primario">
+                  <tr>
+                      <th class="border border-borda-sutil p-2">Chave</th>
+                      <th class="border border-borda-sutil p-2">Descrição</th>
+                      <th class="border border-borda-sutil p-2">Valor vigente</th>
+                      <th class="border border-borda-sutil p-2">Atualizado</th>
+                      <th class="border border-borda-sutil p-2 text-center">Ações</th>
+                  </tr>
+              </thead>
+
+              <tbody>
+                  {% for item in grupo.itens %}
+                  <tr class="transition hover:bg-interacao-hover">
+                      <td class="border border-borda-sutil p-2 align-top font-mono max-w-xs truncate" title="{{ item.chave }}">
+                          {{ item.chave }}
+                      </td>
+                      <td class="border border-borda-sutil p-2 align-top text-texto-secundario max-w-md truncate" title="{{ item.descricao }}">
+                          {{ item.descricao|default:"-" }}
+                      </td>
+                      <td class="border border-borda-sutil p-2 align-top max-w-md truncate" title="{{ item.valor }}">
+                          {{ item.valor|default:"-" }}
+                      </td>
+                      <td class="border border-borda-sutil p-2 align-top whitespace-nowrap text-texto-secundario">
+                          {% if item.tem_linha %}
+                              {{ item.atualizado_por|default:"-" }}<br>
+                              <span class="text-texto-legenda">{{ item.atualizado_em|date:"d/m/Y H:i" }}</span>
+                          {% else %}
+                              <span class="text-texto-legenda">Sem configuração salva</span>
+                          {% endif %}
+                      </td>
+                      <td class="border border-borda-sutil p-2 align-top text-center whitespace-nowrap">
+                          <a href="{% url 'editar_configuracao' item.chave %}"
+                             class="botao-atencao-icone"
+                             title="Editar">
+                              <i data-lucide="square-pen" aria-hidden="true"></i>
+                          </a>
+                      </td>
+                  </tr>
+                  {% endfor %}
+              </tbody>
+          </table>
+      </div>
+
+  </div>
+  {% empty %}
+  <div class="bg-superficie-elevada border border-borda-sutil rounded p-4 text-center text-texto-legenda">
+      Nenhuma chave declarada em código.
+  </div>
+  {% endfor %}
+
+  <div class="mt-4">
+      <a href="{% url 'home' %}"
+         class="botao-secundario text-sm">
+          Voltar
+      </a>
+  </div>
+
+</div>
+
+{% endblock %}

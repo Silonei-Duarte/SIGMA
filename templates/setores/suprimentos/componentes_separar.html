@@ -1,0 +1,596 @@
+{% extends 'base.html' %}
+{% block title %}{{ APPLICATION_NAME }} | Componentes a Separar{% endblock %}
+{% block content %}
+
+<style>
+@media print {
+    @page { size: A4 landscape; margin: 10mm; }
+
+    body > nav, footer, .area-nao-imprimir, #modal-detalhe-necessidade, #container-tabela-necessidades {
+        display: none !important;
+    }
+
+    #area-impressao { display: block !important; width: 100%; }
+
+    #area-impressao table {
+        width: 100% !important;
+        min-width: 0 !important;
+        table-layout: auto !important;
+        font-size: 9pt !important;
+        background: none !important;
+        box-shadow: none !important;
+    }
+
+    #area-impressao th, #area-impressao td {
+        white-space: normal !important;
+        max-width: none !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        background: none !important;
+        color: var(--color-texto-primario) !important;
+        border: 1px solid var(--color-texto-primario) !important;
+    }
+
+    #area-impressao thead { background: none !important; }
+    #area-impressao span { color: var(--color-texto-primario) !important; background: none !important; border: none !important; }
+}
+</style>
+
+<div class="w-full px-4 mt-4 pb-4 text-sm text-texto-primario">
+
+<!-- CABEÇALHO + FILTROS -->
+<div class="area-nao-imprimir mb-6 border-b border-borda-sutil pb-4">
+    <div class="mb-3">
+        <h2 class="titulo-pagina text-texto-primario">Componentes a Separar</h2>
+    </div>
+
+    <form method="get" id="form-filtros-separacao" class="flex flex-wrap items-end gap-3">
+
+        {% if empresas|length > 1 %}
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-semibold text-texto-legenda">Empresa</label>
+            <select name="empresa" onchange="this.form.submit()"
+                    class="rounded-xl border px-2 py-1.5 shadow-sm text-sm">
+                {% for e in empresas %}
+                <option value="{{ e.id }}" {% if e.selecionada %}selected{% endif %}>{{ e.codemp }} - {{ e.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% else %}
+        <input type="hidden" name="empresa" value="{{ empresa_id }}">
+        {% endif %}
+
+        <div class="filtro-combo flex flex-col gap-1">
+            <label class="text-xs font-semibold text-texto-legenda">Recurso</label>
+            <details class="relative">
+                <summary class="list-none rounded-xl border border-borda-sutil bg-superficie-elevada px-2 py-1.5 shadow-sm text-sm min-w-48 cursor-pointer">
+                    {% if codcres_selecionados %}{{ codcres_selecionados|length }} selecionado(s){% else %}Todos{% endif %}
+                </summary>
+                <div class="opcoes-combo absolute z-30 mt-1 max-h-64 w-64 overflow-y-auto rounded-xl border border-borda-sutil bg-superficie-elevada p-2 shadow-lg">
+                    {% for recurso in recursos %}
+                    <label class="flex items-center gap-2 rounded px-1 py-1 text-sm hover:bg-interacao-hover">
+                        <input type="checkbox" name="codcre" value="{{ recurso.codcre }}" {% if recurso.selecionado %}checked{% endif %}>
+                        {{ recurso.codcre }} - {{ recurso.descre }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </details>
+        </div>
+
+        <div class="filtro-combo flex flex-col gap-1">
+            <label class="text-xs font-semibold text-texto-legenda">Depósito de planta</label>
+            <details class="relative">
+                <summary class="list-none rounded-xl border border-borda-sutil bg-superficie-elevada px-2 py-1.5 shadow-sm text-sm min-w-40 cursor-pointer">
+                    {% if depositos_planta_todos %}Todos{% else %}{{ depositos_planta_selecionados|length }} selecionado(s){% endif %}
+                </summary>
+                <div class="opcoes-combo absolute z-30 mt-1 w-64 rounded-xl border border-borda-sutil bg-superficie-elevada p-2 shadow-lg">
+                    {% for deposito in depositos_planta_opcoes %}
+                    <label class="flex items-center gap-2 rounded px-1 py-1 text-sm hover:bg-interacao-hover">
+                        <input type="checkbox" name="deposito_planta" value="{{ deposito.codigo }}" {% if deposito.selecionada %}checked{% endif %}>
+                        {{ deposito.codigo }}{% if deposito.nome %} - {{ deposito.nome }}{% endif %}
+                    </label>
+                    {% endfor %}
+                </div>
+            </details>
+        </div>
+
+        <div class="filtro-combo flex flex-col gap-1">
+            <label class="text-xs font-semibold text-texto-legenda">Componente/Derivação</label>
+            <details class="relative">
+                <summary class="list-none rounded-xl border border-borda-sutil bg-superficie-elevada px-2 py-1.5 shadow-sm text-sm min-w-48 cursor-pointer">
+                    {% if componentes_selecionados %}{{ componentes_selecionados|length }} selecionado(s){% else %}Todos{% endif %}
+                </summary>
+                <div class="opcoes-combo absolute z-30 mt-1 max-h-64 w-72 overflow-y-auto rounded-xl border border-borda-sutil bg-superficie-elevada p-2 shadow-lg">
+                    <input type="search" class="busca-opcoes-combo mb-2 w-full rounded-lg border px-2 py-1 text-sm" placeholder="Buscar componente...">
+                    {% for componente in componentes_opcoes %}
+                    <label class="flex items-center gap-2 rounded px-1 py-1 text-sm hover:bg-interacao-hover">
+                        <input type="checkbox" name="componente" value="{{ componente.sku }}" {% if componente.selecionado %}checked{% endif %}>
+                        {{ componente.sku }} - {{ componente.descricao }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </details>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-semibold text-texto-legenda">Agrupamento</label>
+            <select name="modo_agrupamento" onchange="this.form.submit()"
+                    class="rounded-xl border px-2 py-1.5 shadow-sm text-sm min-w-40">
+                <option value="juntar" {% if modo_agrupamento == "juntar" and not numpri_filtro %}selected{% endif %}>Juntar tudo</option>
+                <option value="prioridade" {% if modo_agrupamento == "prioridade" and not numpri_filtro %}selected{% endif %}>Separar por prioridade</option>
+                <option value="recurso" {% if modo_agrupamento == "recurso" %}selected{% endif %}>Separar por recurso</option>
+                {% if prioridades %}
+                <optgroup label="Prioridade específica">
+                    {% for prioridade in prioridades %}
+                    <option value="{{ prioridade.valor }}" {% if prioridade.selecionada %}selected{% endif %}>P{{ prioridade.valor }}</option>
+                    {% endfor %}
+                </optgroup>
+                {% endif %}
+            </select>
+        </div>
+
+        <div class="filtro-combo flex flex-col gap-1">
+            <label class="text-xs font-semibold text-texto-legenda">Família</label>
+            <details class="relative">
+                <summary class="list-none rounded-xl border border-borda-sutil bg-superficie-elevada px-2 py-1.5 shadow-sm text-sm min-w-40 cursor-pointer">
+                    {% if familias_selecionadas %}{{ familias_selecionadas|length }} selecionada(s){% else %}Todas{% endif %}
+                </summary>
+                <div class="opcoes-combo absolute z-30 mt-1 max-h-64 w-64 overflow-y-auto rounded-xl border border-borda-sutil bg-superficie-elevada p-2 shadow-lg">
+                    {% for familia in familias %}
+                    <label class="flex items-center gap-2 rounded px-1 py-1 text-sm hover:bg-interacao-hover">
+                        <input type="checkbox" name="familia" value="{{ familia.codfam }}" {% if familia.selecionada %}checked{% endif %}>
+                        {{ familia.codfam }}-{{ familia.desfam }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </details>
+        </div>
+
+        <div class="flex items-end gap-2">
+            <button type="submit" class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                <i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i> Filtrar
+            </button>
+            <a href="{% url 'suprimentos:componentes_separar' %}?empresa={{ empresa_id }}"
+               class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+                <i data-lucide="refresh-cw" class="h-5 w-5" aria-hidden="true"></i> Limpar
+            </a>
+        </div>
+
+    </form>
+</div>
+
+<script>
+(function () {
+    var form = document.getElementById("form-filtros-separacao");
+
+    function atualizarDestaqueFiltros() {
+        form.querySelectorAll(".filtro-combo details").forEach(function (detalhe) {
+            var temSelecionado = Boolean(detalhe.querySelector("input:checked"));
+            var resumo = detalhe.querySelector("summary");
+            resumo.classList.toggle("border-informacao-borda", temSelecionado);
+            resumo.classList.toggle("bg-informacao-sutil", temSelecionado);
+            resumo.classList.toggle("!text-informacao-base", temSelecionado);
+            resumo.classList.remove("text-texto-sobre-marca");
+        });
+    }
+    atualizarDestaqueFiltros();
+    form.addEventListener("change", atualizarDestaqueFiltros);
+
+    document.querySelectorAll(".busca-opcoes-combo").forEach(function (campo) {
+        campo.addEventListener("input", function () {
+            var termo = campo.value.toLocaleLowerCase("pt-BR");
+            campo.parentElement.querySelectorAll("label").forEach(function (opcao) {
+                opcao.hidden = !opcao.textContent.toLocaleLowerCase("pt-BR").includes(termo);
+            });
+        });
+    });
+
+    document.addEventListener("click", function (event) {
+        form.querySelectorAll(".filtro-combo details[open]").forEach(function (detalhe) {
+            if (!detalhe.contains(event.target)) detalhe.removeAttribute("open");
+        });
+    });
+})();
+</script>
+
+{% if erro %}
+<div class="alerta alerta-erro mb-4"><i data-lucide="circle-alert" class="alerta-icone-erro h-5 w-5 shrink-0" aria-hidden="true"></i><span class="flex-1">{{ erro }}</span></div>
+{% else %}
+
+<div class="area-nao-imprimir mb-3 flex flex-wrap items-center justify-between gap-2">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span class="text-xs text-texto-legenda">{{ total_necessidades }} componente(s) com necessidade de separação. Clique em uma linha para ver os detalhes.</span>
+        <span class="flex flex-wrap items-center gap-1.5 text-xs text-texto-legenda">
+            <span class="rounded bg-sucesso-sutil px-1.5 py-0.5 font-semibold text-sucesso-base">0</span> coberto pela planta
+            <span class="rounded bg-informacao-sutil px-1.5 py-0.5 font-semibold text-informacao-base">&gt; 0</span> tem saldo no almoxarifado
+            <span class="rounded bg-erro-sutil px-1.5 py-0.5 font-semibold text-erro-base">&gt; 0</span> sem estoque
+        </span>
+    </div>
+    <button type="button" id="btn-imprimir-necessidades" data-url-imprimir="?{{ querystring }}&imprimir=1"
+            class="botao-secundario h-9 px-3 text-xs">
+        <i data-lucide="printer" class="" aria-hidden="true"></i> Imprimir
+    </button>
+</div>
+
+<div id="container-tabela-necessidades" class="hidden overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm md:block">
+    <div class="overflow-x-auto">
+        <table id="tabela-necessidades" class="w-full min-w-max text-xs text-center border-collapse">
+            <thead class="bg-superficie-afundada text-texto-primario">
+                <tr>
+                    <th class="border border-borda-sutil p-2">Prior.</th>
+                    <th class="border border-borda-sutil p-2 text-left">Componente</th>
+                    <th class="border border-borda-sutil p-2 text-left">Descrição</th>
+                    <th class="border border-borda-sutil p-2 text-left">Recurso</th>
+                    <th class="border border-borda-sutil p-2">Necessário</th>
+                    <th class="border border-borda-sutil p-2">Na planta</th>
+                    <th class="border border-borda-sutil p-2" title="Saldo nos depósitos de estoque geral (informativo, não entra no cálculo)">Em Estoque</th>
+                    <th class="border border-borda-sutil p-2">A separar</th>
+                    <th class="border border-borda-sutil p-2">UM</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in necessidades %}
+                <tr class="linha-necessidade cursor-pointer transition hover:bg-interacao-hover"
+                    data-ops-id="{{ item.ops_id }}"
+                    data-estoque-id="{{ item.estoque_id }}"
+                    data-estoque-geral-id="{{ item.estoque_geral_id }}"
+                    data-sku="{{ item.sku }}"
+                    data-descricao="{{ item.descricao }}"
+                    data-desfam="{{ item.desfam|default:"-" }}"
+                    data-unimed="{{ item.unimed }}"
+                    data-necessario="{{ item.necessidade_op_fmt }}"
+                    data-planta="{{ item.estoque_planta_fmt }}"
+                    data-estoque-geral="{{ item.estoque_geral_fmt }}"
+                    data-separar="{{ item.necessidade_real_fmt }}"
+                    data-classe-separar="{{ item.classe_a_separar }}"
+                    data-recursos="{{ item.recursos|join:"||" }}">
+                    <td class="border border-borda-sutil p-2">{% if item.prioridades %}{% for p in item.prioridades %}P{{ p }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}-{% endif %}</td>
+                    <td class="border border-borda-sutil p-2 text-left font-bold text-texto-primario whitespace-nowrap">{{ item.sku }}</td>
+                    <td class="border border-borda-sutil p-2 text-left max-w-xs truncate" title="{{ item.descricao }}">{{ item.descricao }}</td>
+                    <td class="border border-borda-sutil p-2 text-left max-w-[14rem] truncate" title="{{ item.recursos|join:", " }}">{{ item.recursos|join:", " }}</td>
+                    <td class="border border-borda-sutil p-2">{{ item.necessidade_op_fmt }}</td>
+                    <td class="border border-borda-sutil p-2 text-sucesso-base">{{ item.estoque_planta_fmt }}</td>
+                    <td class="border border-borda-sutil p-2 text-informacao-base">{{ item.estoque_geral_fmt }}</td>
+                    <td class="border border-borda-sutil p-2 font-bold {{ item.classe_a_separar }}">{{ item.necessidade_real_fmt }}</td>
+                    <td class="border border-borda-sutil p-2">{{ item.unimed }}</td>
+                </tr>
+                {{ item.ops|json_script:item.ops_id }}
+                {{ item.estoque_detalhe|json_script:item.estoque_id }}
+                {{ item.estoque_geral_detalhe|json_script:item.estoque_geral_id }}
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="border border-borda-sutil p-6 text-center text-texto-legenda italic">
+                        Nenhuma necessidade real de separação encontrada para os filtros selecionados.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- VERSÃO EM CARDS PARA CELULAR (a tabela acima fica ilegível/com barra horizontal no mobile) -->
+<div class="area-nao-imprimir grid grid-cols-1 gap-3 md:hidden">
+    {% for item in necessidades %}
+    <div class="linha-necessidade cursor-pointer rounded-2xl border border-borda-sutil bg-superficie-elevada p-3 shadow-sm transition hover:bg-interacao-hover"
+         data-ops-id="{{ item.ops_id }}"
+         data-estoque-id="{{ item.estoque_id }}"
+         data-estoque-geral-id="{{ item.estoque_geral_id }}"
+         data-sku="{{ item.sku }}"
+         data-descricao="{{ item.descricao }}"
+         data-desfam="{{ item.desfam|default:"-" }}"
+         data-unimed="{{ item.unimed }}"
+         data-necessario="{{ item.necessidade_op_fmt }}"
+         data-planta="{{ item.estoque_planta_fmt }}"
+         data-estoque-geral="{{ item.estoque_geral_fmt }}"
+         data-separar="{{ item.necessidade_real_fmt }}"
+         data-classe-separar="{{ item.classe_a_separar }}"
+         data-recursos="{{ item.recursos|join:"||" }}">
+        <div class="mb-1 flex items-start justify-between gap-2">
+            <div class="min-w-0">
+                <div class="font-bold text-texto-primario">{{ item.sku }}</div>
+                <div class="truncate text-xs text-texto-legenda" title="{{ item.descricao }}">{{ item.descricao }}</div>
+            </div>
+            {% if item.prioridades %}
+            <div class="shrink-0 text-xs text-texto-legenda">{% for p in item.prioridades %}P{{ p }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>
+            {% endif %}
+        </div>
+        {% if item.recursos %}
+        <div class="mb-2 truncate text-xs text-texto-secundario" title="{{ item.recursos|join:", " }}">{{ item.recursos|join:", " }}</div>
+        {% endif %}
+        <div class="grid grid-cols-2 gap-2 rounded-xl bg-superficie-afundada p-2 text-center text-xs sm:grid-cols-4">
+            <div>
+                <div class="uppercase text-texto-legenda">Necessário</div>
+                <div class="font-bold">{{ item.necessidade_op_fmt }}</div>
+            </div>
+            <div>
+                <div class="uppercase text-texto-legenda">Na planta</div>
+                <div class="font-bold text-sucesso-base">{{ item.estoque_planta_fmt }}</div>
+            </div>
+            <div>
+                <div class="uppercase text-texto-legenda">Em Estoque</div>
+                <div class="font-bold text-informacao-base">{{ item.estoque_geral_fmt }}</div>
+            </div>
+            <div>
+                <div class="uppercase text-texto-legenda">A separar</div>
+                <div class="font-bold {{ item.classe_a_separar }}">{{ item.necessidade_real_fmt }}</div>
+            </div>
+        </div>
+        <div class="mt-1 text-right text-xs text-texto-legenda">{{ item.unimed }}</div>
+    </div>
+    {% empty %}
+    <div class="rounded-2xl border border-borda-sutil bg-superficie-elevada p-6 text-center text-xs text-texto-legenda italic">
+        Nenhuma necessidade real de separação encontrada para os filtros selecionados.
+    </div>
+    {% endfor %}
+</div>
+
+{% if necessidades.has_other_pages %}
+<div class="area-nao-imprimir mt-6 mb-2 flex justify-center">
+    <nav class="inline-flex rounded-xl shadow-sm">
+        {% if necessidades.has_previous %}
+            <a href="?{{ querystring }}&page=1" class="rounded-l-xl border border-borda-sutil bg-superficie-elevada px-3 py-2 text-sm font-medium text-texto-secundario hover:bg-interacao-hover">Primeira</a>
+            <a href="?{{ querystring }}&page={{ necessidades.previous_page_number }}" class="border-y border-borda-sutil bg-superficie-elevada px-3 py-2 text-sm font-medium text-texto-secundario hover:bg-interacao-hover">Anterior</a>
+        {% endif %}
+
+        <span class="botao-secundario h-9 px-3 text-sm">
+            Página {{ necessidades.number }} de {{ necessidades.paginator.num_pages }}
+        </span>
+
+        {% if necessidades.has_next %}
+            <a href="?{{ querystring }}&page={{ necessidades.next_page_number }}" class="border-y border-borda-sutil bg-superficie-elevada px-3 py-2 text-sm font-medium text-texto-secundario hover:bg-interacao-hover">Próxima</a>
+            <a href="?{{ querystring }}&page={{ necessidades.paginator.num_pages }}" class="rounded-r-xl border border-borda-sutil bg-superficie-elevada px-3 py-2 text-sm font-medium text-texto-secundario hover:bg-interacao-hover">Última</a>
+        {% endif %}
+    </nav>
+</div>
+{% endif %}
+
+<div id="area-impressao" class="hidden"></div>
+
+{% endif %}
+</div>
+
+<!-- MODAL DE DETALHES -->
+<div id="modal-detalhe-necessidade" class="fixed inset-0 z-50 hidden items-center justify-center bg-superficie-inversa/40 p-4">
+    <div class="max-h-[90vh] w-full max-w-[95vw] overflow-y-auto rounded-2xl border border-borda-padrao bg-superficie-elevada p-4 text-texto-primario shadow-xl">
+        <div class="mb-3 flex items-center justify-between">
+            <div>
+                <h3 id="modal-detalhe-sku" class="text-lg font-bold"></h3>
+                <p id="modal-detalhe-descricao" class="text-sm text-texto-legenda"></p>
+            </div>
+            <button type="button" id="fechar-modal-detalhe-necessidade" class="botao-secundario h-9 w-9 p-0" aria-label="Fechar"><i data-lucide="x" class="h-5 w-5" aria-hidden="true"></i></button>
+        </div>
+
+        <div class="mb-3 grid grid-cols-2 gap-2 rounded-xl border border-borda-sutil bg-superficie-afundada p-3 text-center sm:grid-cols-4">
+            <div>
+                <div class="text-xs uppercase text-texto-legenda">Necessário</div>
+                <div id="modal-detalhe-necessario" class="text-lg font-bold"></div>
+            </div>
+            <div>
+                <div class="text-xs uppercase text-texto-legenda">Na planta</div>
+                <div id="modal-detalhe-planta" class="text-lg font-bold text-sucesso-base"></div>
+            </div>
+            <div>
+                <div class="text-xs uppercase text-texto-legenda" title="Saldo nos depósitos de estoque geral (informativo, não entra no cálculo)">Em Estoque</div>
+                <div id="modal-detalhe-estoque-geral" class="text-lg font-bold text-informacao-base"></div>
+            </div>
+            <div>
+                <div class="text-xs uppercase text-texto-legenda">A separar</div>
+                <div id="modal-detalhe-separar" class="text-lg font-bold"></div>
+            </div>
+        </div>
+
+        <div class="mb-1 text-xs uppercase text-texto-legenda">Saldo por depósito de estoque geral</div>
+        <div id="modal-detalhe-estoque-geral-detalhe" class="mb-3 grid grid-cols-2 gap-1 text-sm sm:grid-cols-3"></div>
+
+        <div class="mb-1 text-xs uppercase text-texto-legenda">Recurso(s) demandante(s)</div>
+        <div id="modal-detalhe-recursos" class="mb-3 flex flex-wrap gap-1 text-sm"></div>
+
+        <div class="mb-1 text-xs uppercase text-texto-legenda">Saldo por depósito da planta</div>
+        <div id="modal-detalhe-estoque" class="mb-3 grid grid-cols-2 gap-1 text-sm sm:grid-cols-3"></div>
+
+        <div class="mb-1 text-xs uppercase text-texto-legenda">OPs relacionadas</div>
+
+        <div class="hidden overflow-x-auto rounded-xl border border-borda-sutil md:block">
+            <table class="w-full min-w-max text-sm text-center border-collapse">
+                <thead class="bg-superficie-afundada">
+                    <tr>
+                        <th class="border border-borda-sutil p-2">Origem-OP</th>
+                        <th class="border border-borda-sutil p-2">Situação</th>
+                        <th class="border border-borda-sutil p-2">Produto Prev.</th>
+                        <th class="border border-borda-sutil p-2">Produto Real.</th>
+                        <th class="border border-borda-sutil p-2 text-left">Descrição</th>
+                        <th class="border border-borda-sutil p-2">Comp. Prev.</th>
+                        <th class="border border-borda-sutil p-2">Comp. Consumido</th>
+                        <th class="border border-borda-sutil p-2">Necessário</th>
+                        <th class="border border-borda-sutil p-2" title="Estoque da planta rateado para esta OP pela prioridade">Em Planta</th>
+                        <th class="border border-borda-sutil p-2" title="Rateado por prioridade: a OP mais urgente consome o estoque da planta primeiro">A separar</th>
+                        <th class="border border-borda-sutil p-2">Recurso</th>
+                        <th class="border border-borda-sutil p-2">Depósito</th>
+                    </tr>
+                </thead>
+                <tbody id="modal-detalhe-ops"></tbody>
+            </table>
+        </div>
+
+        <div id="modal-detalhe-ops-mobile" class="grid grid-cols-1 gap-2 md:hidden"></div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var modal = document.getElementById("modal-detalhe-necessidade");
+    var fechar = document.getElementById("fechar-modal-detalhe-necessidade");
+
+    function fecharModal() {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+    }
+
+    function lerJson(elementoId) {
+        var elemento = document.getElementById(elementoId);
+        if (!elemento) return [];
+        try {
+            return JSON.parse(elemento.textContent) || [];
+        } catch (erro) {
+            return [];
+        }
+    }
+
+    function escaparHtml(valor) {
+        const elemento = document.createElement("span");
+        elemento.textContent = valor ?? "";
+        return elemento.innerHTML;
+    }
+
+    function formatarQtd(valor) {
+        var numero = Number(valor) || 0;
+        var arred2 = Math.round(numero * 100) / 100;
+        var parteDecimal2 = Math.abs(arred2 - Math.trunc(arred2));
+        if (parteDecimal2 > 1e-9) {
+            return arred2.toFixed(2);
+        }
+        var arred5 = Math.round(numero * 100000) / 100000;
+        return Math.abs(arred5 - arred2) < 1e-9 ? arred2.toFixed(2) : arred5.toFixed(5);
+    }
+
+    document.querySelectorAll(".linha-necessidade").forEach(function (linha) {
+        linha.addEventListener("click", function () {
+            document.getElementById("modal-detalhe-sku").innerText = linha.dataset.sku;
+            document.getElementById("modal-detalhe-descricao").innerText = linha.dataset.descricao + (linha.dataset.desfam && linha.dataset.desfam !== "-" ? " · Família " + linha.dataset.desfam : "");
+            var unimed = linha.dataset.unimed || "";
+            document.getElementById("modal-detalhe-necessario").innerText = linha.dataset.necessario + " " + unimed;
+            document.getElementById("modal-detalhe-planta").innerText = linha.dataset.planta + " " + unimed;
+            document.getElementById("modal-detalhe-estoque-geral").innerText = linha.dataset.estoqueGeral + " " + unimed;
+            document.getElementById("modal-detalhe-separar").innerText = linha.dataset.separar + " " + unimed;
+            document.getElementById("modal-detalhe-separar").className = "text-lg font-bold " + (linha.dataset.classeSeparar || "bg-erro-sutil text-erro-base");
+
+            var recursos = (linha.dataset.recursos || "").split("||").filter(Boolean).map(escaparHtml);
+            var containerRecursos = document.getElementById("modal-detalhe-recursos");
+            containerRecursos.innerHTML = recursos.length
+                ? recursos.map(function (recurso) {
+                    return '<span class="rounded-full bg-superficie-afundada px-2 py-0.5 text-sm text-texto-secundario">' + recurso + '</span>';
+                }).join("")
+                : '<span class="text-sm text-texto-legenda">Nenhum recurso identificado.</span>';
+
+            var estoqueDetalhe = lerJson(linha.dataset.estoqueId).map(function (dep) {
+                return {...dep, deposito: escaparHtml(dep.deposito), nome: escaparHtml(dep.nome)};
+            });
+            var containerEstoque = document.getElementById("modal-detalhe-estoque");
+            containerEstoque.innerHTML = estoqueDetalhe.length
+                ? estoqueDetalhe.map(function (dep) {
+                    return '<div class="flex items-center justify-between rounded-lg bg-superficie-afundada px-2 py-1.5 text-sm">' +
+                        '<span class="text-texto-secundario">' + dep.deposito + (dep.nome ? ' - ' + dep.nome : '') + '</span>' +
+                        '<span class="font-semibold">' + formatarQtd(dep.saldo) + ' ' + unimed + '</span>' +
+                        '</div>';
+                }).join("")
+                : '<span class="text-sm text-texto-legenda">Nenhum saldo nos depósitos da planta.</span>';
+
+            var estoqueGeralDetalhe = lerJson(linha.dataset.estoqueGeralId).map(function (dep) {
+                return {...dep, deposito: escaparHtml(dep.deposito), nome: escaparHtml(dep.nome)};
+            });
+            var containerEstoqueGeral = document.getElementById("modal-detalhe-estoque-geral-detalhe");
+            containerEstoqueGeral.innerHTML = estoqueGeralDetalhe.length
+                ? estoqueGeralDetalhe.map(function (dep) {
+                    return '<div class="flex items-center justify-between rounded-lg bg-superficie-afundada px-2 py-1.5 text-sm">' +
+                        '<span class="text-texto-secundario">' + dep.deposito + (dep.nome ? ' - ' + dep.nome : '') + '</span>' +
+                        '<span class="font-semibold text-informacao-base">' + formatarQtd(dep.saldo) + ' ' + unimed + '</span>' +
+                        '</div>';
+                }).join("")
+                : '<span class="text-sm text-texto-legenda">Nenhum saldo nos depósitos de estoque geral.</span>';
+
+            var ops = lerJson(linha.dataset.opsId).map(function (op) {
+                return {
+                    ...op,
+                    codori: escaparHtml(op.codori),
+                    situacao: escaparHtml(op.situacao),
+                    um_produto: escaparHtml(op.um_produto),
+                    descricao_produto: escaparHtml(op.descricao_produto),
+                    codcre: escaparHtml(op.codcre),
+                    descre: escaparHtml(op.descre),
+                    coddep: escaparHtml(op.coddep),
+                };
+            });
+            var containerOps = document.getElementById("modal-detalhe-ops");
+            containerOps.innerHTML = ops.length
+                ? ops.map(function (op) {
+                    var prioridade = op.numpri !== null && op.numpri !== undefined ? 'P' + op.numpri : '-';
+                    return '<tr>' +
+                        '<td class="border border-borda-sutil p-2 whitespace-nowrap">' + (op.codori || '-') + '-' + op.numorp + '</td>' +
+                        '<td class="border border-borda-sutil p-2">' + (op.situacao || '-') + '</td>' +
+                        '<td class="border border-borda-sutil p-2">' + formatarQtd(op.qtd_previsto_op) + ' ' + (op.um_produto || '') + '</td>' +
+                        '<td class="border border-borda-sutil p-2">' + formatarQtd(op.qtd_realizado_op) + ' ' + (op.um_produto || '') + '</td>' +
+                        '<td class="border border-borda-sutil p-2 text-left">' + (op.descricao_produto || '-') + '</td>' +
+                        '<td class="border border-borda-sutil p-2">' + formatarQtd(op.qtd_previsto_componente) + ' ' + unimed + '</td>' +
+                        '<td class="border border-borda-sutil p-2">' + formatarQtd(op.qtd_consumido_componente) + ' ' + unimed + '</td>' +
+                        '<td class="border border-borda-sutil p-2">' + formatarQtd(op.necessidade) + ' ' + unimed + '</td>' +
+                        '<td class="border border-borda-sutil p-2">' + formatarQtd(op.em_planta) + ' ' + unimed + '</td>' +
+                        '<td class="border border-borda-sutil p-2 font-semibold ' + op.classe_a_separar + '">' + formatarQtd(op.a_separar) + ' ' + unimed + '</td>' +
+                        '<td class="border border-borda-sutil p-2 whitespace-nowrap">' + (prioridade !== '-' ? '<span class="font-semibold text-atencao-base">' + prioridade + '</span> ' : '') + (op.codcre || '-') + ' - ' + (op.descre || '-') + '</td>' +
+                        '<td class="border border-borda-sutil p-2 whitespace-nowrap">' + (op.coddep || '-') + '</td>' +
+                        '</tr>';
+                }).join("")
+                : '<tr><td colspan="12" class="border border-borda-sutil p-3 text-center text-texto-legenda italic">Nenhuma OP relacionada.</td></tr>';
+
+            var containerOpsMobile = document.getElementById("modal-detalhe-ops-mobile");
+            containerOpsMobile.innerHTML = ops.length
+                ? ops.map(function (op) {
+                    var prioridade = op.numpri !== null && op.numpri !== undefined ? 'P' + op.numpri : '-';
+                    return '<div class="rounded-xl border border-borda-sutil bg-superficie-afundada p-2 text-sm">' +
+                        '<div class="mb-1 flex items-center justify-between gap-2">' +
+                        '<span class="font-bold">' + (op.codori || '-') + '-' + op.numorp + '</span>' +
+                        '<span class="text-xs text-texto-secundario">' + (op.situacao || '-') + '</span>' +
+                        '</div>' +
+                        '<div class="mb-1 text-xs text-texto-secundario">' + (op.descricao_produto || '-') + '</div>' +
+                        '<div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">' +
+                        '<div><span class="text-texto-legenda">Produto prev.:</span> ' + formatarQtd(op.qtd_previsto_op) + ' ' + (op.um_produto || '') + '</div>' +
+                        '<div><span class="text-texto-legenda">Produto real.:</span> ' + formatarQtd(op.qtd_realizado_op) + ' ' + (op.um_produto || '') + '</div>' +
+                        '<div><span class="text-texto-legenda">Comp. prev.:</span> ' + formatarQtd(op.qtd_previsto_componente) + ' ' + unimed + '</div>' +
+                        '<div><span class="text-texto-legenda">Comp. consumido:</span> ' + formatarQtd(op.qtd_consumido_componente) + ' ' + unimed + '</div>' +
+                        '<div><span class="text-texto-legenda">Necessário:</span> ' + formatarQtd(op.necessidade) + ' ' + unimed + '</div>' +
+                        '<div><span class="text-texto-legenda">Em planta:</span> ' + formatarQtd(op.em_planta) + ' ' + unimed + '</div>' +
+                        '<div class="col-span-2"><span class="font-normal text-texto-legenda">A separar:</span> <span class="font-semibold ' + op.classe_a_separar + '">' + formatarQtd(op.a_separar) + ' ' + unimed + '</span></div>' +
+                        '<div class="col-span-2"><span class="text-texto-legenda">Recurso:</span> ' + (prioridade !== '-' ? '<span class="font-semibold text-atencao-base">' + prioridade + '</span> ' : '') + (op.codcre || '-') + ' - ' + (op.descre || '-') + '</div>' +
+                        '<div class="col-span-2"><span class="text-texto-legenda">Depósito:</span> ' + (op.coddep || '-') + '</div>' +
+                        '</div>' +
+                        '</div>';
+                }).join("")
+                : '<div class="rounded-xl border border-borda-sutil bg-superficie-afundada p-3 text-center text-xs italic text-texto-legenda">Nenhuma OP relacionada.</div>';
+
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        });
+    });
+
+    fechar.addEventListener("click", fecharModal);
+    modal.addEventListener("click", function (event) {
+        if (event.target === modal) fecharModal();
+    });
+
+    var botaoImprimir = document.getElementById("btn-imprimir-necessidades");
+    if (botaoImprimir) {
+        botaoImprimir.addEventListener("click", function () {
+            var textoOriginal = botaoImprimir.innerHTML;
+            botaoImprimir.disabled = true;
+            botaoImprimir.innerHTML = '<i data-lucide="hourglass" class="" aria-hidden="true"></i> Preparando...';
+            fetch(botaoImprimir.dataset.urlImprimir)
+                .then(function (resposta) { return resposta.text(); })
+                .then(function (html) {
+                    var tabela = new DOMParser().parseFromString(html, "text/html").getElementById("tabela-necessidades");
+                    var areaImpressao = document.getElementById("area-impressao");
+                    areaImpressao.innerHTML = "";
+                    if (tabela) areaImpressao.appendChild(tabela);
+                    window.print();
+                })
+                .catch(function () {
+                    alert("Não foi possível preparar a impressão.");
+                })
+                .finally(function () {
+                    botaoImprimir.disabled = false;
+                    botaoImprimir.innerHTML = textoOriginal;
+                });
+        });
+    }
+})();
+</script>
+{% endblock %}

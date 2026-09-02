@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Cadastro de Sensores{% endblock %}
+
+{% block content %}
+<div class="w-full px-4 mt-4 text-sm text-texto-primario">
+  <div class="flex justify-between items-center mb-4">
+    <h4 class="text-lg font-bold">Cadastro de Sensores</h4>
+    <a href="{% url 'telemetria_sensores' %}" class="botao-primario h-10 px-4">Novo sensor</a>
+  </div>
+
+  <section class="cartao mb-4">
+    <h5 class="mb-3 font-bold">Fontes HTTP</h5>
+    <form method="post"{% if fonte_editando %} action="{% url 'telemetria_editar_fonte' fonte_editando.id %}"{% endif %} class="grid grid-cols-1 items-end gap-3 md:grid-cols-6">
+      {% csrf_token %}<input type="hidden" name="acao" value="fonte">
+      {% for field in fonte_form %}<div{% if field.field.widget.input_type == 'checkbox' %} class="flex h-10 items-center"{% endif %}>{% if field.field.widget.input_type == 'checkbox' %}<label class="inline-flex items-center gap-2 font-semibold">{{ field|add_class:"h-4 w-4 rounded border border-borda-sutil" }}{{ field.label }}</label>{% else %}<label class="font-semibold">{{ field.label }}</label>{{ field|add_class:"w-full rounded-xl border border-borda-padrao bg-superficie-elevada px-3 py-2" }}{% endif %}{% for error in field.errors %}<p class="text-erro-base">{{ error }}</p>{% endfor %}</div>{% endfor %}
+      <button class="botao-primario h-10 px-4">{% if fonte_editando %}Atualizar fonte{% else %}Salvar fonte{% endif %}</button>
+      {% if fonte_editando %}<a href="{% url 'telemetria_sensores' %}" class="botao-secundario h-10 px-4">Cancelar</a>{% endif %}
+    </form>
+    {% if fontes %}<div class="mt-4 overflow-x-auto rounded-xl border border-borda-sutil"><table class="tabela-padrao w-full text-left"><thead class="bg-superficie-afundada"><tr><th class="p-2">URL</th><th class="p-2">Ativa</th><th class="p-2">Timeout</th><th class="p-2">Pausa após sucesso</th><th class="p-2">Espera após erro</th><th class="p-2">Ações</th></tr></thead><tbody>{% for fonte in fontes %}<tr class="border-b border-borda-sutil hover:bg-interacao-hover"><td class="p-2">{{ fonte.url }}</td><td class="p-2">{% if fonte.coleta_ativa %}Sim{% else %}Não{% endif %}</td><td class="p-2">{{ fonte.timeout_segundos }}s</td><td class="p-2">{{ fonte.pausa_sucesso_segundos }}s</td><td class="p-2">{{ fonte.backoff_erro_segundos }}s</td><td class="p-2"><div class="flex items-center gap-2"><a class="botao-atencao-icone" href="{% url 'telemetria_editar_fonte' fonte.id %}" title="Editar fonte" aria-label="Editar fonte"><i data-lucide="square-pen" class="h-5 w-5" aria-hidden="true"></i></a><form method="post" action="{% url 'telemetria_excluir_fonte' fonte.id %}" onsubmit="return confirm('Excluir esta fonte?')">{% csrf_token %}<button class="botao-perigo-icone" title="Excluir fonte" aria-label="Excluir fonte"><i data-lucide="trash-2" class="h-5 w-5"></i></button></form></div></td></tr>{% endfor %}</tbody></table></div>{% endif %}
+  </section>
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <form method="post" class="cartao">
+      {% csrf_token %}
+      <h5 class="mb-3 font-bold">{% if sensor_editando %}Editar sensor{% else %}Novo sensor{% endif %}</h5>
+      {% for field in form %}
+        <div class="mb-3">
+          {% if field.field.widget.input_type == 'checkbox' %}
+          <label class="inline-flex items-center gap-2 font-semibold">
+            <span>{{ field.label }}</span>
+            {{ field|add_class:"h-4 w-4 rounded border border-borda-sutil" }}
+          </label>
+          {% else %}
+          <label class="font-semibold">{{ field.label }}</label>
+          {{ field|add_class:"w-full rounded-xl border border-borda-padrao bg-superficie-elevada px-3 py-2" }}
+          {% endif %}
+          {% for error in field.errors %}<p class="text-erro-base">{{ error }}</p>{% endfor %}
+        </div>
+      {% endfor %}
+      <button class="botao-primario h-10 px-4">Salvar</button>
+    </form>
+    <div class="overflow-x-auto rounded-2xl border border-borda-sutil bg-superficie-elevada p-3 shadow-sm lg:col-span-2">
+      <table class="w-full text-left">
+        <thead class="bg-superficie-afundada text-texto-primario"><tr><th class="p-2">Chave</th><th class="p-2">Nome</th><th class="p-2">Tipo</th><th class="p-2">Unidade</th><th class="p-2">Ativo</th><th class="p-2">Ações</th></tr></thead>
+        <tbody>{% for sensor in sensores %}
+          <tr class="border-b border-borda-sutil hover:bg-interacao-hover"><td class="p-2">{{ sensor.chave_origem }}</td><td class="p-2">{{ sensor.nome }}</td><td class="p-2">{{ sensor.get_tipo_valor_display }}</td><td class="p-2">{{ sensor.unidade|default:"-" }}</td><td class="p-2">{% if sensor.ativo %}<span class="etiqueta-sutil etiqueta-cor-sucesso">Sim</span>{% else %}<span class="etiqueta-sutil bg-superficie-afundada text-texto-legenda">Não</span>{% endif %}</td>
+          <td class="p-2"><div class="flex items-center gap-2"><a class="botao-atencao-icone" href="{% url 'telemetria_editar_sensor' sensor.id %}" title="Editar sensor" aria-label="Editar sensor"><i data-lucide="square-pen" class="h-5 w-5" aria-hidden="true"></i></a><form method="post" action="{% url 'telemetria_excluir_sensor' sensor.id %}" onsubmit="return confirm('Excluir este sensor?')">{% csrf_token %}<button class="botao-perigo-icone" type="submit" title="Excluir sensor" aria-label="Excluir sensor"><i data-lucide="trash-2" class="h-5 w-5" aria-hidden="true"></i></button></form></div></td></tr>
+        {% empty %}<tr><td colspan="6" class="p-3 text-center">Nenhum sensor cadastrado.</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

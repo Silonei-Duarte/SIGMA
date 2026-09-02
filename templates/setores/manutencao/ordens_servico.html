@@ -1,0 +1,471 @@
+{% extends 'base.html' %}
+{% block title %}{{ APPLICATION_NAME }} | Manutenção - Ordens de Serviço{% endblock %}
+{% block content %}
+
+<div class="w-full px-4 mt-4 pb-4 text-sm text-texto-primario">
+
+<div class="mb-6 border-b border-borda-sutil pb-4">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div>
+      <h2 class="titulo-pagina text-texto-primario">Ordens de Serviço</h2>
+    </div>
+
+    {% if modo == "lista" %}
+    <div class="flex flex-wrap justify-end gap-2">
+      {% if perms.manutencao.pode_manipular_os or user.is_staff %}
+      <a href="?nova=1"
+         class="botao-primario h-10 px-4 text-sm">
+        <i data-lucide="circle-plus" class="h-5 w-5" aria-hidden="true"></i> Nova OS
+      </a>
+      {% endif %}
+
+      <a href="/"
+         class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+        <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i> Voltar
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if os_excluir %}
+  {% if perms.manutencao.pode_manipular_os or user.is_staff %}
+  <div class="mb-4 rounded-xl border border-atencao-borda bg-atencao-sutil p-4 text-texto-primario shadow-sm">
+    Confirma a exclusão da OS <strong>{{ os_excluir.id }}</strong>?
+    <form method="post" class="inline" action="{% url 'excluir_os' os_excluir.id %}">
+      {% csrf_token %}
+      <button type="submit" class="botao-perigo h-9 px-3">Confirmar exclusão</button>
+      <a href="{% url 'listar_os' %}" class="botao-secundario h-9 px-3">Cancelar</a>
+    </form>
+  </div>
+  {% endif %}
+{% endif %}
+
+{% if modo == "lista" %}
+
+<form method="get" class="mb-4 grid grid-cols-1 gap-4 rounded-2xl border border-borda-sutil bg-superficie-elevada p-3 shadow-sm md:grid-cols-3">
+  <div>
+    <label class="font-semibold">Status</label>
+    <select name="status" class="w-full rounded-xl border px-3 py-2 shadow-sm">
+      <option value="">Todos</option>
+      {% for cod, nome in status_list %}
+        <option value="{{ cod }}" {% if status_sel == cod %}selected{% endif %}>{{ nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div>
+    <label class="font-semibold">Recurso</label>
+    <select name="recurso" class="w-full rounded-xl border px-3 py-2 shadow-sm">
+      <option value="">Todos</option>
+      {% for r in recursos %}
+        <option value="{{ r.id }}" {% if recurso_sel|add:'' == r.id|stringformat:"s" %}selected{% endif %}>
+          {{ r.descricao }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="flex items-end gap-2">
+    <button class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+      <i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i> Filtrar
+    </button>
+    <a href="{% url 'listar_os' %}"
+       class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+      <i data-lucide="refresh-cw" class="h-5 w-5" aria-hidden="true"></i> Limpar
+    </a>
+  </div>
+</form>
+
+<div class="overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+  <div class="grid grid-cols-6 border-b border-borda-sutil bg-superficie-afundada p-2 text-center text-xs font-bold text-texto-primario">
+    <div>ID</div>
+    <div>Recurso</div>
+    <div>Status</div>
+    <div>Início Prev.</div>
+    <div>Final Prev.</div>
+    <div>Ações</div>
+  </div>
+
+  {% for os in ordens %}
+  <div class="grid grid-cols-6 border-b border-borda-sutil p-2 text-center text-sm transition hover:bg-interacao-hover">
+    <div>{{ os.id }}</div>
+    <div>{{ os.recurso.descricao }}</div>
+    <div>{{ os.get_status_display }}</div>
+    <div>{{ os.inicio_prev|date:"d/m/Y H:i" }}</div>
+    <div>{{ os.final_prev|date:"d/m/Y H:i" }}</div>
+
+    <div class="flex justify-center gap-1">
+      <a href="{% url 'detalhar_os' os.id %}"
+         class="rounded-lg bg-informacao-sutil px-2 py-1 text-informacao-base transition hover:opacity-90">
+         Detalhar
+      </a>
+
+      {% if perms.manutencao.pode_manipular_os or user.is_staff %}
+      <a href="{% url 'excluir_os' os.id %}"
+         class="botao-perigo-icone" title="Excluir" aria-label="Excluir">
+         <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="p-4 text-center text-sm text-texto-legenda">Nenhuma OS encontrada.</div>
+  {% endfor %}
+</div>
+
+{% if ordens.paginator.num_pages %}
+<div class="mt-6 flex justify-center gap-2">
+  {% if ordens.has_previous %}
+    <a href="?page=1" class="rounded-xl bg-superficie-afundada px-3 py-2 text-sm shadow-sm"><i data-lucide="chevrons-left" class="mr-1 inline h-4 w-4 align-text-bottom" aria-hidden="true"></i>Primeiro</a>
+    <a href="?page={{ ordens.previous_page_number }}" class="rounded-xl bg-superficie-afundada px-3 py-2 text-sm shadow-sm">Anterior</a>
+  {% endif %}
+
+  <span class="rounded-xl bg-marca-base px-3 py-2 text-sm text-texto-sobre-marca shadow-sm">
+    {{ ordens.number }} de {{ ordens.paginator.num_pages }}
+  </span>
+
+  {% if ordens.has_next %}
+    <a href="?page={{ ordens.next_page_number }}" class="rounded-xl bg-superficie-afundada px-3 py-2 text-sm shadow-sm">Próxima</a>
+    <a href="?page={{ ordens.paginator.num_pages }}" class="rounded-xl bg-superficie-afundada px-3 py-2 text-sm shadow-sm">Última<i data-lucide="chevrons-right" class="ml-1 inline h-4 w-4 align-text-bottom" aria-hidden="true"></i></a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% elif modo == "form" %}
+
+<form method="post" class="mt-4 grid grid-cols-1 gap-4 rounded-2xl border border-borda-sutil bg-superficie-elevada p-4 shadow-sm md:grid-cols-2">
+  {% csrf_token %}
+
+  <div>
+    <label class="font-semibold">Chamado</label>
+    <select name="chamado" class="w-full rounded-xl border p-2 shadow-sm">
+      <option value="">---------</option>
+      {% for c in form.fields.chamado.queryset %}
+        <option value="{{ c.id }}" {% if form.chamado.value == c.id %}selected{% endif %}>
+          {{ c.id }} - {{ c.nome }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div>
+    <label class="font-semibold">Recurso</label>
+    <select name="recurso" class="w-full rounded-xl border p-2 shadow-sm">
+      <option value="">---------</option>
+      {% for r in form.fields.recurso.queryset %}
+        <option value="{{ r.id }}" {% if form.recurso.value|stringformat:"s" == r.id|stringformat:"s" %}selected{% endif %}>
+          {{ r.descricao }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="md:col-span-2">
+    <label class="font-semibold">Responsáveis</label>
+    <div class="relative">
+      <button type="button"
+              class="w-full rounded-xl border border-borda-sutil bg-superficie-elevada px-3 py-2 text-left shadow-sm"
+              onclick="document.getElementById('menuRespForm').classList.toggle('hidden')">
+          Selecione responsáveis
+      </button>
+
+      <ul id="menuRespForm"
+          class="absolute left-0 right-0 z-50 mt-1 hidden max-h-60 overflow-y-auto rounded-xl border border-borda-sutil bg-superficie-elevada shadow-lg">
+        {% for u in form.fields.responsaveis.queryset %}
+        <li>
+          <label class="flex cursor-pointer gap-2 bg-superficie-elevada p-2 text-sm">
+            <input type="checkbox" name="responsaveis" value="{{ u.id }}"
+                   {% if u.id|stringformat:"s" in request.POST.responsaveis %}checked{% endif %}>
+            {{ u.first_name }} {{ u.last_name }}{% if not u.first_name and not u.last_name %}{{ u.username }}{% endif %}
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div id="responsaveisSelecionados" class="mt-2"></div>
+  </div>
+
+  <div>
+    <label class="font-semibold">Início Previsto</label>
+    <div class="relative w-full cursor-pointer rounded-xl border border-borda-sutil p-2 shadow-sm">
+      {{ form.inicio_prev }}
+      <span class="absolute inset-0" onclick="this.previousElementSibling.showPicker()"></span>
+    </div>
+  </div>
+
+  <div>
+    <label class="font-semibold">Final Previsto</label>
+    <div class="relative w-full cursor-pointer rounded-xl border border-borda-sutil p-2 shadow-sm">
+      {{ form.final_prev }}
+      <span class="absolute inset-0" onclick="this.previousElementSibling.showPicker()"></span>
+    </div>
+  </div>
+
+  <div class="md:col-span-2">
+    <label class="font-semibold">Descrição</label>
+    <textarea name="descricao" class="w-full rounded-xl border p-3 shadow-sm" rows="3">{{ form.descricao.value|default_if_none:"" }}</textarea>
+  </div>
+
+  <div class="md:col-span-2 flex justify-end gap-2">
+    <button class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+      <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i> Salvar
+    </button>
+    <a href="{% url 'listar_os' %}" class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+      <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i> Voltar
+    </a>
+  </div>
+</form>
+
+{% elif modo == "detalhe" %}
+
+<form method="post" class="mt-4 text-sm">
+  {% csrf_token %}
+
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div class="flex h-[70vh] flex-col rounded-2xl border border-borda-sutil bg-superficie-elevada p-4 shadow-sm">
+      <h3 class="mb-2 text-base font-bold text-texto-primario">Interações</h3>
+
+      <div id="interacoesBox" class="flex-grow overflow-y-auto rounded-xl border border-borda-sutil bg-superficie-afundada p-3">
+        {% for i in interacoes %}
+        <div class="mb-2 border-b pb-2">
+          <div class="text-xs text-texto-legenda">
+            {% if i.inicio %}
+              {{ i.usuario.first_name|default:i.usuario.username }} registrou início às {{ i.inicio|date:"d/m/Y H:i" }}
+            {% else %}
+              {{ i.usuario.first_name|default:i.usuario.username }} registrou fim às {{ i.fim|date:"d/m/Y H:i" }}
+            {% endif %}
+            <br>
+            <span class="text-texto-legenda">Registrado: {{ i.data_registro|date:"d/m/Y H:i" }}</span>
+          </div>
+          <div>{{ i.descricao|linebreaksbr }}</div>
+        </div>
+        {% empty %}
+        <p class="text-texto-legenda">Nenhuma interação.</p>
+        {% endfor %}
+      </div>
+
+      <div class="mt-2">
+        <label class="font-semibold">Nova interação</label>
+        <textarea name="descricao_interacao" class="w-full rounded-xl border p-3 shadow-sm" rows="2"></textarea>
+
+        {% if interacoes|length|divisibleby:2 %}
+        <div class="relative mt-1 w-full cursor-pointer rounded-xl border border-borda-sutil p-2 shadow-sm"
+             onclick="this.querySelector('input').showPicker()">
+          <input type="datetime-local"
+                 name="inicio"
+                 value="{{ form.inicio.value|default_if_none:'' }}"
+                 class="w-full cursor-pointer bg-transparent ">
+        </div>
+        {% else %}
+        <div class="relative mt-1 w-full cursor-pointer rounded-xl border border-borda-sutil p-2 shadow-sm"
+             onclick="this.querySelector('input').showPicker()">
+          <input type="datetime-local"
+                 name="fim"
+                 value="{{ form.fim.value|default_if_none:'' }}"
+                 class="w-full cursor-pointer bg-transparent ">
+        </div>
+        {% endif %}
+
+        <button type="submit" name="salvar_interacao"
+                class="botao-primario mt-2 h-10 whitespace-nowrap px-4 text-sm">
+          Salvar interação
+        </button>
+      </div>
+    </div>
+
+    <div class="rounded-2xl border border-borda-sutil bg-superficie-elevada p-4 shadow-sm">
+      <h3 class="mb-2 text-base font-bold text-texto-primario">Dados da OS</h3>
+
+      <div class="mb-2">
+        <label class="font-semibold">ID</label>
+        <input class="w-full rounded-xl border bg-superficie-afundada p-2" value="{{ os_obj.id }}" readonly>
+      </div>
+
+      <div class="mb-2">
+        <label class="font-semibold">Chamado</label>
+        {% if os_obj.chamado %}
+        <input class="w-full rounded-xl border bg-superficie-afundada p-2"
+               value="Chamado #{{ os_obj.chamado.id }} - {{ os_obj.chamado.nome }}" readonly>
+        {% else %}
+        <input class="w-full rounded-xl border bg-superficie-afundada p-2" value="Nenhum" readonly>
+        {% endif %}
+      </div>
+
+      <div class="mb-2">
+        <label class="font-semibold">Descrição</label>
+        <textarea name="descricao" class="w-full rounded-xl border p-3 shadow-sm" rows="3">{{ os_form.descricao.value|default_if_none:"" }}</textarea>
+      </div>
+
+      <div class="mb-2">
+        <label class="font-semibold">Status</label>
+        <input class="w-full rounded-xl border bg-superficie-afundada p-2"
+               value="{{ os_obj.get_status_display }}" readonly>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="font-semibold">Início Previsto</label>
+          {% if perms.manutencao.pode_manipular_os or user.is_staff %}
+          <div class="w-full cursor-pointer rounded-xl border border-borda-sutil p-2 shadow-sm"
+               onclick="this.querySelector('input').showPicker()">
+            <input type="datetime-local" name="inicio_prev"
+                   value="{{ os_obj.inicio_prev|date:'Y-m-d\\TH:i' }}"
+                   class="w-full cursor-pointer bg-transparent ">
+          </div>
+          {% else %}
+          <input class="w-full rounded-xl border bg-superficie-afundada p-2"
+                 value="{{ os_obj.inicio_prev|date:'Y-m-d\\TH:i' }}" readonly>
+          {% endif %}
+        </div>
+
+        <div>
+          <label class="font-semibold">Final Previsto</label>
+          {% if perms.manutencao.pode_manipular_os or user.is_staff %}
+          <div class="w-full cursor-pointer rounded-xl border border-borda-sutil p-2 shadow-sm"
+               onclick="this.querySelector('input').showPicker()">
+            <input type="datetime-local" name="final_prev"
+                   value="{{ os_obj.final_prev|date:'Y-m-d\\TH:i' }}"
+                   class="w-full cursor-pointer bg-transparent ">
+          </div>
+          {% else %}
+          <input class="w-full rounded-xl border bg-superficie-afundada p-2"
+                 value="{{ os_obj.final_prev|date:'Y-m-d\\TH:i' }}" readonly>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mt-2 grid grid-cols-2 gap-4">
+        <div>
+          <label class="font-semibold">Início Real</label>
+          <input class="w-full rounded-xl border bg-superficie-afundada p-2"
+                 value="{{ os_obj.inicio_real|date:'Y-m-d\\TH:i' }}" readonly>
+        </div>
+
+        <div>
+          <label class="font-semibold">Final Real</label>
+          <input class="w-full rounded-xl border bg-superficie-afundada p-2"
+                 value="{{ os_obj.final_real|date:'Y-m-d\\TH:i' }}" readonly>
+        </div>
+      </div>
+
+      <div class="mb-2 mt-2">
+        <label class="font-semibold">Recurso</label>
+        {% if perms.manutencao.pode_manipular_os or user.is_staff %}
+        <select name="recurso" class="w-full rounded-xl border p-2 shadow-sm">
+          <option value="">---------</option>
+          {% for r in os_form.fields.recurso.queryset %}
+            <option value="{{ r.id }}" {% if os_form.recurso.value == r.id %}selected{% endif %}>
+              {{ r.descricao }}
+            </option>
+          {% endfor %}
+        </select>
+        {% else %}
+        <input class="w-full rounded-xl border bg-superficie-afundada p-2"
+               value="{{ os_obj.recurso.descricao }}" readonly>
+        {% endif %}
+      </div>
+
+      <div class="mb-2">
+        <label class="font-semibold">Responsáveis</label>
+
+        <div class="relative">
+          <button type="button"
+                  class="w-full rounded-xl border border-borda-sutil bg-superficie-elevada px-3 py-2 text-left shadow-sm"
+                  onclick="document.getElementById('menuRespDet').classList.toggle('hidden')">
+            Selecione responsáveis
+          </button>
+
+          <ul id="menuRespDet"
+              class="absolute left-0 right-0 z-50 mt-1 hidden max-h-60 overflow-y-auto rounded-xl border border-borda-sutil bg-superficie-elevada shadow-lg">
+            {% for u in os_form.fields.responsaveis.queryset %}
+            <li>
+              <label class="flex cursor-pointer gap-2 bg-superficie-elevada p-2 text-sm">
+                <input type="checkbox" name="responsaveis" value="{{ u.id }}"
+                       {% if os_obj.responsaveis and u.id in os_obj.responsaveis %}checked{% endif %}>
+                {{ u.first_name }} {{ u.last_name }}{% if not u.first_name and not u.last_name %}{{ u.username }}{% endif %}
+              </label>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <div id="responsaveisSelecionados" class="mt-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 flex justify-end gap-2">
+    {% if os_obj.status != "FINALIZADA" %}
+    <button type="submit" name="finalizar_os"
+            class="botao-perigo h-10 whitespace-nowrap px-4 text-sm"
+            onclick="return confirm('Deseja realmente finalizar esta OS?')">
+      Finalizar OS
+    </button>
+    {% endif %}
+
+    {% if perms.manutencao.pode_manipular_os or user.is_staff %}
+    <button type="submit" name="salvar"
+            class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+      Salvar
+    </button>
+    {% endif %}
+
+    <a href="{% url 'listar_os' %}"
+       class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+      Voltar
+    </a>
+  </div>
+</form>
+
+{% endif %}
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+  const box = document.getElementById("interacoesBox");
+  if (box) box.scrollTop = box.scrollHeight;
+
+  function atualizarLista() {
+    const selecionados = [...document.querySelectorAll('input[name="responsaveis"]:checked')]
+      .map(i => i.parentElement.textContent.trim());
+    const div = document.getElementById("responsaveisSelecionados");
+    if (!div) return;
+
+    div.replaceChildren();
+    if (!selecionados.length) {
+      const vazio = document.createElement("span");
+      vazio.className = "text-texto-legenda text-xs";
+      vazio.textContent = "Nenhum selecionado";
+      div.appendChild(vazio);
+      return;
+    }
+    selecionados.forEach(nomeSelecionado => {
+      const nome = document.createElement("span");
+      nome.className = "bg-marca-base text-texto-sobre-marca text-xs px-2 py-1 rounded mr-1";
+      nome.textContent = nomeSelecionado;
+      div.appendChild(nome);
+    });
+  }
+
+  document.querySelectorAll('input[name="responsaveis"]').forEach(cb =>
+    cb.addEventListener("change", atualizarLista)
+  );
+
+  atualizarLista();
+
+  document.addEventListener("click", function(e) {
+    document.querySelectorAll(".relative ul").forEach(ul => {
+      const btn = ul.previousElementSibling;
+      if (!ul.contains(e.target) && !btn.contains(e.target)) {
+          ul.classList.add("hidden");
+      }
+    });
+  });
+
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+{% block title %}{{ APPLICATION_NAME }} | Movimentação de Componentes{% endblock %}
+{% block content %}
+
+<div class="w-full px-4 mt-4 pb-4 text-sm text-texto-primario">
+
+<!-- CABEÇALHO + FILTROS -->
+<div class="mb-6 border-b border-borda-sutil pb-4">
+    <div class="mb-3">
+        <h2 class="titulo-pagina text-texto-primario">Movimentação de Componentes</h2>
+    </div>
+
+    <form method="get" class="flex flex-wrap items-end gap-3">
+
+        {% if empresas|length > 1 %}
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-semibold text-texto-legenda">Empresa</label>
+            <select name="empresa" onchange="this.form.submit()"
+                    class="h-10 min-w-40 rounded-xl border border-borda-padrao bg-superficie-elevada px-3 py-2 text-sm shadow-sm">
+                {% for e in empresas %}
+                {% if e.selecionada %}
+                <option value="{{ e.id }}" selected>
+                {% else %}
+                <option value="{{ e.id }}">
+                {% endif %}
+                    {{ e.codemp }} - {{ e.nome }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% else %}
+        <input type="hidden" name="empresa" value="{{ empresa_id }}">
+        {% endif %}
+
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-semibold text-texto-legenda">Máquina</label>
+            <select name="codcre" onchange="this.form.submit()"
+                    class="h-10 min-w-48 rounded-xl border border-borda-padrao bg-superficie-elevada px-3 py-2 text-sm shadow-sm">
+                <option value="">Selecione...</option>
+                {% for recurso in recursos %}
+                {% if recurso.SELECIONADO %}
+                <option value="{{ recurso.CODCRE }}" selected>
+                {% else %}
+                <option value="{{ recurso.CODCRE }}">
+                {% endif %}
+                    {{ recurso.CODCRE }} - {{ recurso.DESCRE }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {% if origens_componente %}
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-semibold text-texto-legenda">Origem do componente</label>
+            <select name="origem" id="filtro-origem" onchange="this.form.submit()"
+                    class="h-10 min-w-40 rounded-xl border border-borda-padrao bg-superficie-elevada px-3 py-2 text-sm shadow-sm">
+                {% if not origem_selecionada %}
+                <option value="" selected>Todas</option>
+                {% else %}
+                <option value="">Todas</option>
+                {% endif %}
+                {% for origem in origens_componente %}
+                {% if origem.selecionada %}
+                <option value="{{ origem.valor }}" selected>{{ origem.valor }}</option>
+                {% else %}
+                <option value="{{ origem.valor }}">{{ origem.valor }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+    </form>
+</div>
+
+{% if erro %}
+<div class="alerta alerta-erro mb-4"><i data-lucide="circle-alert" class="alerta-icone-erro h-5 w-5 shrink-0" aria-hidden="true"></i><span class="flex-1">{{ erro }}</span></div>
+{% elif not codcre %}
+<div class="rounded-2xl border border-borda-sutil bg-superficie-elevada p-8 text-center text-texto-legenda shadow-sm">
+    Selecione uma máquina para ver as OPs em produção.
+</div>
+{% else %}
+
+<!-- OPS EM PRODUÇÃO -->
+<section class="mb-6">
+    <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-texto-legenda">OPs em produção</h3>
+
+    {% if not atuais %}
+    <div class="rounded-2xl border border-borda-sutil bg-superficie-elevada p-6 text-center text-texto-legenda shadow-sm">
+        Nenhuma OP em produção agora nessa máquina.
+    </div>
+    {% else %}
+    <div class="grid grid-cols-1 gap-4{% if atuais|length > 1 %} lg:grid-cols-2{% endif %}">
+        {% for op in atuais %}
+        <div class="rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm overflow-hidden">
+            <div class="bg-superficie-afundada px-4 py-3 text-texto-primario">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                        {% if op.PRIORIDADE is not None %}<span class="rounded-full bg-superficie-elevada/20 px-2 py-0.5 text-xs font-semibold">P{{ op.PRIORIDADE }}</span>{% endif %}
+                        <span class="font-bold">OP {{ op.OP }}</span> — {{ op.DESCRICAO }}
+                    </div>
+                    <span class="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-superficie-elevada/20 px-2 py-0.5 text-xs font-semibold"><i data-lucide="circle-play" class="" aria-hidden="true"></i> Ativa</span>
+                </div>
+                <div class="text-xs text-texto-secundario">SKU {{ op.SKU }} · Máquina {{ codcre }}</div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 border-b border-borda-sutil bg-superficie-afundada px-4 py-3 text-center">
+                <div>
+                    <div class="text-xs uppercase text-texto-legenda">Prevista</div>
+                    <div class="font-bold">{{ op.QTD_PREVISTO_OP|floatformat:2 }} <span class="font-normal text-xs">{{ op.UM_PRODUTO }}</span></div>
+                </div>
+                <div>
+                    <div class="text-xs uppercase text-texto-legenda">Produzida</div>
+                    <div class="font-bold">{{ op.QTD_REALIZADO_OP|floatformat:2 }} <span class="font-normal text-xs">{{ op.UM_PRODUTO }}</span></div>
+                </div>
+                <div>
+                    <div class="text-xs uppercase text-texto-legenda">Avanço</div>
+                    <div class="font-bold text-sucesso-base">{{ op.PCTAVANCO_OP|floatformat:1 }}%</div>
+                </div>
+            </div>
+
+            <div class="px-4 py-3">
+                <div class="mb-2 text-xs uppercase text-texto-legenda">Consumo de componentes</div>
+                {% for c in op.componentes %}
+                {% include "producao/_componente_op.html" %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+
+<!-- PRÓXIMAS OPS -->
+<section>
+    <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-texto-legenda">Próximas OPs na máquina</h3>
+    {% if not proximas %}
+    <div class="rounded-2xl border border-borda-sutil bg-superficie-elevada p-6 text-center text-texto-legenda shadow-sm">
+        Nenhuma OP programada em seguida.
+    </div>
+    {% else %}
+    <div class="flex flex-col gap-4">
+        {% for op in proximas %}
+        <details class="group rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm overflow-hidden">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 bg-superficie-afundada px-4 py-2 text-xs border-b border-borda-padrao hover:bg-interacao-hover">
+                <div>
+                    <i data-lucide="chevron-right" class=" mr-1 inline-block transition-transform group-open:rotate-90" aria-hidden="true"></i>
+                    {% if op.PRIORIDADE is not None %}<span class="text-sucesso-base font-semibold">P{{ op.PRIORIDADE }}</span>{% endif %}
+                    <span class="font-semibold">OP {{ op.OP }}</span>
+                    <span class="font-mono text-texto-legenda">{{ op.SKU }}</span>
+                    — {{ op.DESCRICAO }}
+                </div>
+                <div class="text-right text-texto-secundario">{{ op.QTD_PREVISTO_OP|floatformat:2 }} {{ op.UM_PRODUTO }}</div>
+            </summary>
+            {% if op.componentes %}
+            <div class="px-4 py-3">
+                {% for c in op.componentes %}
+                {% include "producao/_componente_op.html" %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="px-4 py-3 text-xs text-texto-legenda">Nenhum componente cadastrado.</p>
+            {% endif %}
+        </details>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+
+{% endif %}
+</div>
+
+<script>
+function escaparHtml(valor) {
+    var elemento = document.createElement('div');
+    elemento.textContent = valor === null || valor === undefined ? '' : String(valor);
+    return elemento.innerHTML;
+}
+
+function formatarData(valor) {
+    var partes = String(valor || '').slice(0, 10).split('-');
+    return partes.length === 3 ? partes[2] + '/' + partes[1] + '/' + partes[0] : String(valor || '');
+}
+
+window.setTimeout(function () {
+    window.location.reload();
+}, 5 * 60 * 1000);
+
+document.addEventListener('click', function (evento) {
+    var botaoLote = evento.target.closest('.trilha-consumo');
+    var botaoBobina = evento.target.closest('.qtd-prevista-clicavel');
+    if (!botaoLote && !botaoBobina) return;
+
+    var botao = botaoLote || botaoBobina;
+    var seletorPainel = botaoLote ? '.historico-lote' : '.bobinas-wms';
+    var linha = botao.closest('[data-origem]');
+    var painel = linha.querySelector(seletorPainel);
+    var jaAberto = !painel.classList.contains('hidden');
+    document.querySelectorAll('.historico-lote, .bobinas-wms').forEach(function (p) { p.classList.add('hidden'); });
+    document.querySelectorAll('.trilha-consumo').forEach(function (item) { item.setAttribute('aria-expanded', 'false'); });
+    if (jaAberto) return;
+
+    painel.classList.remove('hidden');
+    botao.setAttribute('aria-expanded', 'true');
+    if (painel.dataset.carregado) return;
+
+    painel.textContent = 'Carregando...';
+    var params = new URLSearchParams({
+        empresa: botao.dataset.empresa,
+        codori: botao.dataset.codori,
+        numorp: botao.dataset.numorp,
+        codcmp: botao.dataset.codcmp,
+        codder: botao.dataset.codder,
+    });
+
+    var url = botaoLote
+        ? '{% url "logistica:historico_lote_componente" %}?' + params.toString()
+        : '{% url "logistica:bobinas_disponiveis" %}?' + params.toString();
+    var nomeProduto = (botao.dataset.nomeProduto || 'Produto').trim().split(/\s+/)[0] || 'Produto';
+    var tituloWms = 'Disponibilidade no WMS — ' + nomeProduto;
+    var vazio = botaoLote ? 'Nenhuma movimentação encontrada.' : 'Nenhum registro disponível no WMS para ' + nomeProduto + ' na quantidade faltante.';
+    var erroMsg = botaoLote ? 'Não foi possível consultar os lotes' : 'Não foi possível consultar a disponibilidade no WMS para ' + nomeProduto;
+
+    fetch(url)
+        .then(function (r) { return r.json(); })
+        .then(function (dados) {
+            painel.dataset.carregado = '1';
+            if (dados.erro) {
+                painel.textContent = erroMsg + ': ' + dados.erro;
+                return;
+            }
+            if (!dados.linhas.length) {
+                painel.textContent = vazio;
+                return;
+            }
+            if (botaoLote) {
+                painel.innerHTML = '<p class="texto-painel-wms mb-1 font-semibold">Movimentações de consumo registradas</p>' + dados.linhas.map(function (l) {
+                    return '<div class="mb-1 border-b border-borda-sutil pb-1 last:border-0 last:pb-0">' +
+                        '<div class="texto-painel-wms flex justify-between font-semibold"><span>' + (l.LOTE !== null && l.LOTE !== undefined && String(l.LOTE).trim() !== '' ? 'Lote: ' + escaparHtml(l.LOTE) : '') + '</span><span>' + escaparHtml(l.QTD) + '</span></div>' +
+                        '<div class="texto-painel-wms">Depósito ' + escaparHtml(l.DEPOSITO) + ' · ' + escaparHtml(formatarData(l.DATA)) + ' · Seq. ' + escaparHtml(l.SEQ) + '</div>' +
+                        '<div class="texto-painel-wms">' + escaparHtml(l.USUARIO) + '</div>' +
+                        '</div>';
+                }).join('');
+            } else {
+                painel.innerHTML = '<p class="texto-painel-wms mb-1 font-semibold">' + escaparHtml(tituloWms) + '</p>' + dados.linhas.map(function (b) {
+                    return '<div class="mb-1 border-b border-borda-sutil pb-1 last:border-0 last:pb-0">' +
+                        '<div class="texto-painel-wms flex justify-between font-semibold"><span>Lote ' + escaparHtml(b.LOTE) + '</span><span>' + escaparHtml(b.QTD) + '</span></div>' +
+                        '<div class="texto-painel-wms">Endereço ' + escaparHtml(b.ENDERECO) + ' · ID ' + escaparHtml(b.ID) + '</div>' +
+                        '</div>';
+                }).join('') + (Number(dados.total_linhas || 0) > dados.linhas.length
+                    ? '<div class="texto-painel-wms mt-1">+ ' + escaparHtml(Number(dados.total_linhas) - dados.linhas.length) + ' outro(s) lote(s) disponível(is) no WMS</div>'
+                    : '');
+            }
+        })
+        .catch(function () {
+            painel.textContent = erroMsg + '.';
+        });
+});
+</script>
+{% endblock %}

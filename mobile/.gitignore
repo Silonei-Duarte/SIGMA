@@ -1,0 +1,10 @@
+node_modules/
+android/.gradle/
+android/local.properties
+android/app/build/
+dist/*.apk
+keystore/*
+google-services.json
+android/app/google-services.json
+firebase-service-account*.json
+*-firebase-adminsdk-*.json

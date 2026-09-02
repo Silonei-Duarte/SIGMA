@@ -1,0 +1,597 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Horas Extras Planejadas{% endblock %}
+
+{% block content %}
+
+<div class="w-full mt-3 text-[0.85rem] text-texto-primario">
+
+<!-- ========================= -->
+<!-- FILTROS -->
+<!-- ========================= -->
+<form method="get" id="filtroForm"
+      class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+
+  <div>
+    <label class="font-semibold">Empresa</label>
+    <select name="empresa" id="id_empresa"
+            class="border p-1 rounded w-full">
+      <option value="">Todas</option>
+      {% for e in empresas %}
+        <option value="{{ e.id }}" {% if e.id|stringformat:"s" == empresa_sel %}selected{% endif %}>
+          {{ e.nome }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div>
+    <label class="font-semibold">Filial</label>
+    <select name="filial" id="id_filial"
+            class="border p-1 rounded w-full">
+      <option value="">Todas</option>
+      {% for f in filiais %}
+        <option value="{{ f.id }}" {% if f.id|stringformat:"s" == filial_sel %}selected{% endif %}>
+          {{ f.nome }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div>
+    <label class="font-semibold">Departamento</label>
+    <select name="departamento" id="id_departamento"
+            class="border p-1 rounded w-full">
+      <option value="">Todos</option>
+      {% for d in departamentos %}
+        <option value="{{ d.id }}" {% if d.id|stringformat:"s" == departamento_sel %}selected{% endif %}>
+          {{ d.descricao }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div>
+    <label class="font-semibold">Setor</label>
+    <select name="setor" id="id_setor"
+            class="border p-1 rounded w-full">
+      <option value="">Todos</option>
+      {% if setores %}
+        {% for s in setores %}
+          <option value="{{ s.id }}"
+                  {% if setor_sel == s.id|stringformat:"s" %}selected{% endif %}>
+            {{ s.descricao }}
+          </option>
+        {% endfor %}
+      {% endif %}
+    </select>
+
+  </div>
+
+  <div>
+    <label class="font-semibold">Centro de Recurso</label>
+    <select name="centro" id="id_centro"
+            class="border p-1 rounded w-full">
+      <option value="">Todos</option>
+      {% for c in centros %}
+          <option value="{{ c.id }}"
+                  {% if centro_sel == c.id|stringformat:"s" %}selected{% endif %}>
+            {{ c.descricao }}
+          </option>
+      {% endfor %}
+    </select>
+
+  </div>
+
+  <!-- HIDDENS para enviar o filtro de recurso -->
+  <input type="hidden" name="recurso" id="hidden_recurso" value="{{ recurso_sel }}">
+
+
+</form>
+
+
+<!-- ========================= -->
+<!-- FORMULÁRIO -->
+<!-- ========================= -->
+
+<div class="mb-4 rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+
+  <div class="border-b border-borda-sutil bg-superficie-afundada px-3 py-2 font-bold text-texto-primario">
+    Nova Hora Extra Planejada
+  </div>
+
+  <div class="p-3">
+
+    <form method="post" class="grid grid-cols-1 gap-3 form-hora-extra">
+      {% csrf_token %}
+
+      {% if editar_obj %}
+        <div class="bg-atencao-sutil border border-atencao-borda text-atencao-base px-3 py-1 text-center rounded">
+          Editando hora extra:
+          <strong>{{ editar_obj.turnobase.descricao }}</strong> —
+          {{ editar_obj.recurso.descricao }}
+        </div>
+      {% endif %}
+
+      <!-- ====================================== -->
+      <!-- LINHA 1 — 4 CAMPOS LADO A LADO          -->
+      <!-- ====================================== -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+
+        <!-- TURNO BASE -->
+        <div>
+          <label class="font-semibold">Turno Base</label>
+
+          {% if editar_obj %}
+            {{ form.id_turnobase }}
+          {% else %}
+            <div class="relative">
+              <button type="button"
+                      class="w-full border border-borda-sutil rounded p-1 bg-superficie-elevada text-left"
+                      onclick="this.nextElementSibling.classList.toggle('hidden')">
+                Selecionar Turnos Base
+              </button>
+
+              <div class="absolute bg-superficie-elevada border border-borda-sutil rounded mt-1 p-2 w-full hidden h-48 overflow-y-auto">
+                {% for tb in form.fields.turnobase.queryset %}
+                  <label class="flex items-center gap-2 cursor-pointer hover:bg-interacao-hover p-1 rounded">
+                    <input type="checkbox" name="id_turnobase" value="{{ tb.id }}" class="w-4 h-4">
+                    <span>{{ tb.descricao }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+
+            </div>
+          {% endif %}
+        </div>
+
+
+        <!-- RECURSOS -->
+        <div>
+          <label class="font-semibold">Recursos</label>
+
+        <div class="relative">
+            <button type="button"
+                    class="w-full border border-borda-sutil rounded p-1 bg-superficie-elevada text-left"
+                    onclick="this.nextElementSibling.classList.toggle('hidden')">
+                Selecionar Recursos
+            </button>
+
+            <div id="id_recursos"
+                 name="recursos[]"
+                 class="absolute bg-superficie-elevada border border-borda-sutil rounded mt-1 p-2 w-full hidden h-48 overflow-y-auto">
+
+                {% for r in recursos %}
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-interacao-hover p-1 rounded">
+                      <input type="radio"
+                             name="recurso"
+                             value="{{ r.id }}"
+                             class="w-4 h-4"
+                             {% if editar_obj and r.id == editar_obj.recurso.id %}checked{% endif %}>
+                      <span>{{ r.descricao }}</span>
+                    </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        </div>
+
+        <!-- DATA INÍCIO -->
+        <div class="flex flex-col">
+          <label class="font-semibold mb-0">Data Início</label>
+
+          <div class="relative border border-borda-sutil rounded p-1 cursor-pointer bg-superficie-elevada"
+               onclick="this.querySelector('input').showPicker()">
+
+              <input type="date" name="data_inicio"
+                     value="{% if editar_obj %}{{ editar_obj.data_inicio|date:'Y-m-d' }}{% endif %}"
+                     class="w-full bg-transparent  cursor-pointer">
+          </div>
+        </div>
+
+        <!-- DATA FIM -->
+        <div class="flex flex-col">
+          <label class="font-semibold mb-0">Data Fim</label>
+
+          <div class="relative border border-borda-sutil rounded p-1 cursor-pointer bg-superficie-elevada"
+               onclick="this.querySelector('input').showPicker()">
+
+              <input type="date" name="data_fim"
+                     value="{% if editar_obj %}{{ editar_obj.data_fim|date:'Y-m-d' }}{% endif %}"
+                     class="w-full bg-transparent  cursor-pointer">
+          </div>
+</div>
+
+
+
+
+      </div>
+
+      <!-- ====================================== -->
+      <!-- LINHA 2 — HORAS + DIAS + FERIADO        -->
+      <!-- ====================================== -->
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+        <!-- HORAS -->
+        <div class="border border-borda-sutil rounded p-1 text-center bg-superficie-elevada">
+
+          <div class="grid grid-cols-2 gap-2">
+
+            <!-- INÍCIO -->
+            <div>
+              <span class="text-sm font-semibold">Início</span>
+              <div class="flex justify-center gap-1 mt-1">
+                <select name="hora_inicio_h" class="border rounded p-1">
+                  {% for h, label in form.fields.hora_inicio_h.choices %}
+                    <option value="{{ h }}" {% if editar_obj and editar_obj.hora_inicio.hour|stringformat:'02d' == h %}selected{% endif %}>
+                      {{ label }}
+                    </option>
+                  {% endfor %}
+                </select>
+
+                <select name="hora_inicio_m" class="border rounded p-1">
+                  {% for m, label in form.fields.hora_inicio_m.choices %}
+                    <option value="{{ m }}" {% if editar_obj and editar_obj.hora_inicio.minute|stringformat:'02d' == m %}selected{% endif %}>
+                      {{ label }}
+                    </option>
+                  {% endfor %}
+                </select>
+
+                <select name="hora_inicio_s" class="border rounded p-1">
+                  {% for s, label in form.fields.hora_inicio_s.choices %}
+                    <option value="{{ s }}" {% if editar_obj and editar_obj.hora_inicio.second|stringformat:'02d' == s %}selected{% endif %}>
+                      {{ label }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+            <!-- FIM -->
+            <div>
+              <span class="text-sm font-semibold">Fim</span>
+              <div class="flex justify-center gap-1 mt-1">
+                <select name="hora_fim_h" class="border rounded p-1">
+                  {% for h, label in form.fields.hora_fim_h.choices %}
+                    <option value="{{ h }}" {% if editar_obj and editar_obj.hora_fim.hour|stringformat:'02d' == h %}selected{% endif %}>
+                      {{ label }}
+                    </option>
+                  {% endfor %}
+                </select>
+
+                <select name="hora_fim_m" class="border rounded p-1">
+                  {% for m, label in form.fields.hora_fim_m.choices %}
+                    <option value="{{ m }}" {% if editar_obj and editar_obj.hora_fim.minute|stringformat:'02d' == m %}selected{% endif %}>
+                      {{ label }}
+                    </option>
+                  {% endfor %}
+                </select>
+
+                <select name="hora_fim_s" class="border rounded p-1">
+                  {% for s, label in form.fields.hora_fim_s.choices %}
+                    <option value="{{ s }}" {% if editar_obj and editar_obj.hora_fim.second|stringformat:'02d' == s %}selected{% endif %}>
+                      {{ label }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- DIAS DA SEMANA -->
+        <div class="border border-borda-sutil rounded p-1 text-center bg-superficie-elevada">
+
+          <label class="font-bold block mb-1">Dias da Semana</label>
+
+          <div class="flex flex-wrap justify-center gap-2">
+
+            <label class="inline-flex items-center gap-1"><input type="checkbox" class="dia-check w-4 h-4" value="1" {% if editar_obj and 1 in editar_obj.dias %}checked{% endif %}>Seg</label>
+            <label class="inline-flex items-center gap-1"><input type="checkbox" class="dia-check w-4 h-4" value="2" {% if editar_obj and 2 in editar_obj.dias %}checked{% endif %}>Ter</label>
+            <label class="inline-flex items-center gap-1"><input type="checkbox" class="dia-check w-4 h-4" value="3" {% if editar_obj and 3 in editar_obj.dias %}checked{% endif %}>Qua</label>
+            <label class="inline-flex items-center gap-1"><input type="checkbox" class="dia-check w-4 h-4" value="4" {% if editar_obj and 4 in editar_obj.dias %}checked{% endif %}>Qui</label>
+            <label class="inline-flex items-center gap-1"><input type="checkbox" class="dia-check w-4 h-4" value="5" {% if editar_obj and 5 in editar_obj.dias %}checked{% endif %}>Sex</label>
+            <label class="inline-flex items-center gap-1"><input type="checkbox" class="dia-check w-4 h-4" value="6" {% if editar_obj and 6 in editar_obj.dias %}checked{% endif %}>Sab</label>
+            <label class="inline-flex items-center gap-1"><input type="checkbox" class="dia-check w-4 h-4" value="7" {% if editar_obj and 7 in editar_obj.dias %}checked{% endif %}>Dom</label>
+
+          </div>
+
+          <input type="hidden" name="dias" class="dias-hidden">
+        </div>
+
+        <!-- FERIADO -->
+        <div class="border border-borda-sutil rounded p-1 flex items-center justify-center gap-1 bg-superficie-elevada">
+          <label class="font-semibold">Considera Feriado</label>
+          <input type="checkbox" name="considera_feriado" class="w-4 h-4"
+                 {% if editar_obj and editar_obj.considera_feriado %}checked{% endif %}>
+        </div>
+
+      </div>
+
+    <!-- BOTÕES -->
+    <div class="text-end mt-2">
+
+      {% if editar_obj %}
+        <a href="{% url 'lista_horas_extras' %}"
+           class="botao-secundario mr-2">
+          Cancelar
+        </a>
+      {% endif %}
+
+      <a href="{% url 'home' %}"
+         class="botao-secundario h-10 px-4">
+        <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i> Voltar
+      </a>
+
+      <button type="submit"
+              class="botao-primario h-10 px-4">
+        <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i> {% if editar_obj %}Atualizar{% else %}Salvar{% endif %}
+      </button>
+
+    </div>
+
+    </form>
+  </div>
+</div>
+
+
+  <!-- ========================= -->
+  <!-- TABELA -->
+  <!-- ========================= -->
+
+  <div class="border border-borda-sutil rounded shadow">
+
+    <div class="bg-superficie-afundada text-texto-primario px-3 py-2 font-bold">
+      Horas Extras Planejadas Cadastradas
+    </div>
+
+    <div class="overflow-x-auto p-3">
+
+      <table class="w-full text-center border border-borda-sutil">
+        <thead class="bg-superficie-afundada">
+          <tr>
+            <th class="border p-1">Turno Base</th>
+            <th class="border p-1">Datas</th>
+            <th class="border p-1">Horário</th>
+            <th class="border p-1">Dias</th>
+            <th class="border p-1">Feriado</th>
+            <th class="border p-1">Recurso</th>
+            <th class="border p-1"></th>
+          </tr>
+        </thead>
+
+        <tbody>
+        {% for he in horas_extras %}
+          <tr {% if editar_obj and he.id == editar_obj.id %}class="bg-atencao-sutil"{% endif %}>
+
+            <td class="border p-1">{{ he.turnobase.descricao }}</td>
+
+            <td class="border p-1">
+              {{ he.data_inicio|date:"d/m/Y" }} → {{ he.data_fim|date:"d/m/Y" }}
+            </td>
+
+            <td class="border p-1">
+              {{ he.hora_inicio|time:"H:i:s" }} - {{ he.hora_fim|time:"H:i:s" }}
+            </td>
+
+            <td class="border p-1">
+              {% for d in he.dias %}
+                {% if d == 1 %}Seg{% elif d == 2 %}Ter{% elif d == 3 %}Qua
+                {% elif d == 4 %}Qui{% elif d == 5 %}Sex{% elif d == 6 %}Sáb{% elif d == 7 %}Dom{% endif %}
+                {% if not forloop.last %}, {% endif %}
+              {% endfor %}
+            </td>
+
+            <td class="border p-1">
+              {% if he.considera_feriado %}Sim{% else %}Não{% endif %}
+            </td>
+
+            <td class="border p-1">
+              <span class="px-2 py-1 bg-superficie-inversa text-texto-sobre-marca rounded text-xs">
+                {{ he.recurso.descricao }}
+              </span>
+            </td>
+
+            <td class="border p-1 text-center">
+              <div class="flex justify-center gap-1">
+                <a href="{% url 'editar_hora_extra' he.id %}?empresa={{empresa_sel}}&filial={{filial_sel}}&departamento={{departamento_sel}}&setor={{setor_sel}}&centro={{centro_sel}}&recurso={{recurso_sel}}"
+                   class="botao-atencao-icone"
+                   title="Editar">
+                  <i data-lucide="square-pen" class="" aria-hidden="true"></i>
+                </a>
+
+                <form method="post"
+                      action="{% url 'deletar_hora_extra' he.id %}?empresa={{ empresa_sel }}&filial={{ filial_sel }}&departamento={{ departamento_sel }}&setor={{ setor_sel }}&centro={{ centro_sel }}&recurso={{ recurso_sel }}"
+                      onsubmit="return confirm('Excluir hora extra planejada?')">
+                    {% csrf_token %}
+                    <button type="submit" class="botao-perigo-icone" title="Excluir" aria-label="Excluir">
+                        <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                    </button>
+                </form>
+              </div>
+            </td>
+
+
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="border p-2 text-texto-legenda">
+              Nenhuma hora extra planejada.
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+  const editando = {{ editar_obj|yesno:"true,false" }};
+
+  // impedir fechar dropdown interno
+  document.querySelectorAll('.relative .absolute').forEach(menu => {
+    menu.addEventListener('click', e => e.stopPropagation());
+  });
+
+  const empresaSel = id_empresa;
+  const filialSel = id_filial;
+  const depSel = id_departamento;
+  const setorSel = id_setor;
+  const centroSel = id_centro;
+
+  const hiddenRecurso = document.getElementById('hidden_recurso');
+hiddenRecurso.value = "{{ recurso_sel }}";
+
+  const recursosDiv = document.getElementById('id_recursos');
+  const recursoSel = "{{ recurso_sel }}";
+
+  // ------------------------------------------
+  // AJAX genérico
+  // ------------------------------------------
+  async function atualiza(url, params, destino, texto = "Todos") {
+    const query = new URLSearchParams(params).toString();
+    const resp = await fetch(`${url}?${query}`);
+    const data = await resp.json();
+
+    if (destino.tagName === "SELECT") {
+      destino.innerHTML = `<option value="">${texto}</option>`;
+      data.forEach(i => {
+        const opt = document.createElement('option');
+        opt.value = i.id;
+        opt.textContent = i.descricao || i.nome;
+        destino.appendChild(opt);
+      });
+    } else {
+      // Rótulos construídos por nós de DOM (textContent): descricao/nome
+      // vindos do cadastro nunca são interpretados como HTML — evita XSS
+      // armazenado.
+      destino.replaceChildren();
+      data.forEach(i => {
+        const rotulo = document.createElement('label');
+        rotulo.className = 'flex items-center gap-2 cursor-pointer hover:bg-interacao-hover p-1 rounded';
+
+        const entrada = document.createElement('input');
+        entrada.type = 'radio';
+        entrada.className = 'w-4 h-4';
+        entrada.name = 'recurso';
+        entrada.value = i.id;
+        if (i.id == recursoSel) {
+          entrada.checked = true;
+          hiddenRecurso.value = i.id;
+        }
+
+        const legenda = document.createElement('span');
+        legenda.textContent = i.descricao || i.nome;
+
+        rotulo.appendChild(entrada);
+        rotulo.appendChild(legenda);
+        destino.appendChild(rotulo);
+      });
+
+      destino.querySelectorAll('input[type=radio]').forEach(r => {
+        r.addEventListener('change', () => {
+          hiddenRecurso.value = r.value;
+          if (!editando) envia();
+        });
+      });
+    }
+  }
+
+  // ------------------------------------------
+  // Atualizar recursos com todos os filtros
+  // ------------------------------------------
+  function atualizaRecursos() {
+    atualiza('/ajax/recursos/', {
+      empresa_id: empresaSel.value,
+      filial_id: filialSel.value,
+      departamento_id: depSel.value,
+      setor_id: setorSel.value,
+      centro_id: centroSel.value
+    }, recursosDiv);
+  }
+
+  // ------------------------------------------
+  // ENVIO SEGURO DOS FILTROS
+  // só envia automaticamente se NÃO estiver editando
+  // ------------------------------------------
+function envia() {
+    document.getElementById('filtroForm').submit();
+}
+
+
+
+  // ------------------------------------------
+  // LISTENERS
+  // ------------------------------------------
+  empresaSel.addEventListener('change', () => {
+    atualiza('/ajax/filiais/', { empresa_id: empresaSel.value }, filialSel, 'Todas');
+    atualizaRecursos();
+    envia();
+  });
+
+  filialSel.addEventListener('change', () => {
+    atualiza('/ajax/departamentos/', { filial_id: filialSel.value }, depSel, 'Todos');
+    atualizaRecursos();
+    envia();
+  });
+
+  depSel.addEventListener('change', () => {
+    atualiza('/ajax/setores/', { departamento_id: depSel.value }, setorSel, 'Todos');
+    atualizaRecursos();
+    envia();
+  });
+
+  setorSel.addEventListener('change', () => {
+    atualiza('/ajax/centros/', { setor_id: setorSel.value }, centroSel, 'Todos');
+    atualizaRecursos();
+    envia();
+  });
+
+  centroSel.addEventListener('change', () => {
+    atualizaRecursos();
+    envia();
+  });
+
+  // ------------------------------------------
+  // DIAS DA SEMANA
+  // ------------------------------------------
+  document.querySelector('.form-hora-extra').addEventListener('submit', e => {
+    const dias = [...document.querySelectorAll('.dia-check:checked')]
+      .map(d => d.value)
+      .join(',');
+
+    document.querySelector('.dias-hidden').value = dias;
+  });
+
+  // ------------------------------------------
+  // FECHAR DROPDOWNS AO CLICAR FORA
+  // ------------------------------------------
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('.relative .absolute').forEach(menu => {
+      const btn = menu.previousElementSibling;
+      const clicouNoBotao = btn && btn.contains(e.target);
+      const clicouNoMenu = menu.contains(e.target);
+      if (!clicouNoBotao && !clicouNoMenu) {
+        menu.classList.add('hidden');
+      }
+    });
+  });
+
+});
+</script>
+
+
+
+
+
+{% endblock %}

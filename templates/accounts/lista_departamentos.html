@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}Departamentos{% endblock %}
+
+{% block content %}
+
+<div class="w-full px-4 mt-4 text-sm text-texto-primario">
+
+    <!-- TÍTULO + NOVO -->
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="titulo-pagina text-texto-primario">Departamentos</h1>
+
+        <a href="{% url 'cadastrar_departamento' %}"
+       class="botao-primario text-sm">
+            <i data-lucide="plus" class="" aria-hidden="true"></i> Novo Departamento
+        </a>
+    </div>
+
+    <div class="bg-superficie-elevada border border-borda-sutil rounded shadow">
+
+        <div class="p-4">
+
+            {% if page_obj %}
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead class="bg-superficie-afundada text-texto-primario">
+                        <tr>
+                            <th class="border border-borda-sutil p-2">Filial</th>
+                            <th class="border border-borda-sutil p-2">Descrição</th>
+                            <th class="border border-borda-sutil p-2 text-center">Ações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for departamento in page_obj %}
+                        <tr class="transition hover:bg-interacao-hover">
+                            <td class="border border-borda-sutil p-2">{{ departamento.filial }}</td>
+                            <td class="border border-borda-sutil p-2">{{ departamento.descricao }}</td>
+                            <td class="border border-borda-sutil p-2">
+                                <div class="flex justify-center gap-2">
+
+                                    <a href="{% url 'editar_departamento' departamento.pk %}"
+                                       class="botao-atencao-icone"
+                                       title="Editar">
+                                        <i data-lucide="square-pen" class="" aria-hidden="true"></i>
+                                    </a>
+
+                                    <form method="post" action="{% url 'deletar_departamento' departamento.pk %}"
+                                          onsubmit="return confirm('Excluir este departamento?')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="botao-perigo-icone" title="Excluir" aria-label="Excluir">
+                                            <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+
+            <!-- Paginação -->
+            <div class="flex justify-center items-center gap-2 mt-4">
+
+                {% if page_obj.has_previous %}
+        <a href="?page=1" class="botao-secundario text-sm">Primeira</a>
+                <a href="?page={{ page_obj.previous_page_number }}"
+                   class="botao-secundario text-sm">Anterior</a>
+                {% endif %}
+
+                <span class="botao-primario text-sm">
+                    {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                </span>
+
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}"
+                   class="botao-secundario text-sm">Próxima</a>
+
+                <a href="?page={{ page_obj.paginator.num_pages }}"
+                   class="botao-secundario text-sm">Última</a>
+                {% endif %}
+
+            </div>
+
+            <!-- Voltar -->
+            <div class="mt-4">
+                <a href="{% url 'home' %}"
+                   class="botao-secundario text-sm">
+                    Voltar
+                </a>
+            </div>
+
+            {% else %}
+
+            <div class="bg-informacao-sutil border border-informacao-borda text-informacao-base p-3 rounded">
+
+                <h4 class="font-bold mb-1">Nenhum departamento cadastrado</h4>
+                <p>
+                    Nenhum departamento foi encontrado.
+                    <a href="{% url 'cadastrar_departamento' %}" class="underline">Clique aqui para cadastrar.</a>
+                </p>
+
+                <div class="mt-4">
+                    <a href="{% url 'home' %}"
+                   class="botao-secundario text-sm">
+                        Voltar
+                    </a>
+                </div>
+
+            </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

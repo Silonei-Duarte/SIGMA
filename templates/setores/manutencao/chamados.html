@@ -1,0 +1,626 @@
+{% extends 'base.html' %}
+{% block title %}{{ APPLICATION_NAME }} | Manutenção - Chamados{% endblock %}
+
+{% block content %}
+
+<div class="w-full px-4 mt-4 pb-4 text-sm text-texto-primario {% if not pode_editar %}[&_.card_.dropdown]:hidden{% endif %}">
+
+<div class="mb-6 border-b border-borda-sutil pb-4">
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div>
+      <h2 class="titulo-pagina text-texto-primario">Chamados</h2>
+    </div>
+
+    {% if modo == "lista" %}
+    <div class="flex flex-wrap justify-end gap-2">
+      <button
+          type="button"
+          onclick="document.getElementById('qrModal').classList.remove('hidden')"
+          class="botao-secundario h-10 px-4 text-sm">
+        <i data-lucide="qr-code" class="h-5 w-5" aria-hidden="true"></i> Gerar QR
+      </button>
+
+      <a href="?novo=1"
+         class="botao-primario h-10 px-4 text-sm">
+        <i data-lucide="circle-plus" class="h-5 w-5" aria-hidden="true"></i> Novo
+      </a>
+      <a href="/"
+         class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+        <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i> Voltar
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+
+{% if chamado_excluir and perms.manutencao.pode_manipular_chamado or chamado_excluir and user.is_staff %}
+<div class="mb-4 rounded-xl border border-atencao-borda bg-atencao-sutil p-4 text-texto-primario shadow-sm">
+  Confirma a exclusão do chamado <strong>{{ chamado_excluir.nome }}</strong>?
+  <form method="post" class="inline" action="{% url 'excluir_chamado' chamado_excluir.id %}">
+    {% csrf_token %}
+    <button type="submit" class="botao-perigo h-9 px-3"><i data-lucide="trash-2" class="h-4 w-4" aria-hidden="true"></i> Confirmar
+    </button>
+    <a href="{% url 'listar_chamados' %}"
+       class="botao-secundario h-9 px-3">Cancelar</a>
+  </form>
+</div>
+{% endif %}
+
+{% if modo == "lista" %}
+
+<form method="get" class="mb-4 grid grid-cols-1 gap-4 rounded-2xl border border-borda-sutil bg-superficie-elevada p-3 shadow-sm md:grid-cols-4">
+
+    <div>
+        <label class="font-semibold">Categoria</label>
+        <select name="categoria" class="w-full rounded-xl border px-3 py-2 shadow-sm">
+            <option value="">Todas</option>
+            {% for cod, nome in categorias %}
+                <option value="{{ cod }}"
+                        {% if categoria_sel == cod %}selected{% endif %}>{{ nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label class="font-semibold">Status</label>
+        <select name="status" class="w-full rounded-xl border px-3 py-2 shadow-sm">
+            <option value="">Todos</option>
+            {% for cod, nome in status_list %}
+                <option value="{{ cod }}"
+                        {% if status_sel == cod %}selected{% endif %}>{{ nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label class="font-semibold">Recurso</label>
+        <select name="recurso" class="w-full rounded-xl border px-3 py-2 shadow-sm">
+            <option value="">Todos</option>
+            {% for r in recursos %}
+                <option value="{{ r.id }}"
+                    {% if recurso_sel|add:'' == r.id|stringformat:"s" %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="flex items-end gap-2">
+        <button class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+            <i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i> Filtrar
+        </button>
+        <a href="{% url 'listar_chamados' %}"
+           class="botao-secundario h-10 whitespace-nowrap px-4 text-sm"><i data-lucide="refresh-cw" class="h-5 w-5" aria-hidden="true"></i> Limpar</a>
+    </div>
+
+</form>
+
+<div class="overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+
+
+    <div class="grid grid-cols-7 border-b border-borda-sutil bg-superficie-afundada p-2 text-center text-xs font-bold text-texto-primario">
+        <div>ID</div>
+        <div>Nome</div>
+        <div>Categoria</div>
+        <div>Prioridade</div>
+        <div>Status</div>
+        <div>Recurso</div>
+        <div>Ações</div>
+    </div>
+
+    {% for c in chamados %}
+    <div class="grid grid-cols-7 border-b border-borda-sutil p-2 text-center text-sm transition hover:bg-interacao-hover">
+
+        <div>{{ c.id }}</div>
+        <div class="truncate">{{ c.nome }}</div>
+        <div>{{ c.get_categoria_display }}</div>
+        <div>{{ c.get_prioridade_display }}</div>
+        <div>{{ c.get_status_display }}</div>
+        <div>{{ c.recurso|default_if_none:"-" }}</div>
+
+        <div class="flex justify-center gap-1">
+
+            <a href="{% url 'detalhar_chamado' c.id %}"
+               class="rounded-lg bg-informacao-sutil px-2 py-1 text-informacao-base transition hover:opacity-90">
+                Detalhar
+            </a>
+
+            {% if perms.manutencao.pode_manipular_chamado or user.is_staff %}
+            <a href="{% url 'excluir_chamado' c.id %}"
+               class="botao-perigo-icone" title="Excluir" aria-label="Excluir">
+                <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center text-texto-legenda p-4 text-sm">
+        Nenhum chamado encontrado.
+    </div>
+    {% endfor %}
+</div>
+
+{% if chamados.paginator.num_pages %}
+<div class="mt-6 flex justify-center gap-2">
+
+    {% if chamados.has_previous %}
+        <a href="?page=1" class="rounded-xl bg-superficie-afundada px-3 py-2 text-sm shadow-sm"><i data-lucide="chevrons-left" class="mr-1 inline h-4 w-4 align-text-bottom" aria-hidden="true"></i>Primeiro</a>
+        <a href="?page={{ chamados.previous_page_number }}"
+           class="rounded-xl bg-superficie-afundada px-3 py-2 text-sm shadow-sm">Anterior</a>
+    {% endif %}
+
+    <span class="rounded-xl bg-marca-base px-3 py-2 text-sm text-texto-sobre-marca shadow-sm">
+        {{ chamados.number }} de {{ chamados.paginator.num_pages }}
+    </span>
+
+    {% if chamados.has_next %}
+        <a href="?page={{ chamados.next_page_number }}"
+           class="rounded-xl bg-superficie-afundada px-3 py-2 text-sm shadow-sm">Próxima</a>
+        <a href="?page={{ chamados.paginator.num_pages }}"
+           class="rounded-xl bg-superficie-afundada px-3 py-2 text-sm shadow-sm">Última<i data-lucide="chevrons-right" class="ml-1 inline h-4 w-4 align-text-bottom" aria-hidden="true"></i></a>
+    {% endif %}
+
+</div>
+{% endif %}
+
+{% elif modo == "form" %}
+
+<form method="post" class="mt-4 grid grid-cols-1 gap-4 rounded-2xl border border-borda-sutil bg-superficie-elevada p-4 text-sm shadow-sm md:grid-cols-3">
+  {% csrf_token %}
+
+  <div>
+    <label class="font-semibold">Nome</label>
+    <input type="text" name="nome" value="{{ form.nome.value|default_if_none:'' }}"
+           class="w-full rounded-xl border p-2 shadow-sm">
+  </div>
+
+  <div>
+    <label class="font-semibold">Categoria</label>
+    <select name="categoria" class="w-full rounded-xl border p-2 shadow-sm">
+      {% for v,l in form.fields.categoria.choices %}
+        <option value="{{ v }}" {% if form.categoria.value == v %}selected{% endif %}>{{ l }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div>
+    <label class="font-semibold">Prioridade</label>
+    <select name="prioridade" class="w-full rounded-xl border p-2 shadow-sm">
+      {% for v,l in form.fields.prioridade.choices %}
+        <option value="{{ v }}" {% if form.prioridade.value == v %}selected{% endif %}>{{ l }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+<div>
+    <label class="font-semibold">Centro de Recurso</label>
+    <select id="id_centro_recurso" name="centro_recurso" class="w-full rounded-xl border p-2 shadow-sm">
+        {% for r in form.fields.centro_recurso.queryset %}
+            <option value="{{ r.id }}"
+                {% if form.centro_recurso.value|stringformat:"s" == r.id|stringformat:"s" %}selected{% endif %}>
+                {{ r }}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+
+
+<div>
+    <label class="font-semibold">Recurso</label>
+    <select id="id_recurso" name="recurso" class="w-full rounded-xl border p-2 shadow-sm">
+
+        {# sempre mostra o vazio #}
+        <option value=""
+            {% if not form.recurso.value %}selected{% endif %}>---------</option>
+
+        {# lista os recursos #}
+        {% for r in form.fields.recurso.queryset %}
+            <option value="{{ r.id }}"
+                {% if form.recurso.value|stringformat:"s" == r.id|stringformat:"s" %}selected{% endif %}>
+                {{ r }}
+            </option>
+        {% endfor %}
+    </select>
+</div>
+
+
+  <div class="md:col-span-3">
+    <label class="font-semibold">Descrição</label>
+    <textarea name="descricao"
+              class="border w-full p-2 rounded"
+              rows="3">{{ form.descricao.value|default_if_none:'' }}</textarea>
+  </div>
+
+  <div class="md:col-span-3 flex justify-end gap-2 mt-4">
+      <button class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+        <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i> Salvar
+      </button>
+
+      <a href="{% url 'listar_chamados' %}"
+         class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+        <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i> Voltar
+      </a>
+  </div>
+
+</form>
+
+
+{% elif modo == "detalhe" %}
+
+<form method="post" class="mt-4 text-sm">
+    {% csrf_token %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <div class="flex min-h-[70vh] max-h-[70vh] flex-col rounded bg-superficie-elevada p-4 shadow">
+            <h3 class="font-bold mb-2">Interações</h3>
+
+            <div id="historico" class="flex-grow overflow-y-auto border rounded p-2 bg-superficie-afundada">
+                {% for e in eventos %}
+                    {% if e.tipo == "interacao" %}
+                        <div class="border-b pb-2 mb-2">
+                            <div class="text-xs text-texto-legenda">
+                                {{ e.usuario.first_name|default:e.usuario.username }}
+                                em
+                                {{ e.data|date:"d/m/Y H:i" }}
+                            </div>
+                            <div>{{ e.mensagem|linebreaksbr }}</div>
+                        </div>
+                    {% else %}
+                        <div class="border-b pb-2 mb-2 bg-superficie-afundada p-2">
+                            <strong>{{ e.descricao }}</strong><br>
+                            Hora: {{ e.momento|date:"d/m/Y H:i" }}
+                        </div>
+                    {% endif %}
+                {% empty %}
+                    <p class="text-texto-legenda">Nenhum evento registrado.</p>
+                {% endfor %}
+            </div>
+
+            <div class="mt-2 flex flex-col">
+                <label class="font-semibold mb-1">Nova mensagem</label>
+
+                <div class="relative border border-borda-sutil w-full p-1 rounded">
+                    <textarea name="mensagem"
+                              class="h-[90px] min-h-[90px] max-h-[90px] w-full resize-none overflow-y-auto bg-transparent "
+                    >{{ form.mensagem.value|default_if_none:"" }}</textarea>
+                </div>
+            </div>
+
+            </div> <!-- FECHA O CARD DE INTERAÇÕES -->
+
+            <div class="bg-superficie-elevada shadow rounded p-4">
+
+            <h3 class="font-bold mb-2">Dados do Chamado</h3>
+
+            <div class="mb-2">
+              <label class="font-semibold">Nome</label>
+            <input type="text"
+                   name="nome"
+                   value="{{ chamado_form.nome.value }}"
+                   class="border w-full p-1 rounded">
+            </div>
+
+            <div class="mb-2">
+              <label class="font-semibold">Categoria</label>
+              <select name="categoria" class="border w-full p-1 rounded">
+                {% for value, label in chamado_form.fields.categoria.choices %}
+                  <option value="{{ value }}" {% if chamado_form.categoria.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-2">
+              <label class="font-semibold">Prioridade</label>
+              <select name="prioridade" class="border w-full p-1 rounded">
+                {% for value, label in chamado_form.fields.prioridade.choices %}
+                  <option value="{{ value }}" {% if chamado_form.prioridade.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-2">
+              <label class="font-semibold">Status</label>
+              <select name="status" class="border w-full p-1 rounded">
+                {% for value, label in chamado_form.fields.status.choices %}
+                  <option value="{{ value }}" {% if chamado_form.status.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-2">
+              <label class="font-semibold">Recurso</label>
+              <select name="recurso" class="border w-full p-1 rounded">
+                <option value="">---------</option>
+                {% for r in chamado_form.fields.recurso.queryset %}
+                  <option value="{{ r.id }}" {% if chamado_form.recurso.value == r.id %}selected{% endif %}>{{ r }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-2">
+              <label class="font-semibold">Responsáveis</label>
+              <div class="relative">
+                <button type="button"
+                        class="w-full border rounded px-2 py-1 text-left bg-superficie-elevada"
+                        onclick="this.nextElementSibling.classList.toggle('hidden')">
+                    Selecione responsáveis
+                </button>
+
+                <ul class="absolute left-0 right-0 bg-superficie-elevada shadow border rounded mt-1 max-h-60 overflow-y-auto hidden z-50">
+                  {% for u in chamado_form.fields.responsaveis.queryset %}
+                    <li>
+                      <label class="flex gap-2 p-1 text-sm cursor-pointer">
+                        <input type="checkbox"
+                               name="responsaveis"
+                               value="{{ u.id }}"
+                               {% if chamado.responsaveis and u.id in chamado.responsaveis %}checked{% endif %}>
+                        {{ u.first_name }} {{ u.last_name }}{% if not u.first_name and not u.last_name %}{{ u.username }}{% endif %}
+                      </label>
+                    </li>
+                  {% endfor %}
+                </ul>
+
+              </div>
+
+              <div id="responsaveisSelecionados" class="mt-2"></div>
+            </div>
+
+            <div class="mb-2">
+              <label class="font-semibold">Observadores</label>
+              <div class="relative">
+                <button type="button"
+                        class="w-full border rounded px-2 py-1 text-left bg-superficie-elevada"
+                        onclick="this.nextElementSibling.classList.toggle('hidden')">
+                    Selecione observadores
+                </button>
+
+                <ul class="absolute left-0 right-0 bg-superficie-elevada shadow border rounded mt-1 max-h-60 overflow-y-auto hidden z-50">
+                  {% for u in chamado_form.fields.observadores_id.queryset %}
+                  <li>
+                    <label class="flex gap-2 p-1 text-sm cursor-pointer">
+                      <input type="checkbox" name="observadores_id" value="{{ u.id }}"
+                        {% if chamado.observadores_id and u.id in chamado.observadores_id %}checked{% endif %}>
+                      {{ u.first_name }} {{ u.last_name }}{% if not u.first_name and not u.last_name %}{{ u.username }}{% endif %}
+                    </label>
+                  </li>
+                  {% endfor %}
+                </ul>
+
+              </div>
+
+              <div id="observadoresSelecionados" class="mt-2"></div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="flex justify-end gap-2 mt-4">
+
+        {% if chamado.status != "FECHADO" and perms.manutencao.pode_manipular_os %}
+        <a href="{% url 'abrir_os' %}?chamado={{ chamado.id }}"
+           class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+            <i data-lucide="settings" class="h-5 w-5" aria-hidden="true"></i> Abrir OS
+        </a>
+        {% endif %}
+
+        <button class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+            <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i> Salvar
+        </button>
+
+        <a href="{% url 'listar_chamados' %}"
+           class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+            <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i> Voltar
+        </a>
+    </div>
+
+</form>
+
+{% endif %}
+<!-- MODAL GERAR QR -->
+<div id="qrModal"
+     class="hidden fixed inset-0 bg-superficie-elevada/30 backdrop-blur-sm flex items-start justify-center pt-20 z-50">
+
+
+
+    <div class="bg-superficie-elevada p-6 rounded shadow w-96 text-sm">
+
+        <h3 class="font-bold mb-3">Gerar QR Code</h3>
+
+        <form method="get" action="" id="qrForm">
+
+            <label class="font-semibold">Centro de Recurso</label>
+            <select id="qr_centro" class="w-full border p-1 rounded mb-3">
+                <option value="">Selecione…</option>
+                {% for cr in centros %}
+                    <option value="{{ cr.id }}">{{ cr }}</option>
+                {% endfor %}
+            </select>
+
+
+            <label class="font-semibold">Recurso</label>
+            <select id="qr_recurso" class="w-full border p-1 rounded mb-4">
+                <option value="">Selecione…</option>
+            </select>
+
+            <div class="flex justify-end gap-2">
+
+                <!-- GERAR TODOS DO CENTRO -->
+                <a id="qrGerarTodosBtn"
+                   href="#"
+                   target="_blank"
+                   class="botao-primario px-3 py-1 pointer-events-none opacity-50">
+                    Gerar TODOS
+                </a>
+
+                <!-- GERAR PDF DE UM RECURSO -->
+                <a id="qrGerarBtn"
+                   href="#"
+                   target="_blank"
+                   class="botao-primario px-3 py-1 pointer-events-none opacity-50">
+                    Gerar PDF
+                </a>
+
+                <button type="button"
+                        onclick="document.getElementById('qrModal').classList.add('hidden')"
+                        class="bg-superficie-afundada text-texto-primario px-3 py-1 rounded">
+                    Cancelar
+                </button>
+
+            </div>
+
+
+        </form>
+    </div>
+</div>
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+    // ================= QR CODE MODAL =================
+    const qrCentro = document.getElementById("qr_centro");
+    const qrRecurso = document.getElementById("qr_recurso");
+    const qrBtn = document.getElementById("qrGerarBtn");
+    const qrGerarTodosBtn = document.getElementById("qrGerarTodosBtn"); // botão novo
+
+    // O WebView do aplicativo não cria a nova aba usada pelo navegador comum.
+    if (/\bwv\b/i.test(navigator.userAgent)) {
+        qrBtn.removeAttribute("target");
+        qrGerarTodosBtn.removeAttribute("target");
+    }
+
+    // ao trocar o centro → carrega recursos
+    qrCentro.addEventListener("change", () => {
+        const id = qrCentro.value;
+
+        // habilita botão TODOS do centro
+        if (id) {
+            qrGerarTodosBtn.classList.remove("pointer-events-none", "opacity-50");
+            qrGerarTodosBtn.href = `/setores/manutencao/recurso/qrcodes/?centro=${id}`;
+        } else {
+            qrGerarTodosBtn.classList.add("pointer-events-none", "opacity-50");
+            qrGerarTodosBtn.href = "#";
+        }
+
+        fetch(`/setores/manutencao/ajax_recursos_por_centro/?centro_id=` + id)
+            .then(r => r.json())
+            .then(lista => {
+
+                qrRecurso.innerHTML = "";  // REMOVE “Selecione”
+
+                lista.forEach((r, idx) => {
+                    const opt = document.createElement("option");
+                    opt.value = r.id;
+                    opt.textContent = r.descricao;
+                    if (idx === 0) opt.selected = true; // seleciona o primeiro recurso
+                    qrRecurso.appendChild(opt);
+                });
+
+                // auto-habilita botão de recurso
+                if (lista.length > 0) {
+                    const firstId = lista[0].id;
+                    qrBtn.href = `/setores/manutencao/recurso/${firstId}/qrcode/`;
+                    qrBtn.classList.remove("pointer-events-none","opacity-50");
+                }
+            });
+    });
+
+    qrRecurso.addEventListener("change", () => {
+        if (!qrRecurso.value) {
+            qrBtn.classList.add("pointer-events-none","opacity-50");
+            qrBtn.href = "#";
+            return;
+        }
+        qrBtn.classList.remove("pointer-events-none","opacity-50");
+        qrBtn.href = `/setores/manutencao/recurso/${qrRecurso.value}/qrcode/`;
+    });
+
+    // ==========================
+    // AJAX CENTRO → RECURSO
+    // ==========================
+    const centro = document.getElementById("id_centro_recurso");
+    const recurso = document.getElementById("id_recurso");
+
+    if (centro && recurso) {
+        centro.addEventListener("change", () => {
+            const id = centro.value;
+            recurso.replaceChildren(new Option("Carregando..."));
+
+            fetch(`/setores/manutencao/ajax_recursos_por_centro/?centro_id=` + id)
+                .then(r => r.json())
+                .then(lista => {
+                    recurso.replaceChildren(new Option("---------", ""));
+                    lista.forEach(r => {
+                        recurso.appendChild(new Option(r.descricao, r.id));
+                    });
+                });
+        });
+    }
+
+    // ==========================
+    // FECHAR DROPDOWN AO CLICAR FORA
+    // ==========================
+    document.addEventListener("click", function(e) {
+        document.querySelectorAll(".relative ul").forEach(ul => {
+            const btn = ul.previousElementSibling;
+            if (!ul.contains(e.target) && !btn.contains(e.target)) {
+                ul.classList.add("hidden");
+            }
+        });
+    });
+
+    // ==========================
+    // ATUALIZA SELEÇÕES
+    // ==========================
+    function updateSelection(field, divId) {
+        const names = [...document.querySelectorAll(`input[name="${field}"]:checked`)]
+            .map(i => i.parentElement.textContent.trim());
+
+        const container = document.getElementById(divId);
+
+        container.replaceChildren();
+        if (!names.length) {
+            const vazio = document.createElement("span");
+            vazio.className = "text-texto-legenda text-xs";
+            vazio.textContent = "Nenhum selecionado";
+            container.appendChild(vazio);
+            return;
+        }
+        names.forEach(n => {
+            const nome = document.createElement("span");
+            nome.className = "bg-marca-base text-texto-sobre-marca text-xs px-2 py-1 rounded mr-1";
+            nome.textContent = n;
+            container.appendChild(nome);
+        });
+    }
+
+    ["responsaveis", "observadores_id"].forEach(field => {
+        document.querySelectorAll(`input[name="${field}"]`).forEach(cb =>
+            cb.addEventListener("change", () => updateSelection(
+                field,
+                field === "responsaveis" ? "responsaveisSelecionados" : "observadoresSelecionados"
+            ))
+        );
+
+        updateSelection(
+            field,
+            field === "responsaveis" ? "responsaveisSelecionados" : "observadoresSelecionados"
+        );
+    });
+
+
+
+    // ==========================
+    // ROLAR HISTÓRICO
+    // ==========================
+    const h = document.getElementById("historico");
+    if (h) h.scrollTop = h.scrollHeight;
+
+});
+</script>
+
+
+
+{% endblock %}

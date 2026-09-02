@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build / dist
+build/
+dist/
+wheels/
+*.egg-info/
+.eggs/
+
+# Virtualenv
+.venv/
+venv/
+.env
+.env/
+env
+env.example
+
+# Coletado por collectstatic
+staticfiles/
+
+# IDE
+.ai/
+.idea/
+.vscode/
+.codex/*
+!.codex/README.md
+!.codex/agents/
+!.codex/agents/*.toml
+.agents/
+.opencode/
+.claude/*
+!.claude/agents/
+!.claude/agents/*.md
+
+.claude/agents/farol-comparador.md
+!.claude/hooks/
+!.claude/hooks/*.py
+!.claude/skills/
+!.claude/skills/**
+!.claude/settings.json
+
+# Tailwind: versionar os fontes; o CSS compilado é gerado no deploy.
+theme/node_modules/
+theme/static/css/dist/
+# Dependências antigas da raiz do app; o build usa theme/static_src/.
+theme/package.json
+theme/package-lock.json
+
+# Logs
+*.log
+
+# Artefatos locais dos testes de navegador.
+test-results/
+playwright-report/
+.playwright-mcp/
+
+# Outros
+Outros/
+outros/
+certs/
+artifacts/*.apk
+.junie/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# A documentacao acompanha o codigo (sigma, erp-senior, ...);
+# so os assets de marca (pranchas/imagens dos mascotes) ficam locais.
+docs/marca/
+
+farol-ipel-main/

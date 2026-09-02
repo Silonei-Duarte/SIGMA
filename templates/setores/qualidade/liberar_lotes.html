@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ APPLICATION_NAME }} | {{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="w-full px-4 mt-4 pb-4 text-sm text-texto-primario">
+    <div class="mb-6 border-b border-borda-sutil pb-4">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <h2 class="titulo-pagina text-texto-primario">{{ titulo }}</h2>
+            </div>
+
+            <div class="flex w-full flex-col items-stretch gap-2 md:flex-row md:items-center lg:w-auto lg:justify-end">
+                <div class="w-full md:w-96">
+                    <form method="GET" action="{% url 'qualidade:liberar_lotes' %}" class="flex gap-2">
+                    <input type="text" name="search" value="{{ search_query }}"
+                           placeholder="Buscar por Lote, Bobina, Recurso..."
+                           class="w-full rounded-xl border px-3 py-2 text-sm shadow-sm">
+                    <button type="submit" class="botao-primario h-10 shrink-0 whitespace-nowrap px-4 text-sm">
+                        <i data-lucide="search" class="h-5 w-5" aria-hidden="true"></i> Filtrar
+                    </button>
+                    {% if search_query %}
+                    <a href="{% url 'qualidade:liberar_lotes' %}" class="botao-secundario h-10 w-10 p-0" aria-label="Limpar busca">
+                        <i data-lucide="x" class="h-5 w-5" aria-hidden="true"></i>
+                    </a>
+                    {% endif %}
+                    </form>
+                </div>
+
+            <form method="POST" id="acao-bobina-form" class="flex flex-col items-stretch gap-2 md:flex-row md:items-center {% if not selected_row.codlot %}hidden{% endif %}">
+                {% csrf_token %}
+                <input type="hidden" name="codemp" id="selected-codemp" value="{{ selected_row.codemp }}">
+                <input type="hidden" name="usu_numbob" id="selected-usu_numbob" value="{{ selected_row.usu_numbob }}">
+                <input type="hidden" name="codlot" id="selected-codlot" value="{{ selected_row.codlot }}">
+                <input type="hidden" name="coddep" id="selected-coddep" value="{{ selected_row.coddep }}">
+                <input type="hidden" name="codpro" id="selected-codpro" value="{{ selected_row.codpro }}">
+                <input type="hidden" name="codder" id="selected-codder" value="{{ selected_row.codder }}">
+                <input type="hidden" name="codcre" id="selected-codcre" value="{{ selected_row.codcre }}">
+                <input type="hidden" name="codori" id="selected-codori" value="{{ selected_row.codori }}">
+                <input type="hidden" name="numorp" id="selected-numorp" value="{{ selected_row.numorp }}">
+                <input type="hidden" name="qtdest" id="selected-qtdest" value="{{ selected_row.qtdest }}">
+                <input type="hidden" name="sitlot" id="selected-sitlot" value="{{ selected_row.sitlot }}">
+
+                {% if pode_destinar_lotes %}
+                <button type="submit" name="action" value="liberar" id="btn-liberar"
+                        onclick="return confirm('Confirmar liberação do lote selecionado')"
+                        class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+                    <i data-lucide="circle-check" class=" mr-2" aria-hidden="true"></i> Liberar
+                </button>
+                <button type="submit" name="action" value="area_vermelha" id="btn-area-vermelha"
+                        onclick="return confirm('Confirmar envio do lote selecionado para Área Vermelha?')"
+                        class="botao-perigo h-10 px-4">
+                    <i data-lucide="triangle-alert" class=" mr-2" aria-hidden="true"></i> Área Vermelha
+                </button>
+                {% endif %}
+            </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-hidden rounded-2xl border border-borda-sutil bg-superficie-elevada shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs text-center border-collapse">
+                <thead class="bg-superficie-afundada text-texto-primario">
+                    <tr>
+                        <th class="border border-borda-sutil p-2">Selecionar</th>
+                        <th class="border border-borda-sutil p-2">Bobina</th>
+                        <th class="border border-borda-sutil p-2">Lote</th>
+                        <th class="border border-borda-sutil p-2">Origem</th>
+                        <th class="border border-borda-sutil p-2">OP</th>
+                        <th class="border border-borda-sutil p-2">Dep. Atual</th>
+                        <th class="border border-borda-sutil p-2">Produto</th>
+                        <th class="border border-borda-sutil p-2">Cod. Der.</th>
+                        <th class="border border-borda-sutil p-2">Nome Produto</th>
+                        <th class="border border-borda-sutil p-2">Cod. Recurso</th>
+                        <th class="border border-borda-sutil p-2">Recurso Integrador</th>
+                        <th class="border border-borda-sutil p-2">Qtd produzida</th>
+                        <th class="border border-borda-sutil p-2">Data Realização</th>
+                        <th class="border border-borda-sutil p-2">Hora Realização</th>
+                        <th class="border border-borda-sutil p-2">Análise</th>
+                        <th class="border border-borda-sutil p-2">Situação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bobina in bobinas %}
+                    <tr class="{% if bobina.bloqueado_lote %}cursor-not-allowed bg-superficie-afundada text-texto-desabilitado{% else %}js-select-row cursor-pointer transition hover:bg-interacao-hover{% endif %} {% if selected_row.codlot == bobina.codlot and selected_row.usu_numbob|stringformat:'s' == bobina.usu_numbob|stringformat:'s' %}bg-sucesso-sutil{% endif %}"
+                        data-codemp="{{ bobina.codemp }}"
+                        data-usu_numbob="{{ bobina.usu_numbob }}"
+                        data-codlot="{{ bobina.codlot }}"
+                        data-coddep="{{ bobina.coddep }}"
+                        data-codpro="{{ bobina.codpro }}"
+                        data-codder="{{ bobina.codder }}"
+                        data-codcre="{{ bobina.codcre }}"
+                        data-codori="{{ bobina.codori }}"
+                        data-numorp="{{ bobina.numorp }}"
+                        data-qtdest="{{ bobina.qtdest }}"
+                        data-sitlot="{{ bobina.sitlot }}">
+                        <td class="border border-borda-sutil p-2">
+                            {% if bobina.situacao_excluida %}
+                            <span class="text-xs font-bold text-texto-legenda">Excluído</span>
+                            {% elif bobina.aguardando_repesagem %}
+                            <span class="text-xs font-bold text-texto-legenda">Aguar. Repesagem</span>
+                            {% elif bobina.avaliado_erp %}
+                            <span class="text-xs font-bold text-texto-legenda">Avaliado</span>
+                            {% elif not bobina.situacao_pendente %}
+                            <span class="text-xs font-bold text-texto-legenda">Avaliado</span>
+                            {% elif bobina.destinado_lote %}
+                            <span class="text-xs font-bold text-texto-legenda">Destinado</span>
+                            {% elif bobina.local_nao_definido %}
+                            <span class="text-xs font-bold text-texto-legenda">Local não definido</span>
+                            {% else %}
+                            <input type="radio" name="bobina_selecionada"
+                                   class="form-radio h-3 w-3 text-sucesso-base js-select-radio"
+                                   {% if selected_row.codlot == bobina.codlot and selected_row.usu_numbob|stringformat:'s' == bobina.usu_numbob|stringformat:'s' %}checked{% endif %}>
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2 font-bold text-texto-primario">{{ bobina.usu_numbob|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2 font-bold text-texto-primario">{{ bobina.codlot }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.codori|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.numorp|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.coddep|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.codpro|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.codder|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2 text-left">{{ bobina.despro|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.codcre }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.abrcre|default:"-" }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.qtdest|floatformat:4 }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.datrea }}</td>
+                        <td class="border border-borda-sutil p-2">{{ bobina.horrea }}</td>
+                        <td class="border border-borda-sutil p-2">
+                            {% if bobina.analise_flag == 0 %}
+                            <span class="inline-block w-4 h-4 border border-borda-sutil bg-superficie-elevada rounded-sm" title="Não testada"></span>
+                            {% elif bobina.analise_flag == 1 %}
+                            <span class="inline-block w-4 h-4 border border-erro-base bg-erro-base rounded-sm" title="Vermelha"></span>
+                            {% elif bobina.analise_flag == 2 %}
+                            <span class="inline-block w-4 h-4 border border-marca-base bg-marca-base rounded-sm" title="Verde"></span>
+                            {% elif bobina.analise_flag == 3 %}
+                            <span class="inline-block w-4 h-4 border border-atencao-borda bg-atencao-destaque rounded-sm" title="Amarela"></span>
+                            {% else %}
+                            <span class="text-texto-legenda">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="border border-borda-sutil p-2">
+                            {% if bobina.sitlot == "A" %}
+                            <span class="inline-flex rounded-full border border-sucesso-borda bg-sucesso-sutil px-2 py-0.5 text-xs font-bold uppercase text-sucesso-base">Avaliada</span>
+                            {% elif bobina.sitlot == "V" %}
+                            <span class="inline-flex rounded-full border border-erro-borda bg-erro-sutil px-2 py-0.5 text-xs font-bold uppercase text-erro-base">Área Vermelha</span>
+                            {% elif bobina.sitlot == "E" %}
+                            <span class="inline-flex rounded-full border border-erro-borda bg-erro-sutil px-2 py-0.5 text-xs font-bold uppercase text-erro-base">Excluída</span>
+                            {% else %}
+                            <span class="inline-flex rounded-full border border-atencao-borda bg-atencao-sutil px-2 py-0.5 text-xs font-bold uppercase text-atencao-base">Pendente</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="14" class="border border-borda-sutil p-6 text-center text-texto-legenda">
+                            Nenhuma bobina encontrada.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if bobinas.has_other_pages %}
+    <div class="mt-6 mb-8 flex justify-center">
+        <nav class="inline-flex rounded-xl shadow-sm">
+            {% if bobinas.has_previous %}
+                <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Primeira</a>
+                <a href="?page={{ bobinas.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Anterior</a>
+            {% endif %}
+
+            <span class="botao-primario text-sm">
+                Página {{ bobinas.number }} de {{ bobinas.paginator.num_pages }}
+            </span>
+
+            {% if bobinas.has_next %}
+                <a href="?page={{ bobinas.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Próxima</a>
+                <a href="?page={{ bobinas.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}" class="botao-secundario text-sm">Última</a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    (function () {
+        const rows = document.querySelectorAll(".js-select-row");
+        const form = document.getElementById("acao-bobina-form");
+        const actionButtons = form ? Array.from(form.querySelectorAll('button[type="submit"]')) : [];
+        const hiddenFields = {
+            codemp: document.getElementById("selected-codemp"),
+            usu_numbob: document.getElementById("selected-usu_numbob"),
+            codlot: document.getElementById("selected-codlot"),
+            coddep: document.getElementById("selected-coddep"),
+            codpro: document.getElementById("selected-codpro"),
+            codder: document.getElementById("selected-codder"),
+            codcre: document.getElementById("selected-codcre"),
+            codori: document.getElementById("selected-codori"),
+            numorp: document.getElementById("selected-numorp"),
+            qtdest: document.getElementById("selected-qtdest"),
+            sitlot: document.getElementById("selected-sitlot")
+        };
+
+        function updateButtonsState() {
+            const hasSelection = Boolean(hiddenFields.codlot.value);
+            form.classList.toggle("hidden", !hasSelection);
+        }
+
+        function selectRow(row) {
+            rows.forEach((currentRow) => {
+                currentRow.classList.remove("bg-sucesso-sutil");
+                const radio = currentRow.querySelector(".js-select-radio");
+                if (radio) {
+                    radio.checked = false;
+                }
+            });
+
+            row.classList.add("bg-sucesso-sutil");
+            const radio = row.querySelector(".js-select-radio");
+            if (radio) {
+                radio.checked = true;
+            }
+
+            Object.keys(hiddenFields).forEach((key) => {
+                hiddenFields[key].value = row.dataset[key] || "";
+            });
+            updateButtonsState();
+        }
+
+        rows.forEach((row) => {
+            row.addEventListener("click", function (event) {
+                if (event.target.tagName === "INPUT") {
+                    selectRow(row);
+                    return;
+                }
+                selectRow(row);
+            });
+        });
+
+        if (form) {
+            form.addEventListener("submit", function (event) {
+                const submitter = event.submitter;
+                if (!submitter) {
+                    return;
+                }
+                if (form.dataset.submitting === "1") {
+                    event.preventDefault();
+                    return;
+                }
+                form.dataset.submitting = "1";
+                const oldAction = form.querySelector('input[name="action"][data-generated="1"]');
+                if (oldAction) {
+                    oldAction.remove();
+                }
+                if (submitter.name && submitter.value) {
+                    const actionInput = document.createElement("input");
+                    actionInput.type = "hidden";
+                    actionInput.name = submitter.name;
+                    actionInput.value = submitter.value;
+                    actionInput.setAttribute("data-generated", "1");
+                    form.appendChild(actionInput);
+                }
+                actionButtons.forEach((button) => {
+                    button.disabled = true;
+                    button.classList.add("opacity-70", "cursor-not-allowed");
+                });
+                submitter.dataset.originalText = submitter.innerHTML;
+                submitter.innerHTML = '<i data-lucide="refresh-cw" class=" mr-2" aria-hidden="true"></i> Processando...';
+            });
+        }
+
+        updateButtonsState();
+    })();
+</script>
+{% endblock %}

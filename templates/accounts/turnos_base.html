@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% block title %}Turnos Base{% endblock %}
+{% block content %}
+
+<div class="w-full px-4 mt-4 text-sm text-texto-primario">
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+  <!-- FORMULÁRIO -->
+  <div class="bg-superficie-elevada p-4 border border-borda-sutil rounded shadow">
+
+    <h3 class="text-lg font-bold mb-3">
+      {% if editing %}Editar Turno{% else %}Novo Turno{% endif %}
+    </h3>
+
+    <form method="post" class="grid grid-cols-1 gap-3">
+      {% csrf_token %}
+
+      <!-- CÓDIGO -->
+      <div>
+        <label class="font-semibold">{{ form.codigo.label }}</label>
+        {{ form.codigo|add_class:"border w-full p-1 rounded" }}
+      </div>
+
+      <!-- DESCRIÇÃO -->
+      <div>
+        <label class="font-semibold">{{ form.descricao.label }}</label>
+        {{ form.descricao|add_class:"border w-full p-1 rounded" }}
+      </div>
+
+      <!-- ORDENAÇÃO -->
+      <div>
+        <label class="font-semibold">{{ form.ordenacao.label }}</label>
+        {{ form.ordenacao|add_class:"border w-full p-1 rounded" }}
+      </div>
+
+      <!-- CALENDÁRIO -->
+      <div>
+        <label class="font-semibold">{{ form.calendario.label }}</label>
+        {{ form.calendario|add_class:"border w-full p-1 rounded" }}
+      </div>
+
+      <!-- ERROS -->
+      {% if form.errors %}
+      <div class="bg-erro-base text-texto-sobre-marca p-2 rounded text-xs relative pr-8">
+        <button type="button" onclick="this.parentElement.remove()" class="absolute top-1 right-2 font-bold text-xl leading-none" aria-label="Fechar"><i data-lucide="x" aria-hidden="true"></i></button>
+        <ul class="list-disc ml-4">
+          {% for field in form %}
+            {% if field.errors %}
+              <li>{{ field.label }}: {{ field.errors|striptags }}</li>
+            {% endif %}
+          {% endfor %}
+          {% if form.non_field_errors %}
+            <li>{{ form.non_field_errors|striptags }}</li>
+          {% endif %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if editing %}
+      <div class="bg-atencao-sutil border border-atencao-borda p-2 rounded">
+        Editando turno: <strong>{{ turno_editando.descricao }}</strong>
+      </div>
+      {% endif %}
+
+      <!-- BOTÕES -->
+      <div class="flex justify-between mt-2">
+        <a href="{% url 'home' %}"
+           class="botao-secundario h-10 whitespace-nowrap px-4 text-sm">
+          <i data-lucide="arrow-left" class="h-5 w-5" aria-hidden="true"></i> Voltar
+        </a>
+
+        <div class="flex gap-2">
+          {% if editing %}
+          <a href="{% url 'turnos_base' %}"
+             class="botao-secundario text-sm">
+            Cancelar
+          </a>
+          {% endif %}
+
+          <button class="botao-primario h-10 whitespace-nowrap px-4 text-sm">
+            <i data-lucide="save" class="h-5 w-5" aria-hidden="true"></i>
+            {% if editing %}Atualizar{% else %}Salvar{% endif %}
+          </button>
+        </div>
+
+      </div>
+
+    </form>
+
+  </div>
+
+  <!-- LISTAGEM -->
+  <div class="md:col-span-2 bg-superficie-elevada p-4 border border-borda-sutil rounded shadow">
+
+    <h3 class="text-lg font-bold mb-3">Turnos Cadastrados</h3>
+
+{% if page_obj %}
+    <div class="border border-borda-sutil rounded overflow-hidden">
+      <table class="w-full border-collapse text-center text-xs">
+        <thead class="bg-superficie-afundada font-bold">
+          <tr>
+            <th class="border border-borda-sutil p-2">Código</th>
+            <th class="border border-borda-sutil p-2">Descrição</th>
+            <th class="border border-borda-sutil p-2">Ord.</th>
+            <th class="border border-borda-sutil p-2">Calendário</th>
+            <th class="border border-borda-sutil p-2">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+      {% for turno in page_obj %}
+        <tr class="transition hover:bg-interacao-hover">
+          <td class="border border-borda-sutil p-2">{{ turno.codigo }}</td>
+          <td class="border border-borda-sutil p-2">{{ turno.descricao }}</td>
+          <td class="border border-borda-sutil p-2">{{ turno.ordenacao }}</td>
+          <td class="border border-borda-sutil p-2">{{ turno.calendario.descricao }}</td>
+          <td class="border border-borda-sutil p-2">
+            <div class="flex justify-center gap-2">
+              <a href="{% url 'editar_turno_base' turno.pk %}"
+                 class="botao-atencao-icone"
+                 title="Editar">
+                 <i data-lucide="square-pen" class="" aria-hidden="true"></i>
+              </a>
+
+              <form method="post" action="{% url 'deletar_turno_base' turno.pk %}"
+                    onsubmit="return confirm('Excluir este turno?');">
+                  {% csrf_token %}
+                  <button type="submit" class="botao-perigo-icone" title="Excluir" aria-label="Excluir">
+                      <i data-lucide="trash-2" class="" aria-hidden="true"></i>
+                  </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+{% endfor %}
+      </tbody>
+      </table>
+    </div>
+
+    <!-- PAGINAÇÃO -->
+    <div class="flex justify-center mt-4 gap-2">
+      {% if page_obj.has_previous %}
+      <a href="?page=1" class="botao-secundario text-sm"><i data-lucide="chevrons-left" class="mr-1 inline h-4 w-4 align-text-bottom" aria-hidden="true"></i>Primeiro</a>
+      <a href="?page={{ page_obj.previous_page_number }}" class="botao-secundario text-sm">Anterior</a>
+      {% endif %}
+
+      <span class="botao-primario text-sm">
+        {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+      </span>
+
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}" class="botao-secundario text-sm">Próxima</a>
+      <a href="?page={{ page_obj.paginator.num_pages }}" class="botao-secundario text-sm">Última<i data-lucide="chevrons-right" class="ml-1 inline h-4 w-4 align-text-bottom" aria-hidden="true"></i></a>
+      {% endif %}
+    </div>
+
+    {% else %}
+    <p class="text-sm text-texto-legenda mt-3">Nenhum turno cadastrado ainda.</p>
+    {% endif %}
+
+  </div>
+
+</div>
+</div>
+
+{% endblock %}

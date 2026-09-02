@@ -1,0 +1,60 @@
+# Espelha .gitignore para o que não faz sentido ir para a imagem, mais o que
+# é específico do build Docker (venv Windows, node_modules local, etc.).
+
+# Controle de versão e ferramentas de IDE/agente — não fazem parte da app.
+.git
+.gitattributes
+.gitignore
+.idea
+.vscode
+.codex
+.opencode
+.agents
+.junie
+.claude
+
+# Ambiente virtual local (Windows) — a imagem cria o seu próprio via uv.
+.venv
+venv
+
+# Segredo — nunca entra na imagem; vem só via `docker run --env-file`.
+.env
+.env.docker
+
+# Caches Python
+__pycache__
+**/__pycache__
+*.py[cod]
+*$py.class
+.mypy_cache
+.ruff_cache
+.pytest_cache
+
+# node_modules local (reinstalado no build via `npm ci`) e CSS já compilado
+# localmente (o build da imagem gera o seu próprio).
+theme/node_modules
+theme/static_src/node_modules
+theme/static/css/dist
+theme/package.json
+theme/package-lock.json
+
+# Coletado por collectstatic — a imagem roda o próprio collectstatic no build.
+staticfiles
+
+# Artefatos de teste de navegador
+test-results
+playwright-report
+.playwright-mcp
+
+# Outros diretórios locais sem relação com o runtime do servidor
+Outros
+outros
+certs
+artifacts/*.apk
+docs/marca
+mobile
+Uteis_projeto
+farol-ipel-main
+
+# Logs
+*.log
